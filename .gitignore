@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Database
+*.db
+
+# Secrets
+secrets.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model files (too large for git)
+*.pt
+
+# PyInstaller dist/build (app executables)
+dist/
+build/
+*.spec

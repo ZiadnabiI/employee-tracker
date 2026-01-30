@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Employee Analytics Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .stats-card {
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+
+        .stats-card:hover {
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📊 Employee Presence Analytics</h2>
+            <span class="badge bg-primary">Live Connection Active</span>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-success text-white stats-card shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Online / Present</h5>
+                        <h2 class="display-4 fw-bold" id="count-present">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-warning text-dark stats-card shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">On Break</h5>
+                        <h2 class="display-4 fw-bold" id="count-break">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-danger text-white stats-card shadow">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Away / Missing</h5>
+                        <h2 class="display-4 fw-bold" id="count-away">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">Recent Activity Logs</div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee Name</th>
+                            <th>Status</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const updateDashboard = async () => {
+            try {
+                const response = await fetch('/dashboard/stats');
+                const data = await response.json();
+
+                // Update Stats
+                document.getElementById('count-present').innerText = data.count_present;
+                document.getElementById('count-break').innerText = data.count_break;
+                document.getElementById('count-away').innerText = data.count_away;
+
+                // Update Table
+                const tbody = document.querySelector('tbody');
+                tbody.innerHTML = '';
+
+                data.logs.forEach(log => {
+                    const row = `
+                    <tr>
+                        <td>
+                            <a href="/employee/${log.employee_name}" class="text-decoration-none fw-bold text-dark">
+                                ${log.employee_name} ↗
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge ${log.status === 'Present' || log.status === 'WORK_START' ? 'bg-success' : 'bg-danger'}">
+                                ${log.status}
+                            </span>
+                        </td>
+                        <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+                    </tr>
+                `;
+                    tbody.innerHTML += row;
+                });
+
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+            }
+        };
+
+        // Poll every 5 seconds
+        setInterval(updateDashboard, 5000);
+        updateDashboard(); // Initial call
+    </script>
+</body>
+
+</html>

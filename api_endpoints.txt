@@ -1,0 +1,140 @@
+# Employee Tracker API Documentation
+
+## POST Endpoints
+
+### 1. Create Employee (Admin)
+**URL:** `/admin/create-employee`
+**Description:** Creates a new employee and generates a unique activation key.
+**Body:**
+```json
+{
+  "name": "Employee Name",
+  "department": "Department Name"
+}
+```
+**Response:**
+```json
+{
+  "activation_key": "KEY-1234",
+  "name": "Employee Name"
+}
+```
+
+### 2. Activate Device (First Run)
+**URL:** `/activate-device`
+**Description:** Binds a hardware ID to an employee's activation key.
+**Body:**
+```json
+{
+  "activation_key": "KEY-1234",
+  "hardware_id": "HW-UNIQUE-ID"
+}
+```
+**Response:**
+```json
+{
+  "status": "success",
+  "employee_name": "Employee Name",
+  "token": "KEY-1234"
+}
+```
+
+### 3. Verify Check-in (Start of Shift)
+**URL:** `/verify-checkin`
+**Description:** Verifies that a saved activation key is valid and active.
+**Body:**
+```json
+{
+  "activation_key": "KEY-1234"
+}
+```
+**Response:**
+```json
+{
+  "status": "ACTIVE",
+  "employee_name": "Employee Name"
+}
+```
+
+### 4. Log Activity (General)
+**URL:** `/log-activity`
+**Description:** Logs user check-in/out and breaks.
+**Body:**
+```json
+{
+  "activation_key": "KEY-1234",
+  "status": "WORK_START" 
+}
+```
+*(Statuses: WORK_START, BREAK_START, BREAK_END)*
+
+### 5. Log Presence (Heartbeat)
+**URL:** `/log-activity`
+**Description:** Sent every 5 seconds to confirm user is at the computer.
+**Body:**
+```json
+{
+  "activation_key": "KEY-1234",
+  "status": "Present"
+}
+```
+**Response:**
+```json
+{
+  "status": "ACTIVE"
+}
+```
+
+### 6. Log Away (Missing)
+**URL:** `/log-activity`
+**Description:** Sent when user has been missing from camera for >10 seconds.
+**Body:**
+```json
+{
+  "activation_key": "KEY-1234",
+  "status": "Away"
+}
+```
+**Response:**
+```json
+{
+  "status": "ACTIVE"
+}
+```
+
+---
+
+## GET Endpoints
+
+### 1. Check Status
+**URL:** `/check-status/{activation_key}`
+**Description:** Checks if an employee is active.
+**Response:**
+```json
+{
+  "status": "ACTIVE" 
+}
+```
+*(Returns "INVALID" or "INACTIVE" if checks fail)*
+
+### 2. Dashboard Stats
+**URL:** `/dashboard/stats`
+**Description:** Returns current statistics and logs for the dashboard.
+**Response:**
+```json
+{
+  "total_present": "0h 0m",
+  "total_away": "0h 0m",
+  "logs": [
+    {
+      "employee_name": "Name",
+      "status": "Present",
+      "timestamp": "2024-01-01T12:00:00"
+    }
+  ]
+}
+```
+
+### 3. Dashboard UI
+**URL:** `/`
+**Description:** Serves the HTML dashboard.
