@@ -13,6 +13,15 @@
         .stats-card:hover {
             transform: scale(1.02);
         }
+
+        .key-display {
+            font-family: monospace;
+            font-size: 1.5rem;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px dashed #28a745;
+        }
     </style>
 </head>
 
@@ -20,7 +29,12 @@
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>📊 Employee Presence Analytics</h2>
-            <span class="badge bg-primary">Live Connection Active</span>
+            <div>
+                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+                    ➕ Add Employee
+                </button>
+                <span class="badge bg-primary">Live Connection Active</span>
+            </div>
         </div>
 
         <div class="row mb-4">
@@ -69,6 +83,49 @@
         </div>
     </div>
 
+    <!-- Add Employee Modal -->
+    <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="addEmployeeModalLabel">➕ Add New Employee</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="addEmployeeForm">
+                        <div class="mb-3">
+                            <label for="employeeName" class="form-label">Employee Name</label>
+                            <input type="text" class="form-control" id="employeeName" placeholder="Enter employee name"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="employeeDept" class="form-label">Department (Optional)</label>
+                            <input type="text" class="form-control" id="employeeDept"
+                                placeholder="e.g., Engineering, Sales">
+                        </div>
+                        <button type="button" class="btn btn-success w-100" onclick="createEmployee()">
+                            Create Employee & Generate Key
+                        </button>
+                    </div>
+                    <div id="keyResult" style="display: none;">
+                        <div class="text-center">
+                            <p class="text-muted mb-2">Activation Key for <strong id="resultName"></strong>:</p>
+                            <div class="key-display text-success" id="resultKey"></div>
+                            <p class="text-muted mt-3 small">⚠️ Give this key to the employee. They will enter it in the
+                                app to activate their device.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-3" onclick="resetModal()">
+                            Add Another Employee
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const updateDashboard = async () => {
             try {
@@ -107,6 +164,49 @@
                 console.error("Error fetching stats:", error);
             }
         };
+
+        // Create Employee Function
+        const createEmployee = async () => {
+            const name = document.getElementById('employeeName').value.trim();
+            const dept = document.getElementById('employeeDept').value.trim();
+
+            if (!name) {
+                alert('Please enter an employee name');
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/create-employee', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, department: dept || null })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('resultName').innerText = data.name;
+                    document.getElementById('resultKey').innerText = data.activation_key;
+                    document.getElementById('addEmployeeForm').style.display = 'none';
+                    document.getElementById('keyResult').style.display = 'block';
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to create employee'));
+                }
+            } catch (error) {
+                alert('Connection error: ' + error.message);
+            }
+        };
+
+        // Reset Modal
+        const resetModal = () => {
+            document.getElementById('employeeName').value = '';
+            document.getElementById('employeeDept').value = '';
+            document.getElementById('addEmployeeForm').style.display = 'block';
+            document.getElementById('keyResult').style.display = 'none';
+        };
+
+        // Reset when modal closes
+        document.getElementById('addEmployeeModal').addEventListener('hidden.bs.modal', resetModal);
 
         // Poll every 5 seconds
         setInterval(updateDashboard, 5000);

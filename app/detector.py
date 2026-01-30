@@ -11,8 +11,8 @@ import uuid
 
 # --- Configuration ---
 # --- Configuration ---
-# Use SERVER_URL from environment for production, fallback to localhost for testing
-SERVER_URL = os.getenv("SERVER_URL", "http://localhost:8000")
+# Use SERVER_URL from environment for testing, default to cloud server
+SERVER_URL = os.getenv("SERVER_URL", "https://employee-tracker-up30.onrender.com")
 CONFIDENCE_THRESHOLD = 0.5
 AWAY_LIMIT = 10 
 SECRETS_FILE = "secrets.json"
