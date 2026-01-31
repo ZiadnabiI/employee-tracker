@@ -26,7 +26,19 @@
 </head>
 
 <body class="bg-light">
-    <div class="container mt-5">
+    <div class="container mt-4">
+        <!-- Company Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-white rounded shadow-sm">
+            <div>
+                <span class="text-muted">Welcome,</span>
+                <strong id="supervisor-name">Loading...</strong>
+                <span class="badge bg-secondary ms-2" id="company-badge">Company</span>
+            </div>
+            <a href="/logout" class="btn btn-outline-danger btn-sm">
+                🚪 Logout
+            </a>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>📊 Employee Presence Analytics</h2>
             <div>
@@ -208,9 +220,23 @@
         // Reset when modal closes
         document.getElementById('addEmployeeModal').addEventListener('hidden.bs.modal', resetModal);
 
-        // Poll every 5 seconds
         setInterval(updateDashboard, 5000);
-        updateDashboard(); // Initial call
+        updateDashboard();
+
+        // Fetch and display user info
+        const loadUserInfo = async () => {
+            try {
+                const response = await fetch('/auth/me');
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('supervisor-name').innerText = user.name;
+                    document.getElementById('company-badge').innerText = user.company_name;
+                }
+            } catch (e) {
+                console.error('Failed to load user info:', e);
+            }
+        };
+        loadUserInfo();
     </script>
 </body>
 
