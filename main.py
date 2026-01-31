@@ -444,6 +444,241 @@ async def get_employee_stats(name: str, request: Request, db: Session = Depends(
         "logs": filtered_history 
     }
 
+# ===============================
+# PERFORMANCE SCORING SYSTEM
+# ===============================
+
+def calculate_employee_score(employee_name: str, db: Session, days: int = 7) -> dict:
+    """
+    Calculate employee performance score (0-100)
+    
+    Scoring weights:
+    - Present Time %: 40%
+    - Low Away Time: 25%
+    - Break Discipline: 15%
+    - Consistency: 20%
+    """
+    start_date = datetime.datetime.utcnow() - datetime.timedelta(days=days)
+    
+    logs = db.query(EmployeeLog).filter(
+        EmployeeLog.employee_name == employee_name,
+        EmployeeLog.timestamp >= start_date
+    ).order_by(EmployeeLog.timestamp).all()
+    
+    if not logs:
+        return {
+            "score": 0,
+            "grade": "N/A",
+            "present_hours": 0,
+            "away_hours": 0,
+            "break_hours": 0,
+            "days_active": 0,
+            "details": {"present_score": 0, "away_score": 0, "break_score": 0, "consistency_score": 0}
+        }
+    
+    # Calculate time in each state
+    present_seconds = 0
+    away_seconds = 0
+    break_seconds = 0
+    active_days = set()
+    
+    last_time = None
+    state = "Offline"
+    
+    for log in logs:
+        active_days.add(log.timestamp.date())
+        if last_time:
+            delta = (log.timestamp - last_time).total_seconds()
+            # Cap individual deltas at 2 hours to handle gaps
+            delta = min(delta, 7200)
+            if state in ["Present", "WORK_START", "BREAK_END"]:
+                present_seconds += delta
+            elif state == "BREAK_START":
+                break_seconds += delta
+            elif state == "Away":
+                away_seconds += delta
+        last_time = log.timestamp
+        state = log.status
+    
+    # Total tracked time
+    total_seconds = present_seconds + away_seconds + break_seconds
+    if total_seconds == 0:
+        total_seconds = 1  # Avoid division by zero
+    
+    # Expected hours (8 hours per active day)
+    expected_hours = len(active_days) * 8
+    expected_seconds = expected_hours * 3600
+    
+    # 1. Present Time Score (40%): % of time present vs expected
+    present_ratio = min(present_seconds / max(expected_seconds, 1), 1.0)
+    present_score = present_ratio * 100
+    
+    # 2. Away Time Score (25%): Penalize excessive away time
+    away_ratio = away_seconds / max(total_seconds, 1)
+    away_score = max(0, 100 - (away_ratio * 200))  # 50% away = 0 score
+    
+    # 3. Break Discipline (15%): Reasonable breaks (30min-1hr per day)
+    breaks_per_day = break_seconds / max(len(active_days), 1)
+    ideal_break = 45 * 60  # 45 minutes ideal
+    break_deviation = abs(breaks_per_day - ideal_break) / ideal_break
+    break_score = max(0, 100 - (break_deviation * 50))
+    
+    # 4. Consistency (20%): Days active vs expected
+    consistency_ratio = len(active_days) / max(days, 1)
+    consistency_score = min(consistency_ratio * 100, 100)
+    
+    # Final weighted score
+    final_score = (
+        present_score * 0.40 +
+        away_score * 0.25 +
+        break_score * 0.15 +
+        consistency_score * 0.20
+    )
+    final_score = min(max(round(final_score), 0), 100)
+    
+    # Grade
+    if final_score >= 90:
+        grade = "Excellent"
+    elif final_score >= 75:
+        grade = "Good"
+    elif final_score >= 60:
+        grade = "Average"
+    elif final_score >= 40:
+        grade = "Needs Improvement"
+    else:
+        grade = "Poor"
+    
+    return {
+        "score": final_score,
+        "grade": grade,
+        "present_hours": round(present_seconds / 3600, 1),
+        "away_hours": round(away_seconds / 3600, 1),
+        "break_hours": round(break_seconds / 3600, 1),
+        "days_active": len(active_days),
+        "details": {
+            "present_score": round(present_score),
+            "away_score": round(away_score),
+            "break_score": round(break_score),
+            "consistency_score": round(consistency_score)
+        }
+    }
+
+@app.get("/api/scores")
+async def get_all_scores(request: Request, days: int = 7, db: Session = Depends(get_db)):
+    """Get performance scores for all employees"""
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    company_id = token_data["company_id"]
+    is_super_admin = token_data.get("is_super_admin", False)
+    
+    if is_super_admin:
+        employees = db.query(Employee).all()
+    else:
+        employees = db.query(Employee).filter(Employee.company_id == company_id).all()
+    
+    scores = []
+    for emp in employees:
+        score_data = calculate_employee_score(emp.name, db, days)
+        scores.append({
+            "employee_name": emp.name,
+            "department": emp.department or "-",
+            **score_data
+        })
+    
+    # Sort by score descending
+    scores.sort(key=lambda x: x["score"], reverse=True)
+    
+    return {
+        "period_days": days,
+        "total_employees": len(scores),
+        "average_score": round(sum(s["score"] for s in scores) / max(len(scores), 1)),
+        "scores": scores
+    }
+
+@app.get("/api/analytics/trends")
+async def get_analytics_trends(request: Request, days: int = 7, db: Session = Depends(get_db)):
+    """Get daily trends for charts"""
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    company_id = token_data["company_id"]
+    is_super_admin = token_data.get("is_super_admin", False)
+    
+    if is_super_admin:
+        employees = db.query(Employee).all()
+    else:
+        employees = db.query(Employee).filter(Employee.company_id == company_id).all()
+    
+    employee_names = [e.name for e in employees]
+    
+    # Get daily data for the past N days
+    daily_data = []
+    for i in range(days - 1, -1, -1):
+        day = datetime.datetime.utcnow().date() - datetime.timedelta(days=i)
+        day_start = datetime.datetime.combine(day, datetime.time.min)
+        day_end = datetime.datetime.combine(day, datetime.time.max)
+        
+        # Count employees with activity on this day
+        logs = db.query(EmployeeLog).filter(
+            EmployeeLog.employee_name.in_(employee_names),
+            EmployeeLog.timestamp >= day_start,
+            EmployeeLog.timestamp <= day_end
+        ).all()
+        
+        present_count = 0
+        away_count = 0
+        break_count = 0
+        
+        # Get last status per employee for this day
+        emp_statuses = {}
+        for log in logs:
+            emp_statuses[log.employee_name] = log.status
+        
+        for status in emp_statuses.values():
+            if status in ["Present", "WORK_START", "BREAK_END"]:
+                present_count += 1
+            elif status == "BREAK_START":
+                break_count += 1
+            elif status == "Away":
+                away_count += 1
+        
+        daily_data.append({
+            "date": day.strftime("%Y-%m-%d"),
+            "day_name": day.strftime("%a"),
+            "present": present_count,
+            "away": away_count,
+            "break": break_count,
+            "total_active": len(emp_statuses)
+        })
+    
+    return {
+        "period_days": days,
+        "daily_data": daily_data,
+        "total_employees": len(employees)
+    }
+
+@app.get("/api/analytics/top-performers")
+async def get_top_performers(request: Request, limit: int = 5, db: Session = Depends(get_db)):
+    """Get top and bottom performers"""
+    scores_response = await get_all_scores(request, days=7, db=db)
+    scores = scores_response["scores"]
+    
+    return {
+        "top_performers": scores[:limit],
+        "needs_attention": list(reversed(scores[-limit:])) if len(scores) >= limit else list(reversed(scores))
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

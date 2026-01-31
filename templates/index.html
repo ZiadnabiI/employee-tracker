@@ -4,14 +4,114 @@
 <head>
     <title>Employee Analytics Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         .stats-card {
-            border-radius: 10px;
-            transition: transform 0.2s;
+            border-radius: 15px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: none;
         }
 
         .stats-card:hover {
-            transform: scale(1.02);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .dashboard-header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .employee-table {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .score-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .score-excellent {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+        }
+
+        .score-good {
+            background: linear-gradient(135deg, #0984e3, #74b9ff);
+            color: white;
+        }
+
+        .score-average {
+            background: linear-gradient(135deg, #fdcb6e, #ffeaa7);
+            color: #333;
+        }
+
+        .score-needs-improvement {
+            background: linear-gradient(135deg, #e17055, #fab1a0);
+            color: white;
+        }
+
+        .score-poor {
+            background: linear-gradient(135deg, #d63031, #ff7675);
+            color: white;
+        }
+
+        .performer-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .top-performer-item {
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        }
+
+        .top-performer-item.rank-1 {
+            background: linear-gradient(135deg, #ffd700, #fff3cd);
+        }
+
+        .top-performer-item.rank-2 {
+            background: linear-gradient(135deg, #c0c0c0, #e9ecef);
+        }
+
+        .top-performer-item.rank-3 {
+            background: linear-gradient(135deg, #cd7f32, #ffe5d0);
+        }
+
+        .search-filter-bar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .search-filter-bar input,
+        .search-filter-bar select {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 8px;
         }
 
         .key-display {
@@ -22,72 +122,138 @@
             border-radius: 8px;
             border: 2px dashed #28a745;
         }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+        }
     </style>
 </head>
 
-<body class="bg-light">
-    <div class="container mt-4">
-        <!-- Company Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-white rounded shadow-sm">
+<body>
+    <div class="container-fluid px-4 py-3">
+        <!-- Header -->
+        <div class="dashboard-header d-flex justify-content-between align-items-center">
             <div>
                 <span class="text-muted">Welcome,</span>
                 <strong id="supervisor-name">Loading...</strong>
-                <span class="badge bg-secondary ms-2" id="company-badge">Company</span>
+                <span class="badge bg-primary ms-2" id="company-badge">Company</span>
             </div>
-            <a href="/logout" class="btn btn-outline-danger btn-sm">
-                🚪 Logout
-            </a>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>📊 Employee Presence Analytics</h2>
             <div>
                 <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
                     ➕ Add Employee
                 </button>
-                <span class="badge bg-primary">Live Connection Active</span>
+                <a href="/logout" class="btn btn-outline-danger">
+                    🚪 Logout
+                </a>
             </div>
         </div>
 
+        <!-- Stats Cards -->
         <div class="row mb-4">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card bg-success text-white stats-card shadow">
                     <div class="card-body text-center">
-                        <h5 class="card-title">Online / Present</h5>
-                        <h2 class="display-4 fw-bold" id="count-present">0</h2>
+                        <h6 class="card-title mb-1">🟢 Online</h6>
+                        <div class="stat-number" id="count-present">0</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card bg-warning text-dark stats-card shadow">
                     <div class="card-body text-center">
-                        <h5 class="card-title">On Break</h5>
-                        <h2 class="display-4 fw-bold" id="count-break">0</h2>
+                        <h6 class="card-title mb-1">☕ On Break</h6>
+                        <div class="stat-number" id="count-break">0</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card bg-danger text-white stats-card shadow">
                     <div class="card-body text-center">
-                        <h5 class="card-title">Away / Missing</h5>
-                        <h2 class="display-4 fw-bold" id="count-away">0</h2>
+                        <h6 class="card-title mb-1">⚠️ Away</h6>
+                        <div class="stat-number" id="count-away">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white stats-card shadow">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-1">📊 Avg Score</h6>
+                        <div class="stat-number" id="avg-score">--</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card shadow">
-            <div class="card-header bg-dark text-white">Recent Activity Logs</div>
-            <div class="card-body">
-                <table class="table table-hover">
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="chart-card">
+                    <h5>📈 Weekly Attendance Trend</h5>
+                    <canvas id="trendChart" height="100"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="performer-card h-100">
+                    <h5>🏆 Top Performers</h5>
+                    <div id="top-performers"></div>
+                    <hr>
+                    <h6 class="text-danger">⚠️ Needs Attention</h6>
+                    <div id="needs-attention"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="search-filter-bar">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search employees...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="Present">Present</option>
+                        <option value="Away">Away</option>
+                        <option value="BREAK_START">On Break</option>
+                        <option value="Offline">Offline</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="gradeFilter">
+                        <option value="">All Grades</option>
+                        <option value="Excellent">🟢 Excellent</option>
+                        <option value="Good">🔵 Good</option>
+                        <option value="Average">🟡 Average</option>
+                        <option value="Needs Improvement">🟠 Needs Improvement</option>
+                        <option value="Poor">🔴 Poor</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-light w-100" onclick="resetFilters()">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Table -->
+        <div class="employee-table shadow">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0">📋 Employee Performance</h5>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Employee Name</th>
+                            <th>Rank</th>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Score</th>
                             <th>Status</th>
-                            <th>Timestamp</th>
+                            <th>Present Time</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="employeeTableBody">
                         <!-- Rows populated by JS -->
                     </tbody>
                 </table>
@@ -96,24 +262,22 @@
     </div>
 
     <!-- Add Employee Modal -->
-    <div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel"
-        aria-hidden="true">
+    <div class="modal fade" id="addEmployeeModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="addEmployeeModalLabel">➕ Add New Employee</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                    <h5 class="modal-title">➕ Add New Employee</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div id="addEmployeeForm">
                         <div class="mb-3">
-                            <label for="employeeName" class="form-label">Employee Name</label>
+                            <label class="form-label">Employee Name</label>
                             <input type="text" class="form-control" id="employeeName" placeholder="Enter employee name"
                                 required>
                         </div>
                         <div class="mb-3">
-                            <label for="employeeDept" class="form-label">Department (Optional)</label>
+                            <label class="form-label">Department (Optional)</label>
                             <input type="text" class="form-control" id="employeeDept"
                                 placeholder="e.g., Engineering, Sales">
                         </div>
@@ -125,8 +289,7 @@
                         <div class="text-center">
                             <p class="text-muted mb-2">Activation Key for <strong id="resultName"></strong>:</p>
                             <div class="key-display text-success" id="resultKey"></div>
-                            <p class="text-muted mt-3 small">⚠️ Give this key to the employee. They will enter it in the
-                                app to activate their device.</p>
+                            <p class="text-muted mt-3 small">⚠️ Give this key to the employee.</p>
                         </div>
                         <button type="button" class="btn btn-outline-secondary w-100 mt-3" onclick="resetModal()">
                             Add Another Employee
@@ -139,45 +302,195 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let allScores = [];
+        let trendChart = null;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Present',
+                            data: [],
+                            borderColor: '#00b894',
+                            backgroundColor: 'rgba(0, 184, 148, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Away',
+                            data: [],
+                            borderColor: '#d63031',
+                            backgroundColor: 'rgba(214, 48, 49, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Update dashboard
         const updateDashboard = async () => {
             try {
                 const response = await fetch('/dashboard/stats');
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
                 const data = await response.json();
 
-                // Update Stats
                 document.getElementById('count-present').innerText = data.count_present;
                 document.getElementById('count-break').innerText = data.count_break;
                 document.getElementById('count-away').innerText = data.count_away;
-
-                // Update Table
-                const tbody = document.querySelector('tbody');
-                tbody.innerHTML = '';
-
-                data.logs.forEach(log => {
-                    const row = `
-                    <tr>
-                        <td>
-                            <a href="/employee/${log.employee_name}" class="text-decoration-none fw-bold text-dark">
-                                ${log.employee_name} ↗
-                            </a>
-                        </td>
-                        <td>
-                            <span class="badge ${log.status === 'Present' || log.status === 'WORK_START' ? 'bg-success' : 'bg-danger'}">
-                                ${log.status}
-                            </span>
-                        </td>
-                        <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-                    </tr>
-                `;
-                    tbody.innerHTML += row;
-                });
-
             } catch (error) {
                 console.error("Error fetching stats:", error);
             }
         };
 
-        // Create Employee Function
+        // Load scores
+        const loadScores = async () => {
+            try {
+                const response = await fetch('/api/scores?days=7');
+                if (!response.ok) return;
+                const data = await response.json();
+
+                allScores = data.scores;
+                document.getElementById('avg-score').innerText = data.average_score;
+
+                renderTable(allScores);
+            } catch (error) {
+                console.error("Error fetching scores:", error);
+            }
+        };
+
+        // Load trends
+        const loadTrends = async () => {
+            try {
+                const response = await fetch('/api/analytics/trends?days=7');
+                if (!response.ok) return;
+                const data = await response.json();
+
+                trendChart.data.labels = data.daily_data.map(d => d.day_name);
+                trendChart.data.datasets[0].data = data.daily_data.map(d => d.present);
+                trendChart.data.datasets[1].data = data.daily_data.map(d => d.away);
+                trendChart.update();
+            } catch (error) {
+                console.error("Error fetching trends:", error);
+            }
+        };
+
+        // Load top performers
+        const loadTopPerformers = async () => {
+            try {
+                const response = await fetch('/api/analytics/top-performers?limit=3');
+                if (!response.ok) return;
+                const data = await response.json();
+
+                let topHtml = '';
+                data.top_performers.forEach((p, i) => {
+                    topHtml += `
+                        <div class="top-performer-item rank-${i + 1}">
+                            <strong>${i + 1}. ${p.employee_name}</strong>
+                            <span class="float-end">${p.score}%</span>
+                        </div>
+                    `;
+                });
+                document.getElementById('top-performers').innerHTML = topHtml || '<p class="text-muted">No data</p>';
+
+                let bottomHtml = '';
+                data.needs_attention.forEach(p => {
+                    if (p.score < 60) {
+                        bottomHtml += `
+                            <div class="top-performer-item">
+                                <span class="text-danger">${p.employee_name}</span>
+                                <span class="float-end text-danger">${p.score}%</span>
+                            </div>
+                        `;
+                    }
+                });
+                document.getElementById('needs-attention').innerHTML = bottomHtml || '<p class="text-muted small">Everyone is doing great!</p>';
+            } catch (error) {
+                console.error("Error fetching top performers:", error);
+            }
+        };
+
+        // Render table
+        function renderTable(scores) {
+            const tbody = document.getElementById('employeeTableBody');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const gradeFilter = document.getElementById('gradeFilter').value;
+
+            let filtered = scores.filter(s => {
+                if (searchTerm && !s.employee_name.toLowerCase().includes(searchTerm)) return false;
+                if (gradeFilter && s.grade !== gradeFilter) return false;
+                return true;
+            });
+
+            tbody.innerHTML = '';
+            filtered.forEach((s, index) => {
+                const scoreClass = getScoreClass(s.grade);
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>#${index + 1}</strong></td>
+                        <td>
+                            <a href="/employee/${s.employee_name}" class="text-decoration-none fw-bold">
+                                ${s.employee_name} ↗
+                            </a>
+                        </td>
+                        <td>${s.department}</td>
+                        <td>
+                            <span class="score-badge ${scoreClass}">${s.score}%</span>
+                            <small class="text-muted ms-1">${s.grade}</small>
+                        </td>
+                        <td>${s.days_active} days active</td>
+                        <td>${s.present_hours}h</td>
+                        <td>
+                            <a href="/employee/${s.employee_name}" class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function getScoreClass(grade) {
+            switch (grade) {
+                case 'Excellent': return 'score-excellent';
+                case 'Good': return 'score-good';
+                case 'Average': return 'score-average';
+                case 'Needs Improvement': return 'score-needs-improvement';
+                case 'Poor': return 'score-poor';
+                default: return '';
+            }
+        }
+
+        // Search and filter
+        document.getElementById('searchInput').addEventListener('input', () => renderTable(allScores));
+        document.getElementById('statusFilter').addEventListener('change', () => renderTable(allScores));
+        document.getElementById('gradeFilter').addEventListener('change', () => renderTable(allScores));
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('gradeFilter').value = '';
+            renderTable(allScores);
+        }
+
+        // Create Employee
         const createEmployee = async () => {
             const name = document.getElementById('employeeName').value.trim();
             const dept = document.getElementById('employeeDept').value.trim();
@@ -217,13 +530,9 @@
             document.getElementById('keyResult').style.display = 'none';
         };
 
-        // Reset when modal closes
         document.getElementById('addEmployeeModal').addEventListener('hidden.bs.modal', resetModal);
 
-        setInterval(updateDashboard, 5000);
-        updateDashboard();
-
-        // Fetch and display user info
+        // Load user info
         const loadUserInfo = async () => {
             try {
                 const response = await fetch('/auth/me');
@@ -236,7 +545,21 @@
                 console.error('Failed to load user info:', e);
             }
         };
+
+        // Initialize
+        initChart();
         loadUserInfo();
+        updateDashboard();
+        loadScores();
+        loadTrends();
+        loadTopPerformers();
+
+        // Refresh every 30 seconds
+        setInterval(() => {
+            updateDashboard();
+            loadScores();
+            loadTrends();
+        }, 30000);
     </script>
 </body>
 
