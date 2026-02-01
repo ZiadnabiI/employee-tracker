@@ -531,8 +531,22 @@ async def get_employee_stats(name: str, request: Request, db: Session = Depends(
             last_status = log.status
     filtered_history.reverse()
 
+    # Determine current status with Heartbeat logic
+    employee = db.query(Employee).filter(Employee.name == name).first()
+    current_status = "Offline"
+    
+    if filtered_history and filtered_history[0].status:
+        current_status = filtered_history[0].status
+        
+    # Check 2-minute heartbeat timeout
+    if employee:
+        heartbeat_timeout = datetime.datetime.utcnow() - datetime.timedelta(seconds=120)
+        if employee.last_heartbeat is None or employee.last_heartbeat < heartbeat_timeout:
+            current_status = "Offline"
+
     return {
         "name": name,
+        "current_status": current_status,  # New explicit status
         "present_today": f"{int(present_seconds//3600)}h {int((present_seconds%3600)//60)}m",
         "break_today": f"{int(break_seconds//3600)}h {int((break_seconds%3600)//60)}m",
         "away_today": f"{int(away_seconds//3600)}h {int((away_seconds%3600)//60)}m",

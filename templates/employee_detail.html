@@ -284,24 +284,26 @@
 
                 allLogs = data.logs;
 
+
+
                 // Add Latest Status Badge
-                if (data.logs.length > 0) {
-                    const latest = data.logs[0].status;
-                    const badge = document.getElementById('live-status');
-                    if (['Present', 'WORK_START', 'BREAK_END'].includes(latest)) {
-                        badge.innerText = '🟢 Online';
-                        badge.className = 'live-badge badge badge-present';
-                    } else if (latest === 'BREAK_START') {
-                        badge.innerText = '☕ On Break';
-                        badge.className = 'live-badge badge badge-break';
-                    } else if (latest === 'Away') {
-                        badge.innerText = '⚠️ Away';
-                        badge.className = 'live-badge badge badge-away';
-                    } else {
-                        badge.innerText = '⚫ Offline';
-                        badge.className = 'live-badge badge badge-offline';
-                    }
+                const latest = data.current_status || (data.logs.length > 0 ? data.logs[0].status : 'Offline');
+                const badge = document.getElementById('live-status');
+
+                if (['Present', 'WORK_START', 'BREAK_END'].includes(latest)) {
+                    badge.innerText = '🟢 Online';
+                    badge.className = 'live-badge badge badge-present';
+                } else if (latest === 'BREAK_START') {
+                    badge.innerText = '☕ On Break';
+                    badge.className = 'live-badge badge badge-break';
+                } else if (latest === 'Away') {
+                    badge.innerText = '⚠️ Away';
+                    badge.className = 'live-badge badge badge-away';
+                } else {
+                    badge.innerText = '⚫ Offline';
+                    badge.className = 'live-badge badge bg-secondary';
                 }
+
 
                 filterByDate();
 
