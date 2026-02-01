@@ -1,3 +1,10 @@
+"""
+Employee Presence Monitor - Redesigned
+=======================================
+A modern desktop application for employee attendance tracking.
+Uses Windows Registry for storage (no external files).
+"""
+
 import cv2
 import time
 import requests
@@ -6,24 +13,90 @@ from tkinter import messagebox
 from threading import Thread
 from ultralytics import YOLO
 import os
-import json
 import uuid
-import subprocess
 
-# --- Configuration ---
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
 SERVER_URL = os.getenv("SERVER_URL", "https://employee-tracker-up30.onrender.com")
 CONFIDENCE_THRESHOLD = 0.5
-AWAY_LIMIT = 10 
-SECRETS_FILE = "secrets.json"
-DEVICE_ID_FILE = "device_id.txt"
+AWAY_LIMIT = 10
+REGISTRY_PATH = r"SOFTWARE\EmployeeTracker"
 
-def hide_file(filepath):
-    """Hide a file in Windows"""
-    if os.path.exists(filepath) and os.name == 'nt':
-        try:
-            subprocess.run(['attrib', '+H', filepath], check=True, capture_output=True)
-        except:
-            pass
+# =============================================================================
+# REGISTRY HELPERS (No File Storage)
+# =============================================================================
+
+def get_registry_value(key_name, default=None):
+    """Get a value from Windows Registry"""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH) as reg:
+            value, _ = winreg.QueryValueEx(reg, key_name)
+            return value
+    except:
+        return default
+
+def set_registry_value(key_name, value):
+    """Set a value in Windows Registry"""
+    try:
+        import winreg
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH) as reg:
+            winreg.SetValueEx(reg, key_name, 0, winreg.REG_SZ, str(value))
+        return True
+    except Exception as e:
+        print(f"Registry error: {e}")
+        return False
+
+def delete_registry_key():
+    """Delete all stored data from Registry"""
+    try:
+        import winreg
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH)
+    except:
+        pass
+
+# =============================================================================
+# STYLES - Dark Theme
+# =============================================================================
+
+class Colors:
+    # Background colors
+    BG_DARK = "#1a1a2e"
+    BG_DARKER = "#16213e"
+    BG_CARD = "#2d3748"
+    BG_CARD_HOVER = "#3d4a5c"
+    
+    # Accent colors
+    PRIMARY = "#00b894"
+    SECONDARY = "#00cec9"
+    WARNING = "#fdcb6e"
+    DANGER = "#e17055"
+    INFO = "#74b9ff"
+    
+    # Text colors
+    TEXT_PRIMARY = "#ffffff"
+    TEXT_SECONDARY = "#a0aec0"
+    TEXT_MUTED = "#718096"
+    
+    # Status colors
+    ONLINE = "#00b894"
+    AWAY = "#e17055"
+    BREAK = "#fdcb6e"
+    OFFLINE = "#636e72"
+
+class Fonts:
+    TITLE = ("Segoe UI", 16, "bold")
+    HEADING = ("Segoe UI", 14, "bold")
+    BODY = ("Segoe UI", 12)
+    BODY_BOLD = ("Segoe UI", 12, "bold")
+    SMALL = ("Segoe UI", 10)
+    TIMER = ("Consolas", 14, "bold")
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
 
 def format_time(seconds):
     """Format seconds into HH:MM:SS"""
@@ -32,191 +105,325 @@ def format_time(seconds):
     secs = int(seconds % 60)
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
+def get_hardware_id():
+    """Get or create a unique hardware ID (stored in Registry)"""
+    hw_id = get_registry_value("hardware_id")
+    if not hw_id:
+        hw_id = f"HW-{uuid.uuid4().hex[:8].upper()}"
+        set_registry_value("hardware_id", hw_id)
+    return hw_id
+
+# =============================================================================
+# MAIN APPLICATION
+# =============================================================================
+
 class EmployeeApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Employee Presence Monitor")
-        self.root.geometry("400x600")
-        self.root.configure(bg="#f0f2f5")
+        self.root.geometry("420x650")
+        self.root.configure(bg=Colors.BG_DARK)
+        self.root.resizable(False, False)
         
+        # State
         self.activation_key = None
-        self.hardware_id = self.get_hardware_id()
+        self.hardware_id = get_hardware_id()
         self.is_running = True
         self.monitoring_active = False
         self.in_break_mode = False
-        self.employee_name = "Unknown"
+        self.employee_name = "Employee"
         
-        # Time tracking - simple counters
+        # Time tracking
         self.session_start_time = None
         self.present_seconds = 0
         self.away_seconds = 0
         self.break_seconds = 0
-        self.last_tick = None
         self.current_status = "Present"
 
         self.build_ui()
         self.check_existing_login()
+        
+        # Handle window close
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-    def get_hardware_id(self):
-        if os.path.exists(DEVICE_ID_FILE):
-            with open(DEVICE_ID_FILE, "r") as f:
-                return f.read().strip()
-        else:
-            hw_id = f"HW-{uuid.uuid4().hex[:8].upper()}"
-            with open(DEVICE_ID_FILE, "w") as f:
-                f.write(hw_id)
-            hide_file(DEVICE_ID_FILE)
-            return hw_id
+    # =========================================================================
+    # UI BUILDING
+    # =========================================================================
 
     def build_ui(self):
+        """Build the main user interface"""
+        
         # Header
-        self.header_frame = tk.Frame(self.root, bg="#1877f2", height=60)
+        self.header_frame = tk.Frame(self.root, bg=Colors.BG_DARKER, height=70)
         self.header_frame.pack(fill="x")
-        self.label_title = tk.Label(self.header_frame, text="Employee Tracker", 
-                                    fg="white", bg="#1877f2", font=("Segoe UI", 14, "bold"))
-        self.label_title.pack(pady=15)
+        self.header_frame.pack_propagate(False)
+        
+        self.label_title = tk.Label(
+            self.header_frame, 
+            text="👤 Employee Tracker", 
+            fg=Colors.TEXT_PRIMARY, 
+            bg=Colors.BG_DARKER, 
+            font=Fonts.TITLE
+        )
+        self.label_title.pack(pady=20)
 
-        # Status Area
-        self.status_frame = tk.Frame(self.root, bg="#f0f2f5")
-        self.status_frame.pack(pady=10, fill="x")
+        # Status Indicator
+        self.status_frame = tk.Frame(self.root, bg=Colors.BG_DARK)
+        self.status_frame.pack(pady=15, fill="x", padx=20)
         
-        self.label_status = tk.Label(self.status_frame, text="Initializing...", 
-                                     fg="#65676b", bg="#f0f2f5", font=("Segoe UI", 11))
-        self.label_status.pack()
+        self.status_indicator = tk.Frame(self.status_frame, bg=Colors.OFFLINE, width=12, height=12)
+        self.status_indicator.pack(side="left", padx=(0, 10))
+        
+        self.label_status = tk.Label(
+            self.status_frame, 
+            text="Initializing...", 
+            fg=Colors.TEXT_SECONDARY, 
+            bg=Colors.BG_DARK, 
+            font=Fonts.BODY
+        )
+        self.label_status.pack(side="left")
 
-        # Time Stats Frame
-        self.stats_frame = tk.Frame(self.root, bg="white", padx=20, pady=15)
+        # Stats Card
+        self.stats_card = tk.Frame(self.root, bg=Colors.BG_CARD, padx=25, pady=20)
         
-        # Online time
-        row1 = tk.Frame(self.stats_frame, bg="white")
-        row1.pack(fill="x", pady=8)
-        tk.Label(row1, text="🟢 Online Time:", bg="white", fg="#333", 
-                 font=("Segoe UI", 12)).pack(side="left")
-        self.label_present_time = tk.Label(row1, text="00:00:00", bg="white", 
-                                           fg="#28a745", font=("Segoe UI", 12, "bold"))
-        self.label_present_time.pack(side="right")
+        # Online time row
+        self._create_stat_row(self.stats_card, "🟢 Online Time", "label_present_time", Colors.ONLINE)
         
-        # Away time
-        row2 = tk.Frame(self.stats_frame, bg="white")
-        row2.pack(fill="x", pady=8)
-        tk.Label(row2, text="🔴 Away Time:", bg="white", fg="#333", 
-                 font=("Segoe UI", 12)).pack(side="left")
-        self.label_away_time = tk.Label(row2, text="00:00:00", bg="white", 
-                                        fg="#dc3545", font=("Segoe UI", 12, "bold"))
-        self.label_away_time.pack(side="right")
+        # Away time row  
+        self._create_stat_row(self.stats_card, "🔴 Away Time", "label_away_time", Colors.AWAY)
         
-        # Break time
-        row3 = tk.Frame(self.stats_frame, bg="white")
-        row3.pack(fill="x", pady=8)
-        tk.Label(row3, text="☕ Break Time:", bg="white", fg="#333", 
-                 font=("Segoe UI", 12)).pack(side="left")
-        self.label_break_time = tk.Label(row3, text="00:00:00", bg="white", 
-                                         fg="#ff8c00", font=("Segoe UI", 12, "bold"))
-        self.label_break_time.pack(side="right")
+        # Break time row
+        self._create_stat_row(self.stats_card, "☕ Break Time", "label_break_time", Colors.BREAK)
         
-        # Session time
-        row4 = tk.Frame(self.stats_frame, bg="white")
-        row4.pack(fill="x", pady=8)
-        tk.Label(row4, text="⏱ Session:", bg="white", fg="#333", 
-                 font=("Segoe UI", 12)).pack(side="left")
-        self.label_session_time = tk.Label(row4, text="00:00:00", bg="white", 
-                                           fg="#17a2b8", font=("Segoe UI", 12, "bold"))
-        self.label_session_time.pack(side="right")
+        # Separator
+        tk.Frame(self.stats_card, bg=Colors.BG_DARK, height=1).pack(fill="x", pady=15)
+        
+        # Session time row
+        self._create_stat_row(self.stats_card, "⏱ Session", "label_session_time", Colors.INFO)
 
         # Action Area
-        self.action_frame = tk.Frame(self.root, bg="white", padx=20, pady=20)
-        self.action_frame.pack(pady=10, padx=20, fill="both", expand=True)
+        self.action_frame = tk.Frame(self.root, bg=Colors.BG_DARK, padx=25, pady=10)
+        self.action_frame.pack(pady=10, fill="both", expand=True)
 
-        # Break Button
-        self.btn_break = tk.Button(self.action_frame, text="☕ Take a Break", 
-                                   command=self.toggle_break, bg="#ffc107", fg="black", 
-                                   font=("Segoe UI", 12, "bold"), height=2, state="disabled")
+        # Break Button (hidden initially)
+        self.btn_break = tk.Button(
+            self.action_frame, 
+            text="☕ Take a Break", 
+            command=self.toggle_break, 
+            bg=Colors.WARNING, 
+            fg="#333",
+            activebackground=Colors.BG_CARD_HOVER,
+            font=Fonts.BODY_BOLD, 
+            height=2,
+            relief="flat",
+            cursor="hand2"
+        )
         
+        # End Shift Button (hidden initially)
+        self.btn_end_shift = tk.Button(
+            self.action_frame,
+            text="🏁 End Shift",
+            command=self.show_end_shift_modal,
+            bg=Colors.DANGER,
+            fg="white",
+            activebackground="#c0392b",
+            font=Fonts.BODY_BOLD,
+            height=2,
+            relief="flat",
+            cursor="hand2"
+        )
+
         # Login Widgets
-        self.entry_key = tk.Entry(self.action_frame, font=("Segoe UI", 14), justify='center')
-        self.btn_activate = tk.Button(self.action_frame, text="Activate Device", 
-                                      command=self.activate_device, bg="#42b72a", fg="white", 
-                                      font=("Segoe UI", 12, "bold"), height=2)
+        self.login_frame = tk.Frame(self.action_frame, bg=Colors.BG_DARK)
+        
+        tk.Label(
+            self.login_frame,
+            text="Enter Activation Key",
+            fg=Colors.TEXT_SECONDARY,
+            bg=Colors.BG_DARK,
+            font=Fonts.SMALL
+        ).pack(pady=(0, 8))
+        
+        self.entry_key = tk.Entry(
+            self.login_frame, 
+            font=Fonts.BODY, 
+            justify='center',
+            bg=Colors.BG_CARD,
+            fg=Colors.TEXT_PRIMARY,
+            insertbackground=Colors.TEXT_PRIMARY,
+            relief="flat",
+            width=25
+        )
+        self.entry_key.pack(pady=5, ipady=10)
+        
+        self.btn_activate = tk.Button(
+            self.login_frame, 
+            text="🔓 Activate Device", 
+            command=self.activate_device, 
+            bg=Colors.PRIMARY, 
+            fg="white",
+            activebackground=Colors.SECONDARY,
+            font=Fonts.BODY_BOLD, 
+            height=2,
+            relief="flat",
+            cursor="hand2"
+        )
+        self.btn_activate.pack(pady=15, fill="x")
 
-    def show_end_shift_modal(self):
-        """Show confirmation modal for ending shift"""
-        modal = tk.Toplevel(self.root)
-        modal.title("End Shift")
-        modal.geometry("400x300")
-        modal.configure(bg="white")
-        modal.resizable(False, False)
-        modal.transient(self.root)
-        modal.grab_set()
+        # Footer
+        self.footer_frame = tk.Frame(self.root, bg=Colors.BG_DARKER, height=40)
+        self.footer_frame.pack(fill="x", side="bottom")
+        self.footer_frame.pack_propagate(False)
         
-        # Center the modal
-        modal.update_idletasks()
-        x = self.root.winfo_x() + (self.root.winfo_width() - 400) // 2
-        y = self.root.winfo_y() + (self.root.winfo_height() - 300) // 2
-        modal.geometry(f"400x300+{x}+{y}")
-        
-        # Content
-        tk.Label(modal, text="⚠️", font=("Segoe UI", 48), bg="white").pack(pady=15)
-        tk.Label(modal, text="End Shift?", font=("Segoe UI", 16, "bold"), bg="white").pack()
-        tk.Label(modal, text="This will close the monitoring app.", 
-                 font=("Segoe UI", 11), bg="white", fg="#666").pack(pady=10)
-        
-        if self.session_start_time:
-            session_duration = time.time() - self.session_start_time
-            tk.Label(modal, text=f"Session: {format_time(session_duration)}", 
-                     font=("Segoe UI", 12, "bold"), bg="white", fg="#17a2b8").pack(pady=5)
-        
-        # Buttons frame with more space
-        btn_frame = tk.Frame(modal, bg="white")
-        btn_frame.pack(pady=25, fill="x", padx=40)
-        
-        def confirm_end_shift():
-            modal.destroy()
-            self.end_shift()
-        
-        def cancel():
-            modal.destroy()
-        
-        # BIGGER BUTTONS with proper styling
-        cancel_btn = tk.Button(btn_frame, text="Cancel", command=cancel, 
-                               bg="#cccccc", fg="black", font=("Segoe UI", 14, "bold"),
-                               width=10, height=2, relief="raised", cursor="hand2")
-        cancel_btn.pack(side="left", padx=10)
-        
-        end_btn = tk.Button(btn_frame, text="End Shift", command=confirm_end_shift, 
-                            bg="#e74c3c", fg="white", font=("Segoe UI", 14, "bold"),
-                            width=10, height=2, relief="raised", cursor="hand2")
-        end_btn.pack(side="right", padx=10)
+        tk.Label(
+            self.footer_frame,
+            text=f"Device: {self.hardware_id}",
+            fg=Colors.TEXT_MUTED,
+            bg=Colors.BG_DARKER,
+            font=Fonts.SMALL
+        ).pack(pady=10)
 
-    def end_shift(self):
-        """Properly close the app without hanging"""
-        # Stop all loops first
-        self.is_running = False
-        self.monitoring_active = False
+    def _create_stat_row(self, parent, label_text, attr_name, color):
+        """Create a stat row with label and value"""
+        row = tk.Frame(parent, bg=Colors.BG_CARD)
+        row.pack(fill="x", pady=10)
         
-        # Send log in background
+        tk.Label(
+            row, 
+            text=label_text, 
+            bg=Colors.BG_CARD, 
+            fg=Colors.TEXT_SECONDARY, 
+            font=Fonts.BODY
+        ).pack(side="left")
+        
+        label = tk.Label(
+            row, 
+            text="00:00:00", 
+            bg=Colors.BG_CARD, 
+            fg=color, 
+            font=Fonts.TIMER
+        )
+        label.pack(side="right")
+        setattr(self, attr_name, label)
+
+    # =========================================================================
+    # AUTHENTICATION
+    # =========================================================================
+
+    def check_existing_login(self):
+        """Check if user is already logged in (from Registry)"""
+        self.activation_key = get_registry_value("activation_key")
+        self.employee_name = get_registry_value("employee_name", "Employee")
+        
+        if self.activation_key:
+            self.verify_checkin()
+        else:
+            self.show_login_ui()
+
+    def show_login_ui(self):
+        """Show the login interface"""
+        self.label_status.config(text="Please enter your Activation Key")
+        self.status_indicator.config(bg=Colors.OFFLINE)
+        self.login_frame.pack(pady=20, fill="x")
+
+    def show_main_ui(self):
+        """Show the main monitoring interface"""
+        self.login_frame.pack_forget()
+        
+        self.label_title.config(text=f"👤 {self.employee_name}")
+        self.label_status.config(text="Monitoring Active", fg=Colors.ONLINE)
+        self.status_indicator.config(bg=Colors.ONLINE)
+        
+        self.stats_card.pack(pady=10, padx=20, fill="x")
+        
+        self.btn_break.pack(pady=10, fill="x")
+        self.btn_end_shift.pack(pady=5, fill="x")
+        
+        # Fetch today's time from server
+        self.fetch_initial_time()
+        
+        # Start monitoring
+        if not self.monitoring_active:
+            self.monitoring_active = True
+            self.session_start_time = time.time()
+            Thread(target=self.monitoring_loop, daemon=True).start()
+            Thread(target=self.heartbeat_loop, daemon=True).start()
+            self.root.after(1000, self.tick_time)
+
+    def activate_device(self):
+        """Activate device with the entered key"""
+        key = self.entry_key.get().strip()
+        if not key:
+            messagebox.showwarning("Missing Key", "Please enter an activation key")
+            return
+        
+        self.label_status.config(text="Activating...", fg=Colors.WARNING)
+        
         try:
-            self.send_log("SHUTDOWN")
-        except:
-            pass
+            payload = {"activation_key": key, "hardware_id": self.hardware_id}
+            resp = requests.post(f"{SERVER_URL}/activate-device", json=payload, timeout=10)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                self.activation_key = key
+                self.employee_name = data.get("employee_name", "Employee")
+                
+                # Save to Registry (no files!)
+                set_registry_value("activation_key", key)
+                set_registry_value("employee_name", self.employee_name)
+                
+                self.show_main_ui()
+            else:
+                error_msg = resp.json().get("detail", "Activation failed")
+                messagebox.showerror("Activation Failed", error_msg)
+                self.label_status.config(text="Activation failed", fg=Colors.DANGER)
+        except Exception as e:
+            messagebox.showerror("Connection Error", f"Could not reach server: {e}")
+            self.label_status.config(text="Connection error", fg=Colors.DANGER)
+
+    def verify_checkin(self):
+        """Verify existing login with server"""
+        self.label_status.config(text="Verifying...", fg=Colors.WARNING)
         
-        # Give monitoring thread time to stop
-        time.sleep(0.5)
-        
-        # Force close OpenCV windows
         try:
-            cv2.destroyAllWindows()
+            payload = {"activation_key": self.activation_key}
+            resp = requests.post(f"{SERVER_URL}/verify-checkin", json=payload, timeout=5)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                self.employee_name = data.get("employee_name", "Employee")
+                set_registry_value("employee_name", self.employee_name)
+                self.show_main_ui()
+            else:
+                # Session expired, show login
+                self.label_status.config(text="Session expired. Please login again.", fg=Colors.WARNING)
+                self.show_login_ui()
         except:
-            pass
-        
-        # Force exit the application
+            self.label_status.config(text="Server offline. Retrying...", fg=Colors.WARNING)
+            self.root.after(3000, self.verify_checkin)
+
+    # =========================================================================
+    # TIME TRACKING
+    # =========================================================================
+
+    def fetch_initial_time(self):
+        """Fetch today's accumulated time from server"""
         try:
-            self.root.quit()
-        except:
-            pass
-        
-        # Force terminate if still running
-        import os
-        os._exit(0)
+            resp = requests.get(f"{SERVER_URL}/api/employee-time/{self.activation_key}", timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                self.present_seconds = data.get("present_seconds", 0)
+                self.away_seconds = data.get("away_seconds", 0)
+                self.break_seconds = data.get("break_seconds", 0)
+                
+                # Update display
+                self.label_present_time.config(text=format_time(self.present_seconds))
+                self.label_away_time.config(text=format_time(self.away_seconds))
+                self.label_break_time.config(text=format_time(self.break_seconds))
+                
+                print(f"✓ Synced time - Present: {self.present_seconds}s, Away: {self.away_seconds}s")
+        except Exception as e:
+            print(f"Could not sync time: {e}")
 
     def tick_time(self):
         """Called every second to update counters"""
@@ -244,52 +451,126 @@ class EmployeeApp:
         if self.is_running:
             self.root.after(1000, self.tick_time)
 
-    def check_existing_login(self):
-        if os.path.exists(SECRETS_FILE):
-            try:
-                with open(SECRETS_FILE, "r") as f:
-                    data = json.load(f)
-                    self.activation_key = data.get("activation_key")
-                    self.employee_name = data.get("employee_name", "Employee")
-                    if self.activation_key:
-                        self.verify_checkin()
-                        return
-            except:
-                pass
-        self.show_login_ui()
+    # =========================================================================
+    # BREAK & SHIFT MANAGEMENT
+    # =========================================================================
 
-    def show_login_ui(self):
-        self.label_status.config(text="Please enter your Activation Key")
-        self.entry_key.pack(pady=10, fill="x")
-        self.btn_activate.pack(pady=10, fill="x")
+    def toggle_break(self):
+        """Toggle break mode"""
+        if self.in_break_mode:
+            # Resume Work
+            self.in_break_mode = False
+            self.current_status = "Present"
+            self.send_log("BREAK_END")
+            self.btn_break.config(text="☕ Take a Break", bg=Colors.WARNING, fg="#333")
+            self.label_status.config(text="Monitoring Active", fg=Colors.ONLINE)
+            self.status_indicator.config(bg=Colors.ONLINE)
+        else:
+            # Start Break
+            self.in_break_mode = True
+            self.send_log("BREAK_START")
+            self.btn_break.config(text="▶ Resume Work", bg=Colors.PRIMARY, fg="white")
+            self.label_status.config(text="On Break", fg=Colors.BREAK)
+            self.status_indicator.config(bg=Colors.BREAK)
 
-    def show_main_ui(self):
-        self.entry_key.pack_forget()
-        self.btn_activate.pack_forget()
+    def show_end_shift_modal(self):
+        """Show confirmation modal for ending shift"""
+        modal = tk.Toplevel(self.root)
+        modal.title("End Shift")
+        modal.geometry("380x280")
+        modal.configure(bg=Colors.BG_CARD)
+        modal.resizable(False, False)
+        modal.transient(self.root)
+        modal.grab_set()
         
-        self.label_title.config(text=f"Welcome, {self.employee_name}")
-        self.label_status.config(text="● Monitoring Active", fg="green")
+        # Center the modal
+        modal.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - 380) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 280) // 2
+        modal.geometry(f"380x280+{x}+{y}")
         
-        self.stats_frame.pack(pady=10, padx=20, fill="x")
+        # Content
+        tk.Label(modal, text="⚠️", font=("Segoe UI", 48), bg=Colors.BG_CARD, fg=Colors.WARNING).pack(pady=15)
+        tk.Label(modal, text="End Shift?", font=Fonts.HEADING, bg=Colors.BG_CARD, fg=Colors.TEXT_PRIMARY).pack()
+        tk.Label(modal, text="This will close the monitoring app.", font=Fonts.SMALL, bg=Colors.BG_CARD, fg=Colors.TEXT_MUTED).pack(pady=5)
         
-        self.btn_break.config(state="normal", text="☕ Take a Break", bg="#ffc107")
-        self.btn_break.pack(pady=15, fill="x")
+        if self.session_start_time:
+            session_duration = time.time() - self.session_start_time
+            tk.Label(modal, text=f"Session: {format_time(session_duration)}", font=Fonts.BODY_BOLD, bg=Colors.BG_CARD, fg=Colors.INFO).pack(pady=5)
         
-        # Fetch today's accumulated time from server
-        self.fetch_initial_time()
+        # Buttons
+        btn_frame = tk.Frame(modal, bg=Colors.BG_CARD)
+        btn_frame.pack(pady=20, fill="x", padx=30)
         
-        # Initialize session timing
-        self.session_start_time = time.time()
-        self.current_status = "Present"
+        tk.Button(
+            btn_frame, text="Cancel", command=modal.destroy,
+            bg=Colors.BG_DARK, fg=Colors.TEXT_PRIMARY,
+            font=Fonts.BODY, relief="flat", width=12, cursor="hand2"
+        ).pack(side="left", padx=5)
         
-        # Start monitoring
-        if not self.monitoring_active:
-            self.monitoring_active = True
-            Thread(target=self.monitoring_loop, daemon=True).start()
-            Thread(target=self.heartbeat_loop, daemon=True).start()  # Start heartbeat
-            # Start the timer tick
-            self.root.after(1000, self.tick_time)
-    
+        tk.Button(
+            btn_frame, text="End Shift", command=lambda: self.end_shift(modal),
+            bg=Colors.DANGER, fg="white",
+            font=Fonts.BODY_BOLD, relief="flat", width=12, cursor="hand2"
+        ).pack(side="right", padx=5)
+
+    def end_shift(self, modal=None):
+        """End the shift and close the app"""
+        self.send_log("WORK_END")
+        self.is_running = False
+        self.monitoring_active = False
+        if modal:
+            modal.destroy()
+        self.root.quit()
+
+    # =========================================================================
+    # MONITORING & SERVER COMMUNICATION
+    # =========================================================================
+
+    def monitoring_loop(self):
+        """Main camera monitoring loop"""
+        model = YOLO("yolo11n.pt")
+        cap = cv2.VideoCapture(0)
+        consecutive_away = 0
+        
+        while self.is_running:
+            if self.in_break_mode:
+                time.sleep(1)
+                continue
+            
+            ret, frame = cap.read()
+            if not ret:
+                time.sleep(1)
+                continue
+            
+            results = model(frame, verbose=False)
+            person_detected = False
+            
+            for result in results:
+                for box in result.boxes:
+                    if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
+                        person_detected = True
+                        break
+            
+            if person_detected:
+                consecutive_away = 0
+                if self.current_status != "Present":
+                    self.current_status = "Present"
+                    self.send_log("Present")
+                    self.root.after(0, lambda: self.label_status.config(text="Monitoring Active", fg=Colors.ONLINE))
+                    self.root.after(0, lambda: self.status_indicator.config(bg=Colors.ONLINE))
+            else:
+                consecutive_away += 1
+                if consecutive_away >= AWAY_LIMIT and self.current_status != "Away":
+                    self.current_status = "Away"
+                    self.send_log("Away")
+                    self.root.after(0, lambda: self.label_status.config(text="Away Detected", fg=Colors.AWAY))
+                    self.root.after(0, lambda: self.status_indicator.config(bg=Colors.AWAY))
+            
+            time.sleep(1)
+        
+        cap.release()
+
     def heartbeat_loop(self):
         """Send heartbeat to server every 30 seconds"""
         while self.is_running:
@@ -297,192 +578,34 @@ class EmployeeApp:
                 payload = {"activation_key": self.activation_key}
                 resp = requests.post(f"{SERVER_URL}/heartbeat", json=payload, timeout=5)
                 if resp.status_code == 200:
-                    print(f"💓 Heartbeat sent successfully")
-                else:
-                    print(f"⚠️ Heartbeat failed: {resp.status_code}")
+                    print("💓 Heartbeat OK")
             except Exception as e:
-                print(f"❌ Heartbeat error: {e}")
+                print(f"❌ Heartbeat failed: {e}")
             
-            # Wait 30 seconds before next heartbeat
             time.sleep(30)
-    
-    def fetch_initial_time(self):
-        """Fetch today's accumulated time from server to continue where we left off"""
-        try:
-            resp = requests.get(f"{SERVER_URL}/api/employee-time/{self.activation_key}", timeout=5)
-            if resp.status_code == 200:
-                data = resp.json()
-                self.present_seconds = data.get("present_seconds", 0)
-                self.away_seconds = data.get("away_seconds", 0)
-                self.break_seconds = data.get("break_seconds", 0)
-                print(f"Synced time from server: Present={self.present_seconds}s, Away={self.away_seconds}s, Break={self.break_seconds}s")
-                # Update labels immediately
-                self.label_present_time.config(text=format_time(self.present_seconds))
-                self.label_away_time.config(text=format_time(self.away_seconds))
-                self.label_break_time.config(text=format_time(self.break_seconds))
-            else:
-                # If server fails, start from zero
-                self.present_seconds = 0
-                self.away_seconds = 0
-                self.break_seconds = 0
-        except Exception as e:
-            print(f"Failed to fetch initial time: {e}")
-            # Start from zero if server unavailable
-            self.present_seconds = 0
-            self.away_seconds = 0
-            self.break_seconds = 0
-
-    def activate_device(self):
-        key = self.entry_key.get().strip()
-        if not key:
-            messagebox.showwarning("Input Error", "Please enter an activation key")
-            return
-
-        try:
-            payload = {"activation_key": key, "hardware_id": self.hardware_id}
-            resp = requests.post(f"{SERVER_URL}/activate-device", json=payload, timeout=5)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                self.activation_key = key
-                self.employee_name = data.get("employee_name", "Employee")
-                
-                with open(SECRETS_FILE, "w") as f:
-                    json.dump({"activation_key": key, "employee_name": self.employee_name}, f)
-                hide_file(SECRETS_FILE)
-                
-                self.show_main_ui()
-            else:
-                messagebox.showerror("Activation Failed", resp.json().get("detail", "Unknown Error"))
-        except Exception as e:
-            messagebox.showerror("Connection Error", f"Could not reach server: {e}")
-
-    def verify_checkin(self):
-        self.label_status.config(text="Verifying...")
-        try:
-            payload = {"activation_key": self.activation_key}
-            resp = requests.post(f"{SERVER_URL}/verify-checkin", json=payload, timeout=5)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                self.employee_name = data.get("employee_name", "Employee")
-                self.show_main_ui()
-            else:
-                self.label_status.config(text="Session Expired. Please login again.")
-                self.show_login_ui()
-        except:
-             self.label_status.config(text="Server Offline. Retrying...")
-             self.root.after(3000, self.verify_checkin)
-
-    def toggle_break(self):
-        if self.in_break_mode:
-            # Resume Work
-            self.in_break_mode = False
-            self.current_status = "Present"
-            self.send_log("BREAK_END")
-            self.btn_break.config(text="☕ Take a Break", bg="#ffc107")
-            self.label_status.config(text="● Monitoring Active", fg="green")
-        else:
-            # Start Break
-            self.in_break_mode = True
-            self.send_log("BREAK_START")
-            self.btn_break.config(text="▶ Resume Work", bg="#42b72a")
-            self.label_status.config(text="⏸ On Break", fg="orange")
 
     def send_log(self, status):
+        """Send activity log to server"""
         if self.in_break_mode and status == "Present":
             return
         try:
-            requests.post(f"{SERVER_URL}/log-activity", 
-                          json={"activation_key": self.activation_key, "status": status}, timeout=2)
+            requests.post(
+                f"{SERVER_URL}/log-activity", 
+                json={"activation_key": self.activation_key, "status": status}, 
+                timeout=2
+            )
         except:
             pass
 
-    def monitoring_loop(self):
-        model = YOLO('yolov8n.pt')
-        cap = None 
-        last_heartbeat = 0
-        last_seen_time = time.time()
-        camera_retries = 0
-        max_retries = 5
-        
-        while self.is_running:
-            if self.in_break_mode:
-                if cap is not None:
-                    cap.release()
-                    cv2.destroyAllWindows()
-                    cap = None
-                time.sleep(0.5)
-                continue
-            
-            # Try to open camera with different backends
-            if cap is None:
-                # Try DirectShow first (more reliable on Windows)
-                cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-                if not cap.isOpened():
-                    # Fallback to default MSMF
-                    cap = cv2.VideoCapture(0)
-                if not cap.isOpened():
-                    camera_retries += 1
-                    if camera_retries <= max_retries:
-                        time.sleep(2)
-                        continue
-                    else:
-                        # Camera not available, keep trying
-                        time.sleep(5)
-                        camera_retries = 0
-                        continue
-                else:
-                    camera_retries = 0
-            
-            ret, frame = cap.read()
-            if not ret:
-                # Release and retry
-                cap.release()
-                cap = None
-                time.sleep(1)
-                continue
+    def on_closing(self):
+        """Handle window close"""
+        self.show_end_shift_modal()
 
-            results = model(frame, classes=[0], conf=CONFIDENCE_THRESHOLD, verbose=False)
-            person_detected = len(results[0].boxes) > 0
-            now = time.time()
-            
-            if person_detected:
-                last_seen_time = now
-                if self.current_status == "Away":
-                    self.current_status = "Present"
-                    self.send_log("Present")
-            else:
-                if (now - last_seen_time) > AWAY_LIMIT and self.current_status == "Present":
-                    self.current_status = "Away"
-                    self.send_log("Away")
-
-            # Visual feedback
-            display_frame = frame.copy()
-            color = (0, 255, 0) if self.current_status == "Present" else (0, 0, 255)
-            cv2.putText(display_frame, f"Status: {self.current_status}", (10, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-            
-            if self.current_status == "Away":
-                overlay = display_frame.copy()
-                cv2.rectangle(overlay, (0, 0), (display_frame.shape[1], display_frame.shape[0]), (0, 0, 255), -1)
-                cv2.addWeighted(overlay, 0.3, display_frame, 0.7, 0, display_frame)
-            
-            # Heartbeat
-            if self.current_status == "Present" and (now - last_heartbeat > 5):
-                Thread(target=self.send_log, args=("Present",)).start()
-                last_heartbeat = now
-
-            small_frame = cv2.resize(display_frame, (320, 240))
-            cv2.imshow('Live Monitor', small_frame)
-            cv2.waitKey(1)
-                
-        if cap:
-            cap.release()
-        cv2.destroyAllWindows()
+# =============================================================================
+# MAIN ENTRY POINT
+# =============================================================================
 
 if __name__ == "__main__":
     root = tk.Tk()
     app = EmployeeApp(root)
-    root.protocol("WM_DELETE_WINDOW", app.show_end_shift_modal)
     root.mainloop()
