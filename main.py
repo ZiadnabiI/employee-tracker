@@ -330,6 +330,57 @@ async def verify_checkin(data: dict, db: Session = Depends(get_db)):
         
     return {"status": "ACTIVE", "employee_name": employee.name}
 
+@app.get("/api/employee-time/{activation_key}")
+async def get_employee_time(activation_key: str, db: Session = Depends(get_db)):
+    """Get today's time stats for an employee - used by detector.py on startup"""
+    employee = db.query(Employee).filter(Employee.activation_key == activation_key).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    logs = db.query(EmployeeLog).filter(
+        EmployeeLog.employee_name == employee.name,
+        EmployeeLog.timestamp >= today_start
+    ).order_by(EmployeeLog.timestamp).all()
+    
+    present_seconds = 0
+    away_seconds = 0
+    break_seconds = 0
+    
+    last_time = None
+    state = "Offline"
+    
+    for log in logs:
+        if last_time:
+            delta = (log.timestamp - last_time).total_seconds()
+            if state in ["Present", "WORK_START", "BREAK_END"]:
+                present_seconds += delta
+            elif state == "BREAK_START":
+                break_seconds += delta
+            elif state == "Away":
+                away_seconds += delta
+        last_time = log.timestamp
+        state = log.status
+    
+    # Add time since last log until now
+    if last_time:
+        now_delta = (datetime.datetime.utcnow() - last_time).total_seconds()
+        if state in ["Present", "WORK_START", "BREAK_END"]:
+            present_seconds += now_delta
+        elif state == "BREAK_START":
+            break_seconds += now_delta
+        elif state == "Away":
+            away_seconds += now_delta
+    
+    return {
+        "employee_name": employee.name,
+        "present_seconds": int(present_seconds),
+        "away_seconds": int(away_seconds),
+        "break_seconds": int(break_seconds),
+        "current_status": state
+    }
+
 # ===============================
 # COMPANY MANAGEMENT (Super Admin)
 # ===============================

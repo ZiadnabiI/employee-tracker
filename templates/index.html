@@ -207,10 +207,10 @@
         <!-- Search and Filter -->
         <div class="search-filter-bar">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <input type="text" class="form-control" id="searchInput" placeholder="🔍 Search employees...">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select class="form-select" id="statusFilter">
                         <option value="">All Statuses</option>
                         <option value="Present">Present</option>
@@ -219,46 +219,48 @@
                         <option value="Offline">Offline</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="gradeFilter">
-                        <option value="">All Grades</option>
-                        <option value="Excellent">🟢 Excellent</option>
-                        <option value="Good">🔵 Good</option>
-                        <option value="Average">🟡 Average</option>
-                        <option value="Needs Improvement">🟠 Needs Improvement</option>
-                        <option value="Poor">🔴 Poor</option>
+                <div class="col-md-2">
+                    <select class="form-select" id="dateFilter">
+                        <option value="today">📅 Today</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="custom">Custom Date</option>
                     </select>
+                </div>
+                <div class="col-md-3" id="customDateContainer" style="display: none;">
+                    <input type="date" class="form-control" id="customDate">
                 </div>
                 <div class="col-md-2">
                     <button class="btn btn-light w-100" onclick="resetFilters()">Reset</button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Employee Table -->
-        <div class="employee-table shadow">
-            <div class="card-header bg-dark text-white py-3">
-                <h5 class="mb-0">📋 Employee Performance</h5>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Rank</th>
-                            <th>Employee</th>
-                            <th>Department</th>
-                            <th>Score</th>
-                            <th>Status</th>
-                            <th>Present Time</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="employeeTableBody">
-                        <!-- Rows populated by JS -->
-                    </tbody>
-                </table>
-            </div>
+    <!-- Employee Table -->
+    <div class="employee-table shadow">
+        <div class="card-header bg-dark text-white py-3">
+            <h5 class="mb-0">📋 Employee Performance</h5>
         </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Rank</th>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Away Time</th>
+                        <th>Status</th>
+                        <th>Present Time</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTableBody">
+                    <!-- Rows populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
     </div>
 
     <!-- Add Employee Modal -->
@@ -362,9 +364,9 @@
         };
 
         // Load scores
-        const loadScores = async () => {
+        const loadScores = async (days = 7) => {
             try {
-                const response = await fetch('/api/scores?days=7');
+                const response = await fetch(`/api/scores?days=${days}`);
                 if (!response.ok) return;
                 const data = await response.json();
 
@@ -378,9 +380,9 @@
         };
 
         // Load trends
-        const loadTrends = async () => {
+        const loadTrends = async (days = 7) => {
             try {
-                const response = await fetch('/api/analytics/trends?days=7');
+                const response = await fetch(`/api/analytics/trends?days=${days}`);
                 if (!response.ok) return;
                 const data = await response.json();
 
@@ -464,7 +466,8 @@
 
             tbody.innerHTML = '';
             filtered.forEach((s, index) => {
-                const scoreClass = getScoreClass(s.grade);
+                const awayHours = s.away_hours || 0;
+                const awayClass = awayHours > 2 ? 'text-danger fw-bold' : (awayHours > 1 ? 'text-warning' : 'text-success');
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>#${index + 1}</strong></td>
@@ -475,8 +478,7 @@
                         </td>
                         <td>${s.department}</td>
                         <td>
-                            <span class="score-badge ${scoreClass}">${s.score}%</span>
-                            <small class="text-muted ms-1">${s.grade}</small>
+                            <span class="${awayClass}">⏱️ ${awayHours}h</span>
                         </td>
                         <td>${s.days_active} days active</td>
                         <td>${s.present_hours}h</td>
@@ -502,12 +504,28 @@
         // Search and filter
         document.getElementById('searchInput').addEventListener('input', () => renderTable(allScores));
         document.getElementById('statusFilter').addEventListener('change', () => renderTable(allScores));
-        document.getElementById('gradeFilter').addEventListener('change', () => renderTable(allScores));
+        document.getElementById('dateFilter').addEventListener('change', function () {
+            if (this.value === 'custom') {
+                document.getElementById('customDateContainer').style.display = 'block';
+            } else {
+                document.getElementById('customDateContainer').style.display = 'none';
+                // Reload scores with new date range
+                const days = this.value === 'today' ? 1 : parseInt(this.value);
+                loadScores(days);
+                loadTrends(days);
+            }
+        });
+        document.getElementById('customDate').addEventListener('change', function () {
+            // For custom date, we still use 1 day but centered on selected date
+            loadScores(1, this.value);
+        });
 
         function resetFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('statusFilter').value = '';
-            document.getElementById('gradeFilter').value = '';
+            document.getElementById('dateFilter').value = 'today';
+            document.getElementById('customDateContainer').style.display = 'none';
+            loadScores(1);
             renderTable(allScores);
         }
 

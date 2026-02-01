@@ -275,11 +275,11 @@ class EmployeeApp:
         self.btn_break.config(state="normal", text="☕ Take a Break", bg="#ffc107")
         self.btn_break.pack(pady=15, fill="x")
         
-        # Initialize timing
+        # Fetch today's accumulated time from server
+        self.fetch_initial_time()
+        
+        # Initialize session timing
         self.session_start_time = time.time()
-        self.present_seconds = 0
-        self.away_seconds = 0
-        self.break_seconds = 0
         self.current_status = "Present"
         
         # Start monitoring
@@ -288,6 +288,32 @@ class EmployeeApp:
             Thread(target=self.monitoring_loop, daemon=True).start()
             # Start the timer tick
             self.root.after(1000, self.tick_time)
+    
+    def fetch_initial_time(self):
+        """Fetch today's accumulated time from server to continue where we left off"""
+        try:
+            resp = requests.get(f"{SERVER_URL}/api/employee-time/{self.activation_key}", timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                self.present_seconds = data.get("present_seconds", 0)
+                self.away_seconds = data.get("away_seconds", 0)
+                self.break_seconds = data.get("break_seconds", 0)
+                print(f"Synced time from server: Present={self.present_seconds}s, Away={self.away_seconds}s, Break={self.break_seconds}s")
+                # Update labels immediately
+                self.label_present_time.config(text=format_time(self.present_seconds))
+                self.label_away_time.config(text=format_time(self.away_seconds))
+                self.label_break_time.config(text=format_time(self.break_seconds))
+            else:
+                # If server fails, start from zero
+                self.present_seconds = 0
+                self.away_seconds = 0
+                self.break_seconds = 0
+        except Exception as e:
+            print(f"Failed to fetch initial time: {e}")
+            # Start from zero if server unavailable
+            self.present_seconds = 0
+            self.away_seconds = 0
+            self.break_seconds = 0
 
     def activate_device(self):
         key = self.entry_key.get().strip()
