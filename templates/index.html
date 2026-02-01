@@ -400,6 +400,10 @@
                 // Render recent activity
                 renderRecentActivity(dashboardLogs);
 
+                // Update top performers and currently away (they use dashboardLogs)
+                loadTopPerformers();
+                loadCurrentlyAway();
+
                 // Also render table with dashboard logs if scores not loaded yet
                 if (allScores.length === 0) {
                     renderTableFromLogs(dashboardLogs);
@@ -537,39 +541,58 @@
             }
         };
 
-        // Load top performers
+        // Load top performers (least break time)
         const loadTopPerformers = async () => {
             try {
-                const response = await fetch('/api/analytics/top-performers?limit=3');
-                if (!response.ok) return;
-                const data = await response.json();
+                // Use dashboard logs to calculate break time
+                if (dashboardLogs.length === 0) {
+                    document.getElementById('top-performers').innerHTML = '<p class="text-muted">No data</p>';
+                    return;
+                }
+
+                // Sort by break time (ascending - least break is best)
+                // We don't have break time in logs, so we'll show those who are online longest
+                const onlineEmployees = dashboardLogs
+                    .filter(emp => ['Present', 'WORK_START', 'BREAK_END'].includes(emp.status))
+                    .sort((a, b) => {
+                        // Parse present time and sort by it (most present = top performer)
+                        const getMinutes = (timeStr) => {
+                            const match = timeStr.match(/(\d+)h\s*(\d+)m/);
+                            if (match) return parseInt(match[1]) * 60 + parseInt(match[2]);
+                            return 0;
+                        };
+                        return getMinutes(b.present_time || '0h 0m') - getMinutes(a.present_time || '0h 0m');
+                    });
 
                 let topHtml = '';
-                data.top_performers.forEach((p, i) => {
+                onlineEmployees.slice(0, 3).forEach((p, i) => {
+                    const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
                     topHtml += `
-                        <div class="top-performer-item rank-${i + 1}">
+                        <div class="top-performer-item rank-${i + 1}" style="background: ${rankColors[i]}22; border-left: 3px solid ${rankColors[i]};">
                             <strong>${i + 1}. ${p.employee_name}</strong>
-                            <span class="float-end">${p.score}%</span>
+                            <span class="float-end text-success">🕐 ${p.present_time || '0h 0m'}</span>
                         </div>
                     `;
                 });
-                document.getElementById('top-performers').innerHTML = topHtml || '<p class="text-muted">No data</p>';
+                document.getElementById('top-performers').innerHTML = topHtml || '<p class="text-muted">No online employees</p>';
 
             } catch (error) {
-                console.error("Error fetching top performers:", error);
+                console.error("Error loading top performers:", error);
             }
         };
 
-        // Load currently away employees
+        // Load currently away/offline employees with duration
         const loadCurrentlyAway = async () => {
             try {
-                const response = await fetch('/dashboard/stats');
-                if (!response.ok) return;
-                const data = await response.json();
+                if (dashboardLogs.length === 0) {
+                    document.getElementById('currently-away').innerHTML = '<p class="text-muted small">Loading...</p>';
+                    return;
+                }
 
                 let awayHtml = '';
-                data.logs.forEach(emp => {
-                    if (emp.status === 'Away') {
+                dashboardLogs.forEach(emp => {
+                    // Check for Away OR Offline status
+                    if (emp.status === 'Away' || emp.status === 'Offline') {
                         // Calculate time away
                         const awayTime = new Date(emp.timestamp);
                         const now = new Date();
@@ -579,10 +602,14 @@
                         const mins = diffMins % 60;
                         const timeAway = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
+                        const isOffline = emp.status === 'Offline';
+                        const icon = isOffline ? '⚫' : '🚫';
+                        const label = isOffline ? 'Offline' : 'Away';
+
                         awayHtml += `
-                            <div class="top-performer-item">
-                                <span class="text-danger">🚫 ${emp.employee_name}</span>
-                                <small class="float-end text-danger fw-bold">⏱️ ${timeAway}</small>
+                            <div class="top-performer-item" style="border-left: 3px solid ${isOffline ? '#666' : '#dc3545'};">
+                                <span class="${isOffline ? 'text-secondary' : 'text-danger'}">${icon} ${emp.employee_name}</span>
+                                <small class="float-end ${isOffline ? 'text-secondary' : 'text-danger'} fw-bold">⏱️ ${timeAway}</small>
                             </div>
                         `;
                     }
