@@ -198,8 +198,8 @@
                     <h5>🏆 Top Performers</h5>
                     <div id="top-performers"></div>
                     <hr>
-                    <h6 class="text-danger">⚠️ Needs Attention</h6>
-                    <div id="needs-attention"></div>
+                    <h6 class="text-danger">🚫 Currently Away</h6>
+                    <div id="currently-away"></div>
                 </div>
             </div>
         </div>
@@ -411,20 +411,41 @@
                 });
                 document.getElementById('top-performers').innerHTML = topHtml || '<p class="text-muted">No data</p>';
 
-                let bottomHtml = '';
-                data.needs_attention.forEach(p => {
-                    if (p.score < 60) {
-                        bottomHtml += `
+            } catch (error) {
+                console.error("Error fetching top performers:", error);
+            }
+        };
+
+        // Load currently away employees
+        const loadCurrentlyAway = async () => {
+            try {
+                const response = await fetch('/dashboard/stats');
+                if (!response.ok) return;
+                const data = await response.json();
+
+                let awayHtml = '';
+                data.logs.forEach(emp => {
+                    if (emp.status === 'Away') {
+                        // Calculate time away
+                        const awayTime = new Date(emp.timestamp);
+                        const now = new Date();
+                        const diffMs = now - awayTime;
+                        const diffMins = Math.floor(diffMs / 60000);
+                        const hours = Math.floor(diffMins / 60);
+                        const mins = diffMins % 60;
+                        const timeAway = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+                        awayHtml += `
                             <div class="top-performer-item">
-                                <span class="text-danger">${p.employee_name}</span>
-                                <span class="float-end text-danger">${p.score}%</span>
+                                <span class="text-danger">🚫 ${emp.employee_name}</span>
+                                <small class="float-end text-danger fw-bold">⏱️ ${timeAway}</small>
                             </div>
                         `;
                     }
                 });
-                document.getElementById('needs-attention').innerHTML = bottomHtml || '<p class="text-muted small">Everyone is doing great!</p>';
+                document.getElementById('currently-away').innerHTML = awayHtml || '<p class="text-muted small">✅ Everyone is present!</p>';
             } catch (error) {
-                console.error("Error fetching top performers:", error);
+                console.error("Error fetching away employees:", error);
             }
         };
 
@@ -553,12 +574,14 @@
         loadScores();
         loadTrends();
         loadTopPerformers();
+        loadCurrentlyAway();
 
         // Refresh every 30 seconds
         setInterval(() => {
             updateDashboard();
             loadScores();
             loadTrends();
+            loadCurrentlyAway();
         }, 30000);
     </script>
 </body>
