@@ -175,6 +175,7 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
     count_present = 0
     count_break = 0
     count_away = 0
+    count_offline = 0
 
     for emp in employees:
         user_logs = db.query(EmployeeLog).filter(
@@ -191,6 +192,8 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
             count_break += 1
         elif status == "Away":
             count_away += 1
+        else:
+            count_offline += 1
         
         # Calculate user present time
         user_present = 0
@@ -219,6 +222,7 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         "count_present": count_present,
         "count_break": count_break,
         "count_away": count_away,
+        "count_offline": count_offline,
         "logs": logs_data
     }
 

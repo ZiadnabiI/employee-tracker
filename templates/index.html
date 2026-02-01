@@ -152,7 +152,8 @@
         <!-- Stats Cards -->
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="card bg-success text-white stats-card shadow">
+                <div class="card bg-success text-white stats-card shadow" style="cursor: pointer;"
+                    onclick="filterByStatus('Present')">
                     <div class="card-body text-center">
                         <h6 class="card-title mb-1">🟢 Online</h6>
                         <div class="stat-number" id="count-present">0</div>
@@ -160,26 +161,38 @@
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="card bg-warning text-dark stats-card shadow">
+                <div class="card bg-warning text-dark stats-card shadow" style="cursor: pointer;"
+                    onclick="filterByStatus('BREAK_START')">
                     <div class="card-body text-center">
                         <h6 class="card-title mb-1">☕ On Break</h6>
                         <div class="stat-number" id="count-break">0</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card bg-danger text-white stats-card shadow">
+            <div class="col-md-2">
+                <div class="card bg-danger text-white stats-card shadow" style="cursor: pointer;"
+                    onclick="filterByStatus('Away')">
                     <div class="card-body text-center">
                         <h6 class="card-title mb-1">⚠️ Away</h6>
                         <div class="stat-number" id="count-away">0</div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white stats-card shadow">
+            <div class="col-md-2">
+                <div class="card bg-secondary text-white stats-card shadow" style="cursor: pointer;"
+                    onclick="filterByStatus('Offline')">
                     <div class="card-body text-center">
-                        <h6 class="card-title mb-1">📊 Avg Score</h6>
-                        <div class="stat-number" id="avg-score">--</div>
+                        <h6 class="card-title mb-1">⚫ Offline</h6>
+                        <div class="stat-number" id="count-offline">0</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-info text-white stats-card shadow" style="cursor: pointer;"
+                    onclick="filterByStatus('')">
+                    <div class="card-body text-center">
+                        <h6 class="card-title mb-1">👥 Total</h6>
+                        <div class="stat-number" id="count-total">0</div>
                     </div>
                 </div>
             </div>
@@ -187,10 +200,10 @@
 
         <!-- Charts Row -->
         <div class="row mb-4">
-            <div class="col-md-8">
+            <div class="col-md-5">
                 <div class="chart-card">
-                    <h5>📈 Weekly Attendance Trend</h5>
-                    <canvas id="trendChart" height="100"></canvas>
+                    <h5>📊 Current Status Distribution</h5>
+                    <canvas id="statusPieChart" height="200"></canvas>
                 </div>
             </div>
             <div class="col-md-4">
@@ -200,6 +213,12 @@
                     <hr>
                     <h6 class="text-danger">🚫 Currently Away</h6>
                     <div id="currently-away"></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="chart-card h-100">
+                    <h5>📝 Recent Activity</h5>
+                    <div id="recent-activity" style="max-height: 250px; overflow-y: auto;"></div>
                 </div>
             </div>
         </div>
@@ -307,43 +326,49 @@
         let allScores = [];
         let trendChart = null;
 
-        // Initialize chart
+        // Initialize pie chart
+        let statusPieChart = null;
+
         function initChart() {
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            trendChart = new Chart(ctx, {
-                type: 'line',
+            const ctx = document.getElementById('statusPieChart').getContext('2d');
+            statusPieChart = new Chart(ctx, {
+                type: 'doughnut',
                 data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: 'Present',
-                            data: [],
-                            borderColor: '#00b894',
-                            backgroundColor: 'rgba(0, 184, 148, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        },
-                        {
-                            label: 'Away',
-                            data: [],
-                            borderColor: '#d63031',
-                            backgroundColor: 'rgba(214, 48, 49, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        }
-                    ]
+                    labels: ['🟢 Online', '☕ On Break', '⚠️ Away', '⚫ Offline'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: [
+                            '#00b894',
+                            '#fdcb6e',
+                            '#d63031',
+                            '#636e72'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
                 },
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: { position: 'top' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 12 } }
+                        }
                     }
                 }
             });
         }
+
+        // Update pie chart with current stats
+        function updatePieChart(present, breakCount, away, offline) {
+            if (statusPieChart) {
+                statusPieChart.data.datasets[0].data = [present, breakCount, away, offline];
+                statusPieChart.update();
+            }
+        }
+
+        // Store dashboard logs for filtering
+        let dashboardLogs = [];
 
         // Update dashboard
         const updateDashboard = async () => {
@@ -355,13 +380,132 @@
                 }
                 const data = await response.json();
 
-                document.getElementById('count-present').innerText = data.count_present;
-                document.getElementById('count-break').innerText = data.count_break;
-                document.getElementById('count-away').innerText = data.count_away;
+                // Store logs for filtering by status
+                dashboardLogs = data.logs || [];
+
+                const present = data.count_present || 0;
+                const breakCount = data.count_break || 0;
+                const away = data.count_away || 0;
+                const offline = data.count_offline || 0;
+
+                document.getElementById('count-present').innerText = present;
+                document.getElementById('count-break').innerText = breakCount;
+                document.getElementById('count-away').innerText = away;
+                document.getElementById('count-offline').innerText = offline;
+                document.getElementById('count-total').innerText = dashboardLogs.length;
+
+                // Update pie chart
+                updatePieChart(present, breakCount, away, offline);
+
+                // Render recent activity
+                renderRecentActivity(dashboardLogs);
+
+                // Also render table with dashboard logs if scores not loaded yet
+                if (allScores.length === 0) {
+                    renderTableFromLogs(dashboardLogs);
+                }
             } catch (error) {
                 console.error("Error fetching stats:", error);
             }
         };
+
+        // Render recent activity feed
+        function renderRecentActivity(logs) {
+            const container = document.getElementById('recent-activity');
+            // Sort by timestamp descending and take top 8
+            const sorted = [...logs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            const recent = sorted.slice(0, 8);
+
+            let html = '';
+            recent.forEach(log => {
+                const statusIcon = getStatusText(log.status);
+                const time = new Date(log.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                html += `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <strong>${log.employee_name}</strong>
+                            <small class="d-block text-muted">${statusIcon}</small>
+                        </div>
+                        <small class="text-muted">${time}</small>
+                    </div>
+                `;
+            });
+            container.innerHTML = html || '<p class="text-muted small">No recent activity</p>';
+        }
+
+        // Filter by status when clicking on cards
+        function filterByStatus(status) {
+            document.getElementById('statusFilter').value = status;
+            if (status === '') {
+                // Show all
+                renderTableFromLogs(dashboardLogs);
+            } else {
+                // Filter by status
+                const filtered = dashboardLogs.filter(emp => {
+                    if (status === 'Present') {
+                        return ['Present', 'WORK_START', 'BREAK_END'].includes(emp.status);
+                    } else if (status === 'Offline') {
+                        return emp.status === 'Offline';
+                    } else {
+                        return emp.status === status;
+                    }
+                });
+                renderTableFromLogs(filtered);
+            }
+        }
+
+        // Render table from dashboard logs (not scores)
+        function renderTableFromLogs(logs) {
+            const tbody = document.getElementById('employeeTableBody');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = logs.filter(emp => {
+                if (searchTerm && !emp.employee_name.toLowerCase().includes(searchTerm)) return false;
+                return true;
+            });
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No employees found</td></tr>';
+                return;
+            }
+
+            filtered.forEach((emp, index) => {
+                const statusClass = getStatusClass(emp.status);
+                const statusText = getStatusText(emp.status);
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>#${index + 1}</strong></td>
+                        <td>
+                            <a href="/employee/${emp.employee_name}" class="text-decoration-none fw-bold">
+                                ${emp.employee_name} ↗
+                            </a>
+                        </td>
+                        <td>${emp.department || '-'}</td>
+                        <td><span class="${statusClass}">${statusText}</span></td>
+                        <td>${emp.status}</td>
+                        <td>${emp.present_time || '0h 0m'}</td>
+                        <td>
+                            <a href="/employee/${emp.employee_name}" class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function getStatusClass(status) {
+            if (['Present', 'WORK_START', 'BREAK_END'].includes(status)) return 'badge bg-success';
+            if (status === 'BREAK_START') return 'badge bg-warning text-dark';
+            if (status === 'Away') return 'badge bg-danger';
+            return 'badge bg-secondary';
+        }
+
+        function getStatusText(status) {
+            if (['Present', 'WORK_START', 'BREAK_END'].includes(status)) return '🟢 Online';
+            if (status === 'BREAK_START') return '☕ On Break';
+            if (status === 'Away') return '⚠️ Away';
+            return '⚫ Offline';
+        }
 
         // Load scores
         const loadScores = async (days = 7) => {
@@ -371,8 +515,6 @@
                 const data = await response.json();
 
                 allScores = data.scores;
-                document.getElementById('avg-score').innerText = data.average_score;
-
                 renderTable(allScores);
             } catch (error) {
                 console.error("Error fetching scores:", error);
@@ -452,15 +594,14 @@
         };
 
         // Render table
-        function renderTable(scores) {
+        function renderTable(scores, statusFilterValue = null) {
             const tbody = document.getElementById('employeeTableBody');
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            const gradeFilter = document.getElementById('gradeFilter').value;
+            const statusFilter = statusFilterValue || document.getElementById('statusFilter').value;
 
             let filtered = scores.filter(s => {
                 if (searchTerm && !s.employee_name.toLowerCase().includes(searchTerm)) return false;
-                if (gradeFilter && s.grade !== gradeFilter) return false;
+                // Status filter will be applied from dashboard stats data, not scores
                 return true;
             });
 
@@ -590,7 +731,6 @@
         loadUserInfo();
         updateDashboard();
         loadScores();
-        loadTrends();
         loadTopPerformers();
         loadCurrentlyAway();
 
