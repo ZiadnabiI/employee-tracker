@@ -3,7 +3,6 @@ uvicorn
 sqlalchemy
 jinja2
 requests
-ultralytics
-opencv-python
+
 psycopg2-binary
 python-multipart

@@ -323,7 +323,9 @@
             // Filter by date
             if (dateVal) {
                 filtered = filtered.filter(log => {
-                    const logDate = new Date(log.timestamp).toLocaleDateString('en-CA');
+                    // Force UTC parsing
+                    const timeStr = log.timestamp.endsWith('Z') ? log.timestamp : log.timestamp + 'Z';
+                    const logDate = new Date(timeStr).toLocaleDateString('en-CA');
                     return logDate === dateVal;
                 });
             }
@@ -347,7 +349,9 @@
             } else {
                 noData.style.display = 'none';
                 filtered.forEach((log, i) => {
-                    const date = new Date(log.timestamp);
+                    // Force UTC parsing
+                    const timeStr = log.timestamp.endsWith('Z') ? log.timestamp : log.timestamp + 'Z';
+                    const date = new Date(timeStr);
                     const badgeClass = getStatusBadgeClass(log.status);
                     const statusText = getStatusText(log.status);
                     const row = `

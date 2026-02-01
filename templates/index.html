@@ -608,7 +608,9 @@
             } else {
                 filtered.forEach((emp, index) => {
                     const statusIcon = getStatusText(emp.status);
-                    const time = new Date(emp.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    // Force UTC parsing by adding 'Z' if missing
+                    const timeStr = emp.timestamp.endsWith('Z') ? emp.timestamp : emp.timestamp + 'Z';
+                    const time = new Date(timeStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                     html += `
                         <div class="employee-list-item" onclick="window.location.href='/employee/${emp.employee_name}'" style="animation-delay: ${index * 0.05}s; animation: slideInRight 0.3s ease-out forwards;">
                             <div>
@@ -697,7 +699,9 @@
             let html = '';
             recent.forEach(log => {
                 const statusIcon = getStatusText(log.status);
-                const time = new Date(log.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                // Force UTC parsing
+                const timeStr = log.timestamp.endsWith('Z') ? log.timestamp : log.timestamp + 'Z';
+                const time = new Date(timeStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 html += `
                     <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                         <div>
