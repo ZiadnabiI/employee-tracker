@@ -5,44 +5,249 @@
     <title>Employee Details - {{ name }}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
-        .timeline-card {
-            border-left: 4px solid #1877f2;
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .card {
+            border-radius: 15px;
+            border: none;
+            animation: fadeInUp 0.5s ease-out;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .profile-card {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .stat-box {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-box.present {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+        }
+
+        .stat-box.break {
+            background: linear-gradient(135deg, #fdcb6e, #ffeaa7);
+            color: #333;
+        }
+
+        .stat-box.away {
+            background: linear-gradient(135deg, #e17055, #fab1a0);
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .history-card {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .history-card .card-header {
+            background: linear-gradient(135deg, #2d3436, #636e72);
+            border-radius: 15px 15px 0 0;
+            padding: 15px 20px;
+        }
+
+        .filter-bar {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .filter-bar input,
+        .filter-bar select {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 8px;
+        }
+
+        .table tbody tr {
+            animation: slideInRight 0.3s ease-out;
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background: rgba(0, 184, 148, 0.1);
+            transform: scale(1.01);
+        }
+
+        .badge-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .badge-present {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+        }
+
+        .badge-away {
+            background: linear-gradient(135deg, #d63031, #e17055);
+            color: white;
+        }
+
+        .badge-break {
+            background: linear-gradient(135deg, #fdcb6e, #f39c12);
+            color: #333;
+        }
+
+        .badge-offline {
+            background: linear-gradient(135deg, #636e72, #b2bec3);
+            color: white;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateX(-5px);
+        }
+
+        .live-badge {
+            font-size: 1rem;
+            padding: 10px 20px;
+            border-radius: 25px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
         }
     </style>
 </head>
 
-<body class="bg-light">
-    <div class="container mt-5">
-        <a href="/" class="btn btn-outline-secondary mb-3">&larr; Back to Dashboard</a>
+<body>
+    <div class="container py-4">
+        <a href="/" class="btn btn-back mb-3">&larr; Back to Dashboard</a>
 
-        <div class="card shadow mb-4">
+        <!-- Profile Card -->
+        <div class="card profile-card shadow mb-4">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h2 class="card-title">{{ name }}</h2>
-                    <span id="live-status" class="badge bg-secondary">Loading...</span>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="card-title mb-0">{{ name }}</h2>
+                    <span id="live-status" class="live-badge badge bg-secondary">Loading...</span>
                 </div>
                 <hr>
-                <div class="row text-center">
+                <div class="row g-3">
                     <div class="col-md-4">
-                        <h4 class="text-success">Present</h4>
-                        <h2 id="present-time">--</h2>
+                        <div class="stat-box present">
+                            <div class="stat-label">🟢 Present</div>
+                            <div class="stat-value" id="present-time">--</div>
+                        </div>
                     </div>
                     <div class="col-md-4">
-                        <h4 class="text-warning">On Break</h4>
-                        <h2 id="break-time">--</h2>
+                        <div class="stat-box break">
+                            <div class="stat-label">☕ On Break</div>
+                            <div class="stat-value" id="break-time">--</div>
+                        </div>
                     </div>
                     <div class="col-md-4">
-                        <h4 class="text-danger">Away/Missing</h4>
-                        <h2 id="away-time">--</h2>
+                        <div class="stat-box away">
+                            <div class="stat-label">⚠️ Away/Missing</div>
+                            <div class="stat-value" id="away-time">--</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card shadow">
-            <div class="card-header bg-dark text-white">Full Activity History</div>
+        <!-- Date Filter -->
+        <div class="filter-bar">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <label class="text-white mb-1">📅 Filter by Date</label>
+                    <input type="date" class="form-control" id="dateFilter" onchange="filterByDate()">
+                </div>
+                <div class="col-md-4">
+                    <label class="text-white mb-1">📊 Status</label>
+                    <select class="form-select" id="statusFilter" onchange="filterByDate()">
+                        <option value="">All Statuses</option>
+                        <option value="Present">🟢 Present</option>
+                        <option value="BREAK_START">☕ Break</option>
+                        <option value="Away">⚠️ Away</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="text-white mb-1">&nbsp;</label>
+                    <button class="btn btn-outline-light w-100" onclick="clearFilters()">🔄 Clear Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity History -->
+        <div class="card history-card shadow">
+            <div class="card-header text-white">
+                <h5 class="mb-0">📋 Activity History <span id="log-count" class="badge bg-light text-dark ms-2">0</span>
+                </h5>
+            </div>
             <div class="card-body">
-                <table class="table table-striped">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>Status</th>
@@ -54,12 +259,19 @@
                         <!-- Data populated by JS -->
                     </tbody>
                 </table>
+                <div id="no-data" class="text-center py-4 text-muted" style="display: none;">
+                    📭 No activity found for selected filters
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         const employeeName = "{{ name }}";
+        let allLogs = [];
+
+        // Set default date to today
+        document.getElementById('dateFilter').valueAsDate = new Date();
 
         const loadData = async () => {
             try {
@@ -70,36 +282,106 @@
                 document.getElementById('break-time').innerText = data.break_today;
                 document.getElementById('away-time').innerText = data.away_today;
 
-                const historyBody = document.getElementById('history-body');
-                historyBody.innerHTML = '';
+                allLogs = data.logs;
 
                 // Add Latest Status Badge
                 if (data.logs.length > 0) {
                     const latest = data.logs[0].status;
                     const badge = document.getElementById('live-status');
-                    badge.innerText = latest;
-                    badge.className = `badge ${latest === 'Present' || latest === 'WORK_START' ? 'bg-success' : 'bg-warning'}`;
+                    if (['Present', 'WORK_START', 'BREAK_END'].includes(latest)) {
+                        badge.innerText = '🟢 Online';
+                        badge.className = 'live-badge badge badge-present';
+                    } else if (latest === 'BREAK_START') {
+                        badge.innerText = '☕ On Break';
+                        badge.className = 'live-badge badge badge-break';
+                    } else if (latest === 'Away') {
+                        badge.innerText = '⚠️ Away';
+                        badge.className = 'live-badge badge badge-away';
+                    } else {
+                        badge.innerText = '⚫ Offline';
+                        badge.className = 'live-badge badge badge-offline';
+                    }
                 }
 
-                data.logs.forEach(log => {
-                    const date = new Date(log.timestamp);
-                    const row = `
-                        <tr>
-                            <td><span class="badge ${log.status === 'Present' ? 'bg-success' : 'bg-secondary'}">${log.status}</span></td>
-                            <td>${date.toLocaleTimeString()}</td>
-                            <td>${date.toLocaleDateString()}</td>
-                        </tr>
-                    `;
-                    historyBody.innerHTML += row;
-                });
+                filterByDate();
 
             } catch (error) {
                 console.error("Error loading details", error);
             }
         };
 
+        const filterByDate = () => {
+            const dateVal = document.getElementById('dateFilter').value;
+            const statusVal = document.getElementById('statusFilter').value;
+            const historyBody = document.getElementById('history-body');
+            const noData = document.getElementById('no-data');
+
+            let filtered = allLogs;
+
+            // Filter by date
+            if (dateVal) {
+                filtered = filtered.filter(log => {
+                    const logDate = new Date(log.timestamp).toLocaleDateString('en-CA');
+                    return logDate === dateVal;
+                });
+            }
+
+            // Filter by status
+            if (statusVal) {
+                filtered = filtered.filter(log => {
+                    if (statusVal === 'Present') {
+                        return ['Present', 'WORK_START', 'BREAK_END'].includes(log.status);
+                    }
+                    return log.status === statusVal;
+                });
+            }
+
+            // Render
+            historyBody.innerHTML = '';
+            document.getElementById('log-count').innerText = filtered.length;
+
+            if (filtered.length === 0) {
+                noData.style.display = 'block';
+            } else {
+                noData.style.display = 'none';
+                filtered.forEach((log, i) => {
+                    const date = new Date(log.timestamp);
+                    const badgeClass = getStatusBadgeClass(log.status);
+                    const statusText = getStatusText(log.status);
+                    const row = `
+                        <tr style="animation-delay: ${i * 0.03}s">
+                            <td><span class="badge-status ${badgeClass}">${statusText}</span></td>
+                            <td>${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td>${date.toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                    historyBody.innerHTML += row;
+                });
+            }
+        };
+
+        const getStatusBadgeClass = (status) => {
+            if (['Present', 'WORK_START', 'BREAK_END'].includes(status)) return 'badge-present';
+            if (status === 'BREAK_START') return 'badge-break';
+            if (status === 'Away') return 'badge-away';
+            return 'badge-offline';
+        };
+
+        const getStatusText = (status) => {
+            if (['Present', 'WORK_START', 'BREAK_END'].includes(status)) return '🟢 Present';
+            if (status === 'BREAK_START') return '☕ Break';
+            if (status === 'Away') return '⚠️ Away';
+            return '⚫ Offline';
+        };
+
+        const clearFilters = () => {
+            document.getElementById('dateFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            filterByDate();
+        };
+
         loadData();
-        setInterval(loadData, 5000); // Live update
+        setInterval(loadData, 10000); // Live update every 10 seconds
     </script>
 </body>
 
