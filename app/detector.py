@@ -20,8 +20,10 @@ import uuid
 # =============================================================================
 
 SERVER_URL = os.getenv("SERVER_URL", "https://employee-tracker-up30.onrender.com")
-CONFIDENCE_THRESHOLD = 0.5
+CONFIDENCE_THRESHOLD = 0.6 # Increased to reduce false positives
 AWAY_LIMIT = 10
+PRESENT_LIMIT = 3 # Seconds of continuous presence required
+
 REGISTRY_PATH = r"SOFTWARE\EmployeeTracker"
 
 # =============================================================================
@@ -560,6 +562,7 @@ class EmployeeApp:
                 return
 
         consecutive_away = 0
+        consecutive_present = 0
         
         while self.is_running:
             try:
@@ -584,16 +587,21 @@ class EmployeeApp:
                 
                 if person_detected:
                     print("👤 Person Detected", end='\r')
+                    consecutive_present += 1
                     consecutive_away = 0
-                    if self.current_status != "Present":
+                    
+                    if consecutive_present >= PRESENT_LIMIT and self.current_status != "Present":
                         self.current_status = "Present"
                         self.send_log("Present")
                         self.root.after(0, lambda: self.label_status.config(text="Monitoring Active", fg=Colors.ONLINE))
                         self.root.after(0, lambda: self.status_indicator.config(bg=Colors.ONLINE))
                         self.root.after(0, self.hide_warning_modal)
+
                 else:
                     print("👻 No Person     ", end='\r')
+                    consecutive_present = 0 # Reset present counter
                     consecutive_away += 1
+                    
                     if consecutive_away >= AWAY_LIMIT and self.current_status != "Away":
                         self.current_status = "Away"
                         self.send_log("Away")
