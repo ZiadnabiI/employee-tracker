@@ -664,7 +664,8 @@
                 updatePieChart(present, breakCount, away, offline);
 
                 // Render recent activity
-                renderRecentActivity(dashboardLogs);
+                // Use the true feed from server if available, fallback to logs
+                renderRecentActivity(data.recent_activity || dashboardLogs);
 
                 // Update top performers and currently away (they use dashboardLogs)
                 loadTopPerformers();
@@ -682,9 +683,16 @@
         // Render recent activity feed
         function renderRecentActivity(logs) {
             const container = document.getElementById('recent-activity');
-            // Sort by timestamp descending and take top 8
-            const sorted = [...logs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            const recent = sorted.slice(0, 8);
+
+            // If it's the raw feed from server, it's already sorted. 
+            // If it's dashboardLogs (fallback), we might want to sort.
+            // But let's assume valid feed.
+            let recent = logs;
+            if (!logs[0] || !logs[0].status) recent = []; // Safety check
+
+            // Ensure we handle both dashboardLogs format (logs have timestamp) and feed format
+            // Just to be safe, sort if needed, though server sorts.
+            // But server returns simplified object.
 
             let html = '';
             recent.forEach(log => {

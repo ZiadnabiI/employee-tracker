@@ -62,29 +62,29 @@ def delete_registry_key():
 # =============================================================================
 
 class Colors:
-    # Background colors
-    BG_DARK = "#1a1a2e"
-    BG_DARKER = "#16213e"
-    BG_CARD = "#2d3748"
-    BG_CARD_HOVER = "#3d4a5c"
+    # Background colors (Clean Light Mode)
+    BG_DARK = "#f5f6fa"      # Main background (Soft Grey)
+    BG_DARKER = "#ffffff"    # Header/Footer (Pure White)
+    BG_CARD = "#ffffff"      # Card surface (White)
+    BG_CARD_HOVER = "#f1f2f6"
     
     # Accent colors
-    PRIMARY = "#00b894"
-    SECONDARY = "#00cec9"
-    WARNING = "#fdcb6e"
-    DANGER = "#e17055"
-    INFO = "#74b9ff"
+    PRIMARY = "#00cec9"      # Teal
+    SECONDARY = "#00b894"    # Green
+    WARNING = "#fdcb6e"      # Yellow/Orange
+    DANGER = "#ff7675"       # Soft Red
+    INFO = "#74b9ff"         # Soft Blue
     
     # Text colors
-    TEXT_PRIMARY = "#ffffff"
-    TEXT_SECONDARY = "#a0aec0"
-    TEXT_MUTED = "#718096"
+    TEXT_PRIMARY = "#2d3436" # Dark Grey (almost black)
+    TEXT_SECONDARY = "#636e72" # Grey
+    TEXT_MUTED = "#b2bec3"   # Light Grey
     
     # Status colors
     ONLINE = "#00b894"
-    AWAY = "#e17055"
+    AWAY = "#ff7675"
     BREAK = "#fdcb6e"
-    OFFLINE = "#636e72"
+    OFFLINE = "#b2bec3"
 
 class Fonts:
     TITLE = ("Segoe UI", 16, "bold")
@@ -121,7 +121,7 @@ class EmployeeApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Employee Presence Monitor")
-        self.root.geometry("420x650")
+        self.root.geometry("420x720") # Increased height for better spacing
         self.root.configure(bg=Colors.BG_DARK)
         self.root.resizable(False, False)
         
@@ -184,7 +184,7 @@ class EmployeeApp:
         self.label_status.pack(side="left")
 
         # Stats Card
-        self.stats_card = tk.Frame(self.root, bg=Colors.BG_CARD, padx=25, pady=20)
+        self.stats_card = tk.Frame(self.root, bg=Colors.BG_CARD, padx=30, pady=25)
         
         # Online time row
         self._create_stat_row(self.stats_card, "🟢 Online Time", "label_present_time", Colors.ONLINE)
@@ -196,16 +196,16 @@ class EmployeeApp:
         self._create_stat_row(self.stats_card, "☕ Break Time", "label_break_time", Colors.BREAK)
         
         # Separator
-        tk.Frame(self.stats_card, bg=Colors.BG_DARK, height=1).pack(fill="x", pady=15)
+        tk.Frame(self.stats_card, bg=Colors.BG_DARK, height=1, bd=0).pack(fill="x", pady=20)
         
         # Session time row
         self._create_stat_row(self.stats_card, "⏱ Session", "label_session_time", Colors.INFO)
 
         # Action Area
-        self.action_frame = tk.Frame(self.root, bg=Colors.BG_DARK, padx=25, pady=10)
+        self.action_frame = tk.Frame(self.root, bg=Colors.BG_DARK, padx=30, pady=15)
         self.action_frame.pack(pady=10, fill="both", expand=True)
 
-        # Break Button (hidden initially)
+        # Break Button
         self.btn_break = tk.Button(
             self.action_frame, 
             text="☕ Take a Break", 
@@ -216,10 +216,13 @@ class EmployeeApp:
             font=Fonts.BODY_BOLD, 
             height=2,
             relief="flat",
-            cursor="hand2"
+            bd=0,
+            cursor="hand2",
+            padx=20,
+            pady=5
         )
         
-        # End Shift Button (hidden initially)
+        # End Shift Button
         self.btn_end_shift = tk.Button(
             self.action_frame,
             text="🏁 End Shift",
@@ -230,7 +233,10 @@ class EmployeeApp:
             font=Fonts.BODY_BOLD,
             height=2,
             relief="flat",
-            cursor="hand2"
+            bd=0,
+            cursor="hand2",
+            padx=20,
+            pady=5
         )
 
         # Login Widgets
@@ -285,8 +291,8 @@ class EmployeeApp:
 
     def _create_stat_row(self, parent, label_text, attr_name, color):
         """Create a stat row with label and value"""
-        row = tk.Frame(parent, bg=Colors.BG_CARD)
-        row.pack(fill="x", pady=10)
+        row = tk.Frame(parent, bg=Colors.BG_CARD, bd=0)
+        row.pack(fill="x", pady=12)
         
         tk.Label(
             row, 

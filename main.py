@@ -172,6 +172,18 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
     logs_data = []
     today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     
+    # 1. Fetch ALL recent logs for valid activity feed (last 15 events)
+    company_emp_names = [e.name for e in employees]
+    recent_logs_db = db.query(EmployeeLog).filter(
+        EmployeeLog.employee_name.in_(company_emp_names)
+    ).order_by(EmployeeLog.timestamp.desc()).limit(15).all()
+
+    recent_activity = [{
+        "employee_name": log.employee_name,
+        "status": log.status,
+        "timestamp": log.timestamp
+    } for log in recent_logs_db]
+
     count_present = 0
     count_break = 0
     count_away = 0
@@ -229,7 +241,8 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         "count_break": count_break,
         "count_away": count_away,
         "count_offline": count_offline,
-        "logs": logs_data
+        "logs": logs_data,
+        "recent_activity": recent_activity  # New field for feed
     }
 
 # ===============================
