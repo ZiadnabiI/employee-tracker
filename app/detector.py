@@ -530,46 +530,139 @@ class EmployeeApp:
     def monitoring_loop(self):
         """Main camera monitoring loop"""
         model = YOLO("yolo11n.pt")
-        cap = cv2.VideoCapture(0)
+        
+        # Try to find a working camera index
+        cap = None
+        for index in range(2):
+            print(f"Testing camera index {index}...")
+            temp_cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+            if temp_cap.isOpened():
+                ret, _ = temp_cap.read()
+                if ret:
+                    print(f"✅ Found working camera at index {index}")
+                    cap = temp_cap
+                    break
+                else:
+                    temp_cap.release()
+            
+        if cap is None or not cap.isOpened():
+            print("❌ No working camera found! Trying default backend...")
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                print("❌ CRITICAL: Could not open any camera.")
+                self.root.after(0, lambda: messagebox.showerror("Camera Error", "No camera detected. Please check your connection."))
+                return
+
         consecutive_away = 0
         
         while self.is_running:
-            if self.in_break_mode:
+            try:
+                if self.in_break_mode:
+                    time.sleep(1)
+                    continue
+                
+                ret, frame = cap.read()
+                if not ret:
+                    print("⚠️ Failed to grab frame")
+                    time.sleep(1)
+                    continue
+                
+                results = model(frame, verbose=False)
+                person_detected = False
+                
+                for result in results:
+                    for box in result.boxes:
+                        if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
+                            person_detected = True
+                            break
+                
+                if person_detected:
+                    print("👤 Person Detected", end='\r')
+                    consecutive_away = 0
+                    if self.current_status != "Present":
+                        self.current_status = "Present"
+                        self.send_log("Present")
+                        self.root.after(0, lambda: self.label_status.config(text="Monitoring Active", fg=Colors.ONLINE))
+                        self.root.after(0, lambda: self.status_indicator.config(bg=Colors.ONLINE))
+                        self.root.after(0, self.hide_warning_modal)
+                else:
+                    print("👻 No Person     ", end='\r')
+                    consecutive_away += 1
+                    if consecutive_away >= AWAY_LIMIT and self.current_status != "Away":
+                        self.current_status = "Away"
+                        self.send_log("Away")
+                        self.root.after(0, lambda: self.label_status.config(text="Away Detected", fg=Colors.AWAY))
+                        self.root.after(0, lambda: self.status_indicator.config(bg=Colors.AWAY))
+                        self.root.after(0, self.alert_user)
+                        self.root.after(0, self.show_warning_modal)
+                        
+            except Exception as e:
+                print(f"❌ Error in monitoring loop: {e}")
                 time.sleep(1)
-                continue
-            
-            ret, frame = cap.read()
-            if not ret:
-                time.sleep(1)
-                continue
-            
-            results = model(frame, verbose=False)
-            person_detected = False
-            
-            for result in results:
-                for box in result.boxes:
-                    if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
-                        person_detected = True
-                        break
-            
-            if person_detected:
-                consecutive_away = 0
-                if self.current_status != "Present":
-                    self.current_status = "Present"
-                    self.send_log("Present")
-                    self.root.after(0, lambda: self.label_status.config(text="Monitoring Active", fg=Colors.ONLINE))
-                    self.root.after(0, lambda: self.status_indicator.config(bg=Colors.ONLINE))
-            else:
-                consecutive_away += 1
-                if consecutive_away >= AWAY_LIMIT and self.current_status != "Away":
-                    self.current_status = "Away"
-                    self.send_log("Away")
-                    self.root.after(0, lambda: self.label_status.config(text="Away Detected", fg=Colors.AWAY))
-                    self.root.after(0, lambda: self.status_indicator.config(bg=Colors.AWAY))
+
             
             time.sleep(1)
         
         cap.release()
+
+    def show_warning_modal(self):
+        """Show a large warning modal when away"""
+        if hasattr(self, 'warning_modal') and self.warning_modal and self.warning_modal.winfo_exists():
+            return
+            
+        self.warning_modal = tk.Toplevel(self.root)
+        self.warning_modal.title("⚠️ Alert")
+        self.warning_modal.configure(bg=Colors.DANGER)
+        self.warning_modal.attributes('-topmost', True)
+        self.warning_modal.overrideredirect(True) # Remove title bar
+        
+        # Center on screen
+        w, h = 600, 300
+        x = (self.root.winfo_screenwidth() - w) // 2
+        y = (self.root.winfo_screenheight() - h) // 2
+        self.warning_modal.geometry(f"{w}x{h}+{x}+{y}")
+        
+        tk.Label(
+            self.warning_modal, 
+            text="⚠️", 
+            font=("Segoe UI", 80), 
+            bg=Colors.DANGER, 
+            fg="white"
+        ).pack(pady=10)
+        
+        tk.Label(
+            self.warning_modal, 
+            text="YOU ARE AWAY!", 
+            font=("Segoe UI", 32, "bold"), 
+            bg=Colors.DANGER, 
+            fg="white"
+        ).pack()
+        
+        tk.Label(
+            self.warning_modal, 
+            text="Please return to your station.", 
+            font=("Segoe UI", 16), 
+            bg=Colors.DANGER, 
+            fg="white"
+        ).pack(pady=10)
+
+    def hide_warning_modal(self):
+        """Hide the warning modal"""
+        if hasattr(self, 'warning_modal') and self.warning_modal and self.warning_modal.winfo_exists():
+            self.warning_modal.destroy()
+            self.warning_modal = None
+
+    def alert_user(self):
+        """Alert user when away detected"""
+        try:
+            # Visual alert (Restore window)
+            self.root.deiconify()
+            self.root.state('normal')
+            self.root.lift()
+            self.root.focus_force()
+            
+        except Exception as e:
+            print(f"Alert error: {e}")
 
     def heartbeat_loop(self):
         """Send heartbeat to server every 30 seconds"""
@@ -589,13 +682,18 @@ class EmployeeApp:
         if self.in_break_mode and status == "Present":
             return
         try:
-            requests.post(
+            print(f"📤 Sending status: {status}...", end='')
+            resp = requests.post(
                 f"{SERVER_URL}/log-activity", 
                 json={"activation_key": self.activation_key, "status": status}, 
                 timeout=2
             )
-        except:
-            pass
+            if resp.status_code == 200:
+                print(" ✅ OK")
+            else:
+                print(f" ❌ Failed ({resp.status_code})")
+        except Exception as e:
+            print(f" ❌ Error: {e}")
 
     def on_closing(self):
         """Handle window close"""
