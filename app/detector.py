@@ -286,8 +286,25 @@ class EmployeeApp:
         if not self.monitoring_active:
             self.monitoring_active = True
             Thread(target=self.monitoring_loop, daemon=True).start()
+            Thread(target=self.heartbeat_loop, daemon=True).start()  # Start heartbeat
             # Start the timer tick
             self.root.after(1000, self.tick_time)
+    
+    def heartbeat_loop(self):
+        """Send heartbeat to server every 30 seconds"""
+        while self.is_running:
+            try:
+                payload = {"activation_key": self.activation_key}
+                resp = requests.post(f"{SERVER_URL}/heartbeat", json=payload, timeout=5)
+                if resp.status_code == 200:
+                    print(f"💓 Heartbeat sent successfully")
+                else:
+                    print(f"⚠️ Heartbeat failed: {resp.status_code}")
+            except Exception as e:
+                print(f"❌ Heartbeat error: {e}")
+            
+            # Wait 30 seconds before next heartbeat
+            time.sleep(30)
     
     def fetch_initial_time(self):
         """Fetch today's accumulated time from server to continue where we left off"""

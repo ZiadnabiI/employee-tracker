@@ -55,6 +55,7 @@ class Employee(Base):
     is_active = Column(Integer, default=0)
     department = Column(String, nullable=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    last_heartbeat = Column(DateTime, nullable=True)  # Track when app last pinged
     
     # Relationship
     company = relationship("Company", back_populates="employees")

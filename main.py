@@ -186,6 +186,12 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         last_log = user_logs[-1] if user_logs else None
         status = last_log.status if last_log else "Offline"
         
+        # Check heartbeat timeout (2 minutes = 120 seconds)
+        heartbeat_timeout = datetime.datetime.utcnow() - datetime.timedelta(seconds=120)
+        if emp.last_heartbeat is None or emp.last_heartbeat < heartbeat_timeout:
+            # No heartbeat for 2+ minutes = Offline
+            status = "Offline"
+        
         if status in ["Present", "WORK_START", "BREAK_END"]:
             count_present += 1
         elif status == "BREAK_START":
@@ -331,8 +337,29 @@ async def verify_checkin(data: dict, db: Session = Depends(get_db)):
         
     if employee.is_active == 0:
         raise HTTPException(status_code=403, detail="Device not active")
+    
+    # Set initial heartbeat
+    employee.last_heartbeat = datetime.datetime.utcnow()
+    db.commit()
         
     return {"status": "ACTIVE", "employee_name": employee.name}
+
+@app.post("/heartbeat")
+async def heartbeat(data: dict, db: Session = Depends(get_db)):
+    """Receive heartbeat from detector app every 30 seconds"""
+    activation_key = data.get("activation_key")
+    if not activation_key:
+        raise HTTPException(status_code=400, detail="Missing activation_key")
+    
+    employee = db.query(Employee).filter(Employee.activation_key == activation_key).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Update last heartbeat
+    employee.last_heartbeat = datetime.datetime.utcnow()
+    db.commit()
+    
+    return {"status": "OK", "timestamp": employee.last_heartbeat.isoformat()}
 
 @app.get("/api/employee-time/{activation_key}")
 async def get_employee_time(activation_key: str, db: Session = Depends(get_db)):
