@@ -398,6 +398,16 @@
             </div>
         </div>
 
+        <!-- App Usage Row -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="chart-card">
+                    <h5>📱 App Usage (Today)</h5>
+                    <canvas id="appUsageChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- Search and Filter -->
         <div class="search-filter-bar">
             <div class="row">
@@ -673,6 +683,9 @@
                 loadTopPerformers();
                 loadCurrentlyAway();
 
+                // Fetch app usage stats
+                fetchAppUsageStats();
+
                 // Also render table with dashboard logs if scores not loaded yet
                 if (allScores.length === 0) {
                     renderTableFromLogs(dashboardLogs);
@@ -681,6 +694,73 @@
                 console.error("Error fetching stats:", error);
             }
         };
+
+        // Premium App Usage Chart
+        let appUsageChart = null;
+        async function fetchAppUsageStats() {
+            try {
+                const response = await fetch('/api/app-usage-stats');
+                if (response.status !== 200) return;
+                const data = await response.json();
+
+                const labels = data.top_apps.map(a => a.app.replace('.exe', ''));
+                const durations = data.top_apps.map(a => Math.round(a.duration / 60)); // Convert to minutes
+
+                // Premium color palette (Teramind-inspired)
+                const colors = [
+                    '#00b894', '#0984e3', '#fd79a8', '#fdcb6e', '#6c5ce7',
+                    '#e17055', '#00cec9', '#a29bfe', '#fab1a0', '#81ecec'
+                ];
+
+                const ctx = document.getElementById('appUsageChart').getContext('2d');
+
+                if (appUsageChart) {
+                    appUsageChart.data.labels = labels;
+                    appUsageChart.data.datasets[0].data = durations;
+                    appUsageChart.update();
+                } else {
+                    appUsageChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Minutes Used',
+                                data: durations,
+                                backgroundColor: colors,
+                                borderRadius: 8,
+                                borderSkipped: false
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    padding: 12,
+                                    titleFont: { size: 14, weight: 'bold' },
+                                    bodyFont: { size: 13 }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 12 } }
+                                },
+                                y: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 12, weight: 'bold' } }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('App usage fetch error:', error);
+            }
+        }
 
         // Render recent activity feed
         function renderRecentActivity(logs) {

@@ -406,6 +406,48 @@ async def log_app_usage(data: dict, db: Session = Depends(get_db)):
     
     return {"status": "OK"}
 
+@app.get("/api/app-usage-stats")
+async def get_app_usage_stats(request: Request, db: Session = Depends(get_db)):
+    """Get aggregated app usage stats for dashboard"""
+    try:
+        token_data = get_current_supervisor(request)
+    except:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    company_id = token_data["company_id"]
+    is_super_admin = token_data["is_super_admin"]
+    
+    # Get employees for this company
+    if is_super_admin:
+        employees = db.query(Employee).all()
+    else:
+        employees = db.query(Employee).filter(Employee.company_id == company_id).all()
+    
+    emp_names = [e.name for e in employees]
+    
+    # Get today's app logs
+    today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    logs = db.query(AppLog).filter(
+        AppLog.employee_name.in_(emp_names),
+        AppLog.timestamp >= today_start
+    ).all()
+    
+    # Aggregate by app_name
+    app_stats = {}
+    for log in logs:
+        if log.app_name not in app_stats:
+            app_stats[log.app_name] = 0
+        app_stats[log.app_name] += log.duration_seconds
+    
+    # Sort by duration, top 10
+    sorted_apps = sorted(app_stats.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    return {
+        "top_apps": [{"app": app, "duration": dur} for app, dur in sorted_apps],
+        "total_logs": len(logs)
+    }
+
 @app.get("/api/employee-time/{activation_key}")
 async def get_employee_time(activation_key: str, db: Session = Depends(get_db)):
     """Get today's time stats for an employee - used by detector.py on startup"""
