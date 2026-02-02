@@ -27,6 +27,13 @@ class Company(Base):
     name = Column(String, unique=True, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
+    # SaaS / Subscription Fields
+    subscription_plan = Column(String, default="free") # free, pro, enterprise
+    subscription_status = Column(String, default="active") # active, past_due, canceled
+    subscription_end_date = Column(DateTime, nullable=True)
+    stripe_customer_id = Column(String, nullable=True)
+    max_employees = Column(Integer, default=5)
+    
     # Relationships
     employees = relationship("Employee", back_populates="company")
     supervisors = relationship("Supervisor", back_populates="company")
@@ -40,6 +47,7 @@ class Supervisor(Base):
     name = Column(String)
     company_id = Column(Integer, ForeignKey("companies.id"))
     is_super_admin = Column(Integer, default=0)  # 1 = can see all companies
+    role = Column(String, default="owner") # owner, admin, viewer
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Relationship
@@ -66,6 +74,16 @@ class EmployeeLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     employee_name = Column(String)
     status = Column(String)  # WORK_START, BREAK_START, BREAK_END, etc.
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+# --- App Usage Log Model ---
+class AppLog(Base):
+    __tablename__ = "app_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    employee_name = Column(String, index=True)
+    app_name = Column(String)         # e.g., "chrome.exe"
+    window_title = Column(String)     # e.g., "YouTube - Google Chrome"
+    duration_seconds = Column(Integer, default=0)  # How long on this app
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 # Create tables

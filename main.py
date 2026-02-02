@@ -15,7 +15,7 @@ def health_check():
     return {"status": "ok"}
 
 from pydantic import BaseModel
-from database import SessionLocal, EmployeeLog, Employee, Company, Supervisor, Base, engine
+from database import SessionLocal, EmployeeLog, Employee, Company, Supervisor, AppLog, Base, engine
 from auth import (
     hash_password, verify_password, create_token, verify_token, 
     invalidate_token, get_token_from_cookies, get_current_supervisor, require_auth
@@ -379,6 +379,32 @@ async def heartbeat(data: dict, db: Session = Depends(get_db)):
     db.commit()
     
     return {"status": "OK", "timestamp": employee.last_heartbeat.isoformat()}
+
+@app.post("/api/app-log")
+async def log_app_usage(data: dict, db: Session = Depends(get_db)):
+    """Log application usage from detector app"""
+    activation_key = data.get("activation_key")
+    app_name = data.get("app_name")
+    window_title = data.get("window_title", "")
+    duration = data.get("duration_seconds", 1)
+    
+    if not activation_key or not app_name:
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    
+    employee = db.query(Employee).filter(Employee.activation_key == activation_key).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    new_log = AppLog(
+        employee_name=employee.name,
+        app_name=app_name,
+        window_title=window_title,
+        duration_seconds=duration
+    )
+    db.add(new_log)
+    db.commit()
+    
+    return {"status": "OK"}
 
 @app.get("/api/employee-time/{activation_key}")
 async def get_employee_time(activation_key: str, db: Session = Depends(get_db)):

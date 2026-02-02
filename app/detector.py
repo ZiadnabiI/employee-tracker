@@ -14,6 +14,9 @@ from threading import Thread
 from ultralytics import YOLO
 import os
 import uuid
+import win32gui
+import win32process
+import psutil
 
 # =============================================================================
 # CONFIGURATION
@@ -356,6 +359,7 @@ class EmployeeApp:
             self.session_start_time = time.time()
             Thread(target=self.monitoring_loop, daemon=True).start()
             Thread(target=self.heartbeat_loop, daemon=True).start()
+            Thread(target=self.app_tracking_loop, daemon=True).start()
             self.root.after(1000, self.tick_time)
 
     def activate_device(self):
@@ -690,6 +694,57 @@ class EmployeeApp:
                 print(f"❌ Heartbeat failed: {e}")
             
             time.sleep(30)
+
+    def app_tracking_loop(self):
+        """Track which app is currently active and send to server"""
+        last_app = None
+        last_title = None
+        app_start_time = time.time()
+        
+        while self.is_running:
+            try:
+                # Get active window info
+                hwnd = win32gui.GetForegroundWindow()
+                window_title = win32gui.GetWindowText(hwnd)
+                
+                # Get process name
+                _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                try:
+                    process = psutil.Process(pid)
+                    app_name = process.name()
+                except:
+                    app_name = "unknown.exe"
+                
+                # If app changed, send previous app's usage
+                if app_name != last_app and last_app is not None:
+                    duration = int(time.time() - app_start_time)
+                    if duration > 2:  # Only log if used for >2 seconds
+                        self.send_app_log(last_app, last_title, duration)
+                    app_start_time = time.time()
+                
+                last_app = app_name
+                last_title = window_title
+                
+            except Exception as e:
+                print(f"App tracking error: {e}")
+            
+            time.sleep(5)  # Check every 5 seconds
+    
+    def send_app_log(self, app_name, window_title, duration):
+        """Send app usage log to server"""
+        try:
+            payload = {
+                "activation_key": self.activation_key,
+                "app_name": app_name,
+                "window_title": window_title[:200] if window_title else "",  # Truncate long titles
+                "duration_seconds": duration
+            }
+            resp = requests.post(f"{SERVER_URL}/api/app-log", json=payload, timeout=3)
+            if resp.status_code == 200:
+                print(f"📱 App log: {app_name} ({duration}s)")
+        except:
+            pass  # Silent fail for app logs
+
 
     def send_log(self, status):
         """Send activity log to server"""
