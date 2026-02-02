@@ -9,11 +9,6 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-# Add Health Check for UptimeRobot
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
-
 from pydantic import BaseModel
 from database import SessionLocal, EmployeeLog, Employee, Company, Supervisor, AppLog, Base, engine
 from auth import (
@@ -35,6 +30,11 @@ app.add_middleware(
 )
 
 templates = Jinja2Templates(directory="templates")
+
+# Health Check for UptimeRobot
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
 # Dependency
 def get_db():
