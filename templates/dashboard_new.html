@@ -176,6 +176,9 @@
                 <a href="#" onclick="navTo('employees')" id="nav-employees" class="sidebar-link">
                     <i class="fa-solid fa-users w-5 text-center mr-3"></i> Employees
                 </a>
+                <a href="#" onclick="navTo('screenshots')" id="nav-screenshots" class="sidebar-link">
+                    <i class="fa-regular fa-images w-5 text-center mr-3"></i> Screenshots
+                </a>
 
                 <p class="px-6 text-xs font-bold text-slate-500 uppercase mb-2 mt-6">System</p>
                 <a href="#" onclick="navTo('settings')" id="nav-settings" class="sidebar-link">
@@ -236,7 +239,8 @@
                                 <h3 class="text-3xl font-bold text-gray-800" id="kpi-present">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                    <i class="fa-solid fa-check"></i></div>
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
                             </div>
                         </div>
 
@@ -253,7 +257,8 @@
                                 <h3 class="text-3xl font-bold text-gray-800" id="kpi-break">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
-                                    <i class="fa-solid fa-coffee"></i></div>
+                                    <i class="fa-solid fa-coffee"></i>
+                                </div>
                             </div>
                         </div>
 
@@ -270,7 +275,8 @@
                                 <h3 class="text-3xl font-bold text-gray-800" id="kpi-away">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-                                    <i class="fa-solid fa-clock-rotate-left"></i></div>
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+                                </div>
                             </div>
                         </div>
 
@@ -285,7 +291,8 @@
                                 <h3 class="text-3xl font-bold text-gray-800" id="kpi-offline">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
-                                    <i class="fa-solid fa-power-off"></i></div>
+                                    <i class="fa-solid fa-power-off"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -343,8 +350,8 @@
                 <section id="view-employees" class="view-section">
                     <div class="flex justify-between items-center mb-6">
                         <h3 class="font-bold text-gray-800 text-lg">Employee Directory</h3>
-                        <button class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700"
-                            data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+                        <button onclick="openAddEmployeeModal()"
+                            class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
                             <i class="fa-solid fa-plus mr-2"></i>Add Employee
                         </button>
                     </div>
@@ -402,6 +409,32 @@
                     </div>
                 </section>
 
+                <!-- 6. SCREENSHOTS VIEW -->
+                <section id="view-screenshots" class="view-section">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">Screenshot Gallery</h3>
+                            <p class="text-sm text-gray-500">Recent screen captures from employees</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <select id="screenshotFilter" class="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                                onchange="loadScreenshots()">
+                                <option value="">All Employees</option>
+                            </select>
+                            <button onclick="loadScreenshots()"
+                                class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
+                                <i class="fa-solid fa-rotate-right mr-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="screenshots-grid"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <p class="text-gray-400 col-span-full text-center py-10">Select an employee to view screenshots
+                        </p>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -437,6 +470,43 @@
         </div>
     </div>
 
+    <!-- ADD EMPLOYEE MODAL -->
+    <div id="add-employee-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeAddEmployeeModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div
+                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl w-full max-w-md">
+                    <div class="bg-white px-6 pt-5 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-900"><i
+                                class="fa-solid fa-user-plus mr-2 text-blue-600"></i>Add New Employee</h3>
+                    </div>
+                    <form id="addEmployeeForm" onsubmit="submitAddEmployee(event)" class="px-6 py-4 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Employee Name *</label>
+                            <input type="text" id="newEmpName" required placeholder="John Doe"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                            <input type="text" id="newEmpDept" placeholder="Engineering"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div id="addEmpResult" class="hidden p-3 rounded-md text-sm"></div>
+                    </form>
+                    <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100">
+                        <button type="button" onclick="closeAddEmployeeModal()"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                        <button type="submit" form="addEmployeeForm" id="addEmpBtn"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                            <i class="fa-solid fa-plus mr-2"></i>Add Employee
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- Data Storage ---
         let dashboardLogs = [];
@@ -450,6 +520,7 @@
                 'live-monitoring': 'Live Monitoring',
                 'employee-performance': 'Employee Performance',
                 'employees': 'Employee Management',
+                'screenshots': 'Screenshots Gallery',
                 'settings': 'System Settings'
             };
             document.getElementById('page-title').innerText = titles[viewId] || 'Dashboard';
@@ -463,6 +534,7 @@
 
             if (viewId === 'live-monitoring') loadLiveMonitoring();
             if (viewId === 'employees') loadEmployeesTable();
+            if (viewId === 'screenshots') loadScreenshotsView();
         }
 
         // --- Load Dashboard ---
@@ -742,6 +814,175 @@
             if (status === 'BREAK_START') return '<span class="badge badge-yellow">On Break</span>';
             if (status === 'Away') return '<span class="badge badge-red">Away</span>';
             return '<span class="badge badge-gray">Offline</span>';
+        }
+
+        // --- Screenshots Functions ---
+        async function loadScreenshotsView() {
+            // Populate employee filter dropdown
+            const select = document.getElementById('screenshotFilter');
+            if (!dashboardLogs.length) await loadDashboard();
+
+            // Keep first option, clear rest
+            select.innerHTML = '<option value="">Select Employee</option>';
+            dashboardLogs.forEach(emp => {
+                select.innerHTML += `<option value="${emp.employee_name}">${emp.employee_name}</option>`;
+            });
+        }
+
+        async function loadScreenshots() {
+            const employeeName = document.getElementById('screenshotFilter').value;
+            const grid = document.getElementById('screenshots-grid');
+
+            if (!employeeName) {
+                grid.innerHTML = '<p class="text-gray-400 col-span-full text-center py-10"><i class="fa-solid fa-image text-4xl mb-3 block"></i>Select an employee to view screenshots</p>';
+                return;
+            }
+
+            grid.innerHTML = '<p class="text-gray-400 col-span-full text-center py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i> Loading...</p>';
+
+            try {
+                const response = await fetch(`/api/screenshots/${encodeURIComponent(employeeName)}`);
+                if (response.status !== 200) {
+                    grid.innerHTML = '<p class="text-red-400 col-span-full text-center py-10">Failed to load screenshots</p>';
+                    return;
+                }
+
+                const screenshots = await response.json();
+
+                if (!screenshots.length) {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-10 text-gray-500">
+                            <i class="fa-solid fa-camera-retro text-5xl mb-4 text-gray-300"></i>
+                            <p class="font-medium">No screenshots available for ${employeeName}</p>
+                            <p class="text-sm mt-2">Screenshots are captured every 10 minutes automatically</p>
+                            <button onclick="requestScreenshot('${employeeName}')" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
+                                <i class="fa-solid fa-camera mr-2"></i>Request Screenshot Now
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <div class="col-span-full mb-4 flex items-center justify-between">
+                        <p class="text-sm text-gray-500">${screenshots.length} screenshots found</p>
+                        <button onclick="requestScreenshot('${employeeName}')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-blue-700">
+                            <i class="fa-solid fa-camera mr-2"></i>Request Now
+                        </button>
+                    </div>
+                `;
+
+                screenshots.forEach((s, idx) => {
+                    const time = s.timestamp ? new Date(s.timestamp).toLocaleString() : 'Unknown time';
+                    html += `
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer" onclick="openScreenshotModal('${s.image_data}', '${time}')">
+                            <div class="aspect-video bg-gray-100 relative overflow-hidden">
+                                <img src="data:image/jpeg;base64,${s.image_data}" alt="Screenshot" class="w-full h-full object-cover" loading="lazy">
+                                ${s.manual_request ? '<span class="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">Requested</span>' : ''}
+                            </div>
+                            <div class="p-3">
+                                <p class="text-xs text-gray-500"><i class="fa-solid fa-clock mr-1"></i>${time}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                grid.innerHTML = html;
+            } catch (error) {
+                console.error('Screenshot load error:', error);
+                grid.innerHTML = '<p class="text-red-400 col-span-full text-center py-10">Error loading screenshots</p>';
+            }
+        }
+
+        async function requestScreenshot(employeeName) {
+            try {
+                const response = await fetch(`/api/request-screenshot/${encodeURIComponent(employeeName)}`, { method: 'POST' });
+                if (response.ok) {
+                    alert('✅ Screenshot request sent to ' + employeeName);
+                } else {
+                    alert('❌ Failed to send screenshot request');
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        function openScreenshotModal(imageData, time) {
+            // Create a simple fullscreen modal for the image
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4';
+            modal.onclick = () => modal.remove();
+            modal.innerHTML = `
+                <div class="max-w-6xl max-h-full relative">
+                    <button class="absolute -top-10 right-0 text-white text-xl hover:text-gray-300" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fa-solid fa-xmark"></i> Close
+                    </button>
+                    <img src="data:image/jpeg;base64,${imageData}" alt="Screenshot" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
+                    <p class="text-center text-white text-sm mt-3">${time}</p>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // --- Add Employee Modal Functions ---
+        function openAddEmployeeModal() {
+            document.getElementById('add-employee-modal').classList.remove('hidden');
+            document.getElementById('newEmpName').value = '';
+            document.getElementById('newEmpDept').value = '';
+            document.getElementById('addEmpResult').classList.add('hidden');
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('add-employee-modal').classList.add('hidden');
+        }
+
+        async function submitAddEmployee(event) {
+            event.preventDefault();
+            const name = document.getElementById('newEmpName').value.trim();
+            const dept = document.getElementById('newEmpDept').value.trim();
+            const resultDiv = document.getElementById('addEmpResult');
+            const btn = document.getElementById('addEmpBtn');
+
+            if (!name) {
+                resultDiv.innerText = 'Please enter employee name';
+                resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
+                resultDiv.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Adding...';
+
+            try {
+                const response = await fetch('/add-employee', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, department: dept || null })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i>Employee added! Activation Key: <strong class="select-all font-mono">${data.activation_key}</strong>`;
+                    resultDiv.className = 'p-3 rounded-md text-sm bg-green-100 text-green-700';
+                    resultDiv.classList.remove('hidden');
+
+                    // Refresh the dashboard data
+                    await loadDashboard();
+                    loadEmployeesTable();
+                } else {
+                    resultDiv.innerText = data.detail || 'Failed to add employee';
+                    resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
+                    resultDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                resultDiv.innerText = 'Error: ' + error.message;
+                resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
+                resultDiv.classList.remove('hidden');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Add Employee';
         }
 
         // --- Init ---
