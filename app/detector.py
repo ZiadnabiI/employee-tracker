@@ -812,7 +812,7 @@ class EmployeeApp:
             if resp.status_code == 200:
                 print("📸 Screenshot captured and sent!")
             else:
-                print(f"📸 Screenshot failed: {resp.status_code}")
+                print(f"📸 Screenshot failed: {resp.status_code} - {resp.text[:100]}")
         except Exception as e:
             print(f"📸 Screenshot error: {e}")
 
