@@ -86,5 +86,15 @@ class AppLog(Base):
     duration_seconds = Column(Integer, default=0)  # How long on this app
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
+# --- Screenshot Model ---
+class Screenshot(Base):
+    __tablename__ = "screenshots"
+    id = Column(Integer, primary_key=True, index=True)
+    employee_name = Column(String, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    image_data = Column(String)  # Base64 encoded image
+    manual_request = Column(Integer, default=0)  # 1 if manually requested by supervisor
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
 # Create tables
 Base.metadata.create_all(bind=engine)

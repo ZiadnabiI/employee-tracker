@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InFrame - Enterprise Employee Monitoring</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Fonts: Inter (Standard SaaS Font) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+
+        /* Custom Scrollbar for Enterprise feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Sidebar Styling */
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        .sidebar-link.active {
+            background-color: #1e293b;
+            color: #38bdf8;
+            border-left-color: #38bdf8;
+        }
+
+        /* Status Badge Utilities */
+        .badge {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-green {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-yellow {
+            background-color: #fef9c3;
+            color: #854d0e;
+        }
+
+        .badge-red {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-gray {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+
+        /* Chart Containers */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* View Management */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Modal Transitions */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+
+        .modal-exit-active {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 0.2s ease-in, transform 0.2s ease-in;
+        }
+    </style>
+</head>
+
+<body class="h-screen overflow-hidden flex flex-col">
+
+    <!-- MAIN APP LAYOUT -->
+    <div id="app-layout" class="flex h-screen overflow-hidden">
+
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col flex-shrink-0 transition-all duration-300">
+            <!-- Brand -->
+            <div class="h-16 flex items-center px-6 border-b border-slate-800">
+                <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white mr-3">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <span class="font-bold text-lg tracking-wide">InFrame</span>
+            </div>
+
+            <!-- Menu -->
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+                <p class="px-6 text-xs font-bold text-slate-500 uppercase mb-2 mt-2">Monitoring</p>
+                <a href="#" onclick="navTo('dashboard')" id="nav-dashboard" class="sidebar-link active">
+                    <i class="fa-solid fa-gauge-high w-5 text-center mr-3"></i> Dashboard
+                </a>
+                <a href="#" onclick="navTo('live-monitoring')" id="nav-live-monitoring" class="sidebar-link">
+                    <i class="fa-solid fa-desktop w-5 text-center mr-3"></i> Live Monitoring
+                </a>
+                <a href="#" onclick="navTo('employee-performance')" id="nav-employee-performance" class="sidebar-link">
+                    <i class="fa-solid fa-chart-line w-5 text-center mr-3"></i> Employee Performance
+                </a>
+
+                <p class="px-6 text-xs font-bold text-slate-500 uppercase mb-2 mt-6">Management</p>
+                <a href="#" onclick="navTo('employees')" id="nav-employees" class="sidebar-link">
+                    <i class="fa-solid fa-users w-5 text-center mr-3"></i> Employees
+                </a>
+
+                <p class="px-6 text-xs font-bold text-slate-500 uppercase mb-2 mt-6">System</p>
+                <a href="#" onclick="navTo('settings')" id="nav-settings" class="sidebar-link">
+                    <i class="fa-solid fa-gear w-5 text-center mr-3"></i> Settings
+                </a>
+            </nav>
+
+            <!-- User Profile -->
+            <div class="p-4 border-t border-slate-800 bg-slate-900">
+                <div class="flex items-center">
+                    <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">{{
+                        supervisor_name[:2] | upper if supervisor_name else 'AD' }}</div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-white">{{ supervisor_name or 'Admin' }}</p>
+                        <p class="text-xs text-slate-400">{{ company_name or 'Company' }}</p>
+                    </div>
+                    <a href="/logout" class="ml-auto text-slate-400 hover:text-white"><i
+                            class="fa-solid fa-right-from-bracket"></i></a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 flex flex-col bg-gray-50 min-w-0">
+            <!-- Top Header -->
+            <header
+                class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10">
+                <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                        <input type="text" id="searchInput" placeholder="Search..."
+                            class="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none w-64">
+                    </div>
+                    <button class="p-2 text-gray-500 hover:text-blue-600 relative" onclick="location.reload()">
+                        <i class="fa-solid fa-rotate-right text-lg"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- CONTENT VIEWS WRAPPER -->
+            <div class="flex-1 overflow-auto p-6 scroll-smooth">
+
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="view-dashboard" class="view-section active">
+                    <!-- KPI Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                        <!-- KPI 1: Present -->
+                        <div onclick="openStatusModal('Present')"
+                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-green-200 transition-all group">
+                            <div class="flex justify-between items-start">
+                                <p
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-green-600">
+                                    Online</p>
+                                <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-green-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between mt-2">
+                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-present">0</h3>
+                                <div
+                                    class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                    <i class="fa-solid fa-check"></i></div>
+                            </div>
+                        </div>
+
+                        <!-- KPI 2: On Break -->
+                        <div onclick="openStatusModal('Break')"
+                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-yellow-200 transition-all group">
+                            <div class="flex justify-between items-start">
+                                <p
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-yellow-600">
+                                    On Break</p>
+                                <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-yellow-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between mt-2">
+                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-break">0</h3>
+                                <div
+                                    class="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
+                                    <i class="fa-solid fa-coffee"></i></div>
+                            </div>
+                        </div>
+
+                        <!-- KPI 3: Away -->
+                        <div onclick="openStatusModal('Away')"
+                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-red-200 transition-all group">
+                            <div class="flex justify-between items-start">
+                                <p
+                                    class="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-red-600">
+                                    Away</p>
+                                <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-red-400"></i>
+                            </div>
+                            <div class="flex items-center justify-between mt-2">
+                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-away">0</h3>
+                                <div
+                                    class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                                    <i class="fa-solid fa-clock-rotate-left"></i></div>
+                            </div>
+                        </div>
+
+                        <!-- KPI 4: Offline -->
+                        <div onclick="openStatusModal('Offline')"
+                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
+                            <div class="flex justify-between items-start">
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Offline</p>
+                                <i class="fa-solid fa-expand text-gray-300 text-xs"></i>
+                            </div>
+                            <div class="flex items-center justify-between mt-2">
+                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-offline">0</h3>
+                                <div
+                                    class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                                    <i class="fa-solid fa-power-off"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <!-- App Usage Chart -->
+                        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">📱 App Usage (Today)</h3>
+                            <div class="chart-container">
+                                <canvas id="appUsageChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Status Distribution -->
+                        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">📊 Status Distribution</h3>
+                            <div class="chart-container">
+                                <canvas id="statusPieChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">📝 Recent Activity</h3>
+                        <div id="recent-activity" class="space-y-2 max-h-64 overflow-y-auto">
+                            <p class="text-gray-400 text-sm">Loading...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. LIVE MONITORING VIEW -->
+                <section id="view-live-monitoring" class="view-section">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm font-medium">Grid
+                                View</button>
+                            <button class="px-3 py-1 bg-white border border-gray-300 text-gray-600 rounded text-sm">List
+                                View</button>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">Auto-refresh in 30s</span>
+                            <button onclick="loadLiveMonitoring()" class="text-gray-400 hover:text-blue-600"><i
+                                    class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                    </div>
+
+                    <div id="live-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <p class="text-gray-400">Loading...</p>
+                    </div>
+                </section>
+
+                <!-- 3. EMPLOYEES VIEW -->
+                <section id="view-employees" class="view-section">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-bold text-gray-800 text-lg">Employee Directory</h3>
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700"
+                            data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+                            <i class="fa-solid fa-plus mr-2"></i>Add Employee
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Department
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Present
+                                        Time</th>
+                                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeeTableBody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-gray-400">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 4. EMPLOYEE PERFORMANCE VIEW -->
+                <section id="view-employee-performance" class="view-section">
+                    <p class="text-gray-500">Select an employee from the Employees page to view their performance.</p>
+                </section>
+
+                <!-- 5. SETTINGS VIEW -->
+                <section id="view-settings" class="view-section">
+                    <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6 max-w-3xl">
+                        <h4 class="text-lg font-bold text-gray-800 mb-4">Monitoring Configuration</h4>
+
+                        <div class="flex items-center justify-between py-4 border-b border-gray-100">
+                            <div>
+                                <h5 class="font-bold text-gray-700">Camera Presence Detection</h5>
+                                <p class="text-xs text-gray-500 max-w-md mt-1">
+                                    Uses local AI to detect if the employee is in front of the screen.
+                                    <span class="text-blue-600 font-bold">No video is recorded or transmitted.</span>
+                                    (Privacy Safe)
+                                </p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- STATUS DETAIL MODAL -->
+    <div id="status-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+        <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0"
+            onclick="closeStatusModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div id="modal-panel"
+                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg modal-enter">
+                    <div
+                        class="bg-white px-4 pb-4 pt-5 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-bold leading-6 text-gray-900 flex items-center">
+                                <span id="modal-status-icon" class="mr-2"></span>
+                                <span id="modal-title">Employees</span>
+                            </h3>
+                        </div>
+                        <button onclick="closeStatusModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="px-4 py-2 bg-gray-50 max-h-96 overflow-y-auto" id="modal-list-container"></div>
+                    <div class="bg-white px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-gray-100">
+                        <button type="button"
+                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                            onclick="closeStatusModal()">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Data Storage ---
+        let dashboardLogs = [];
+        let appUsageChart = null;
+        let statusPieChart = null;
+
+        // --- Navigation ---
+        function navTo(viewId) {
+            const titles = {
+                'dashboard': 'Dashboard',
+                'live-monitoring': 'Live Monitoring',
+                'employee-performance': 'Employee Performance',
+                'employees': 'Employee Management',
+                'settings': 'System Settings'
+            };
+            document.getElementById('page-title').innerText = titles[viewId] || 'Dashboard';
+
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+
+            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+            const activeLink = document.getElementById('nav-' + viewId);
+            if (activeLink) activeLink.classList.add('active');
+
+            if (viewId === 'live-monitoring') loadLiveMonitoring();
+            if (viewId === 'employees') loadEmployeesTable();
+        }
+
+        // --- Load Dashboard ---
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/dashboard/stats');
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const data = await response.json();
+                dashboardLogs = data.logs || [];
+
+                // Update KPIs
+                document.getElementById('kpi-present').innerText = data.count_present || 0;
+                document.getElementById('kpi-break').innerText = data.count_break || 0;
+                document.getElementById('kpi-away').innerText = data.count_away || 0;
+                document.getElementById('kpi-offline').innerText = data.count_offline || 0;
+
+                // Update Pie Chart
+                updatePieChart(data.count_present, data.count_break, data.count_away, data.count_offline);
+
+                // Update Recent Activity
+                renderRecentActivity(data.recent_activity || dashboardLogs);
+
+                // Load App Usage
+                loadAppUsage();
+
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+            }
+        }
+
+        // --- Pie Chart ---
+        function updatePieChart(present, onBreak, away, offline) {
+            const ctx = document.getElementById('statusPieChart');
+            if (!ctx) return;
+
+            if (statusPieChart) statusPieChart.destroy();
+
+            statusPieChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Online', 'On Break', 'Away', 'Offline'],
+                    datasets: [{
+                        data: [present, onBreak, away, offline],
+                        backgroundColor: ['#22c55e', '#eab308', '#ef4444', '#6b7280'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        // --- App Usage Chart ---
+        async function loadAppUsage() {
+            try {
+                const response = await fetch('/api/app-usage-stats');
+                if (response.status !== 200) return;
+                const data = await response.json();
+
+                const labels = data.top_apps.map(a => a.app.replace('.exe', ''));
+                const durations = data.top_apps.map(a => Math.round(a.duration / 60));
+
+                const colors = ['#00b894', '#0984e3', '#fd79a8', '#fdcb6e', '#6c5ce7', '#e17055', '#00cec9', '#a29bfe', '#fab1a0', '#81ecec'];
+
+                const ctx = document.getElementById('appUsageChart');
+
+                if (appUsageChart) appUsageChart.destroy();
+
+                appUsageChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Minutes',
+                            data: durations,
+                            backgroundColor: colors,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { display: false } }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('App usage load error:', error);
+            }
+        }
+
+        // --- Recent Activity ---
+        function renderRecentActivity(logs) {
+            const container = document.getElementById('recent-activity');
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-sm">No recent activity</p>';
+                return;
+            }
+
+            let html = '';
+            logs.slice(0, 10).forEach(log => {
+                const statusClass = getStatusClass(log.status);
+                const timeStr = log.timestamp.endsWith('Z') ? log.timestamp : log.timestamp + 'Z';
+                const time = new Date(timeStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                html += `
+                    <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded hover:bg-gray-100 transition">
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3 text-xs">${log.employee_name.substring(0, 2).toUpperCase()}</div>
+                            <div>
+                                <span class="text-sm font-medium text-gray-800">${log.employee_name}</span>
+                                <span class="${statusClass} ml-2">${log.status}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs text-gray-400">${time}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // --- Live Monitoring ---
+        async function loadLiveMonitoring() {
+            const grid = document.getElementById('live-grid');
+            if (!dashboardLogs.length) await loadDashboard();
+
+            let html = '';
+            dashboardLogs.forEach(emp => {
+                const statusBadge = getStatusBadge(emp.status);
+                const eyeIcon = ['Present', 'WORK_START', 'BREAK_END'].includes(emp.status)
+                    ? '<div class="absolute top-2 right-2 bg-slate-900/80 text-white px-2 py-1 rounded text-xs"><i class="fa-solid fa-eye mr-1"></i> Detected</div>'
+                    : '<div class="absolute top-2 right-2 bg-red-100 text-red-700 px-2 py-1 rounded text-xs border border-red-200"><i class="fa-solid fa-eye-slash mr-1"></i> Away</div>';
+
+                html += `
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer" onclick="window.location.href='/employee/${emp.employee_name}'">
+                        <div class="bg-gray-100 h-24 flex items-center justify-center relative">
+                            <i class="fa-solid fa-user text-3xl text-gray-300"></i>
+                            ${eyeIcon}
+                        </div>
+                        <div class="p-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 text-sm">${emp.employee_name}</h4>
+                                    <p class="text-xs text-gray-500">${emp.department || 'No department'}</p>
+                                </div>
+                                ${statusBadge}
+                            </div>
+                            <div class="mt-2 text-xs text-gray-500">
+                                <i class="fa-solid fa-clock mr-1"></i> ${emp.present_time || '0h 0m'} today
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html || '<p class="text-gray-400">No employees found</p>';
+        }
+
+        // --- Employees Table ---
+        async function loadEmployeesTable() {
+            if (!dashboardLogs.length) await loadDashboard();
+
+            const tbody = document.getElementById('employeeTableBody');
+            let html = '';
+            dashboardLogs.forEach(emp => {
+                const statusBadge = getStatusBadge(emp.status);
+                html += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3 text-xs">${emp.employee_name.substring(0, 2).toUpperCase()}</div>
+                            <span class="text-sm font-medium text-gray-900">${emp.employee_name}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${emp.department || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${emp.present_time || '0h 0m'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="/employee/${emp.employee_name}" class="text-blue-600 hover:text-blue-900"><i class="fa-solid fa-chart-line mr-1"></i> View</a>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html || '<tr><td colspan="5" class="text-center py-4 text-gray-400">No employees</td></tr>';
+        }
+
+        // --- Status Modal ---
+        function openStatusModal(statusType) {
+            const modal = document.getElementById('status-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            const panel = document.getElementById('modal-panel');
+            const container = document.getElementById('modal-list-container');
+            const title = document.getElementById('modal-title');
+            const icon = document.getElementById('modal-status-icon');
+
+            title.innerText = `Employees: ${statusType}`;
+            container.innerHTML = '';
+
+            if (statusType === 'Present') icon.innerHTML = '<i class="fa-solid fa-circle text-green-500 text-sm"></i>';
+            else if (statusType === 'Break') icon.innerHTML = '<i class="fa-solid fa-circle text-yellow-500 text-sm"></i>';
+            else if (statusType === 'Away') icon.innerHTML = '<i class="fa-solid fa-circle text-red-500 text-sm"></i>';
+            else icon.innerHTML = '<i class="fa-solid fa-circle text-gray-400 text-sm"></i>';
+
+            const filtered = dashboardLogs.filter(emp => {
+                if (statusType === 'Present') return ['Present', 'WORK_START', 'BREAK_END'].includes(emp.status);
+                if (statusType === 'Break') return emp.status === 'BREAK_START';
+                if (statusType === 'Away') return emp.status === 'Away';
+                if (statusType === 'Offline') return emp.status === 'Offline';
+                return false;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="p-8 text-center text-gray-500">No employees in this status.</div>';
+            } else {
+                filtered.forEach(emp => {
+                    const statusBadge = getStatusBadge(emp.status);
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between p-3 mb-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow cursor-pointer';
+                    item.onclick = () => window.location.href = `/employee/${emp.employee_name}`;
+                    item.innerHTML = `
+                        <div class="flex items-center">
+                            <div class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3 text-xs">${emp.employee_name.substring(0, 2).toUpperCase()}</div>
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-800">${emp.employee_name}</h4>
+                                <p class="text-xs text-gray-500">${emp.department || 'No department'}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            ${statusBadge}
+                            <p class="text-xs text-gray-400 mt-1">${emp.present_time || '0h 0m'}</p>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('modal-enter');
+            panel.classList.add('modal-enter-active');
+        }
+
+        function closeStatusModal() {
+            const modal = document.getElementById('status-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            const panel = document.getElementById('modal-panel');
+
+            backdrop.classList.add('opacity-0');
+            panel.classList.add('modal-exit-active');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                panel.classList.remove('modal-exit-active');
+                panel.classList.add('modal-enter');
+            }, 200);
+        }
+
+        // --- Helpers ---
+        function getStatusClass(status) {
+            if (['Present', 'WORK_START', 'BREAK_END'].includes(status)) return 'badge badge-green';
+            if (status === 'BREAK_START') return 'badge badge-yellow';
+            if (status === 'Away') return 'badge badge-red';
+            return 'badge badge-gray';
+        }
+
+        function getStatusBadge(status) {
+            if (['Present', 'WORK_START', 'BREAK_END'].includes(status)) return '<span class="badge badge-green">Online</span>';
+            if (status === 'BREAK_START') return '<span class="badge badge-yellow">On Break</span>';
+            if (status === 'Away') return '<span class="badge badge-red">Away</span>';
+            return '<span class="badge badge-gray">Offline</span>';
+        }
+
+        // --- Init ---
+        loadDashboard();
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+
+</html>

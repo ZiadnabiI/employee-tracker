@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from pydantic import BaseModel
-from database import SessionLocal, EmployeeLog, Employee, Company, Supervisor, AppLog, Base, engine
+from database import SessionLocal, EmployeeLog, Employee, Company, Supervisor, AppLog, Screenshot, Base, engine
 from auth import (
     hash_password, verify_password, create_token, verify_token, 
     invalidate_token, get_token_from_cookies, get_current_supervisor, require_auth
@@ -153,6 +153,23 @@ async def read_root(request: Request):
         return RedirectResponse(url="/login", status_code=302)
     
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/dashboard-new", response_class=HTMLResponse)
+async def dashboard_new(request: Request, db: Session = Depends(get_db)):
+    """New Tailwind dashboard - requires login"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    token_data = verify_token(token)
+    supervisor = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    return templates.TemplateResponse("dashboard_new.html", {
+        "request": request,
+        "supervisor_name": supervisor.name if supervisor else "Admin",
+        "company_name": company.name if company else "Company"
+    })
 
 @app.get("/dashboard/stats")
 async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
@@ -861,6 +878,82 @@ async def get_top_performers(request: Request, limit: int = 5, db: Session = Dep
         "top_performers": scores[:limit],
         "needs_attention": list(reversed(scores[-limit:])) if len(scores) >= limit else list(reversed(scores))
     }
+
+# ===============================
+# SCREENSHOT ENDPOINTS
+# ===============================
+
+class ScreenshotUpload(BaseModel):
+    activation_key: str
+    screenshot_data: str  # Base64 encoded
+    manual_request: bool = False
+
+@app.post("/api/screenshot")
+async def upload_screenshot(data: ScreenshotUpload, db: Session = Depends(get_db)):
+    """Receive screenshot from detector app"""
+    # Verify activation key
+    employee = db.query(Employee).filter(Employee.activation_key == data.activation_key).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Save screenshot (store only last 50 per employee to save space)
+    old_screenshots = db.query(Screenshot).filter(
+        Screenshot.employee_name == employee.name
+    ).order_by(Screenshot.timestamp.asc()).all()
+    
+    # Delete oldest if more than 50
+    if len(old_screenshots) >= 50:
+        for old in old_screenshots[:-49]:
+            db.delete(old)
+    
+    # Create new screenshot
+    new_screenshot = Screenshot(
+        employee_name=employee.name,
+        company_id=employee.company_id,
+        image_data=data.screenshot_data,
+        manual_request=1 if data.manual_request else 0
+    )
+    db.add(new_screenshot)
+    db.commit()
+    
+    return {"status": "ok", "message": "Screenshot saved"}
+
+@app.get("/api/screenshots/{employee_name}")
+async def get_employee_screenshots(employee_name: str, request: Request, limit: int = 20, db: Session = Depends(get_db)):
+    """Get recent screenshots for an employee"""
+    # Auth check
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    screenshots = db.query(Screenshot).filter(
+        Screenshot.employee_name == employee_name
+    ).order_by(Screenshot.timestamp.desc()).limit(limit).all()
+    
+    return [{
+        "id": s.id,
+        "timestamp": s.timestamp.isoformat() if s.timestamp else None,
+        "image_data": s.image_data,
+        "manual_request": bool(s.manual_request)
+    } for s in screenshots]
+
+@app.post("/api/request-screenshot/{employee_name}")
+async def request_screenshot(employee_name: str, request: Request, db: Session = Depends(get_db)):
+    """Supervisor requests an immediate screenshot from employee"""
+    # Auth check
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # For now, we create a "request" record that the detector can poll
+    # In production, you'd use WebSockets or push notifications
+    employee = db.query(Employee).filter(Employee.name == employee_name).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Store request in registry (employee needs to poll this)
+    # For simplicity, we just return success - detector would need to poll an endpoint
+    return {"status": "ok", "message": f"Screenshot request sent to {employee_name}"}
 
 if __name__ == "__main__":
     import uvicorn

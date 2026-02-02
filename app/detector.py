@@ -17,6 +17,9 @@ import uuid
 import win32gui
 import win32process
 import psutil
+from PIL import ImageGrab
+import io
+import base64
 
 # =============================================================================
 # CONFIGURATION
@@ -357,9 +360,14 @@ class EmployeeApp:
         if not self.monitoring_active:
             self.monitoring_active = True
             self.session_start_time = time.time()
+            
+            # Send initial Present status so employee shows as online immediately
+            self.send_log("Present")
+            
             Thread(target=self.monitoring_loop, daemon=True).start()
             Thread(target=self.heartbeat_loop, daemon=True).start()
             Thread(target=self.app_tracking_loop, daemon=True).start()
+            Thread(target=self.screenshot_loop, daemon=True).start()  # Screenshot loop
             self.root.after(1000, self.tick_time)
 
     def activate_device(self):
@@ -767,6 +775,46 @@ class EmployeeApp:
     def on_closing(self):
         """Handle window close"""
         self.show_end_shift_modal()
+
+    def screenshot_loop(self):
+        """Capture screenshots every 10 minutes and send to server"""
+        SCREENSHOT_INTERVAL = 600  # 10 minutes in seconds
+        
+        while self.is_running and self.monitoring_active:
+            if not self.in_break_mode:  # Don't capture during breaks
+                self.capture_and_send_screenshot()
+            
+            # Sleep in small intervals to allow quick exit
+            for _ in range(SCREENSHOT_INTERVAL // 5):
+                if not self.is_running or not self.monitoring_active:
+                    break
+                time.sleep(5)
+    
+    def capture_and_send_screenshot(self, manual=False):
+        """Capture screen and send to server"""
+        try:
+            # Capture the screen
+            screenshot = ImageGrab.grab()
+            
+            # Convert to JPEG and Base64
+            buffer = io.BytesIO()
+            screenshot.save(buffer, format='JPEG', quality=60)
+            img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            
+            # Send to server
+            payload = {
+                "activation_key": self.activation_key,
+                "screenshot_data": img_base64,
+                "manual_request": manual
+            }
+            resp = requests.post(f"{SERVER_URL}/api/screenshot", json=payload, timeout=10)
+            
+            if resp.status_code == 200:
+                print("📸 Screenshot captured and sent!")
+            else:
+                print(f"📸 Screenshot failed: {resp.status_code}")
+        except Exception as e:
+            print(f"📸 Screenshot error: {e}")
 
 # =============================================================================
 # MAIN ENTRY POINT
