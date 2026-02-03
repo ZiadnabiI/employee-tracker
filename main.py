@@ -310,6 +310,10 @@ async def create_supervisor(request: Request, data: SupervisorInvite, db: Sessio
     current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
     if not current_sup:
         raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # RBAC Check
+    if current_sup.role != 'admin':
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot create supervisors")
 
     # Check email uniqueness
     if db.query(Supervisor).filter(Supervisor.email == data.email).first():
@@ -355,9 +359,13 @@ async def create_employee(request: Request, employee: EmployeeCreate, db: Sessio
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    token_data = verify_token(token)
     if not token_data:
         raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # RBAC Check
+    current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    if not current_sup or current_sup.role != 'admin':
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot create employees")
     
     # Generate unique key
     while True:
@@ -1082,6 +1090,12 @@ async def update_settings(settings: SettingsUpdate, request: Request, db: Sessio
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     token_data = verify_token(token)
+    
+    # RBAC Check
+    current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    if not current_sup or current_sup.role != 'admin':
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot change settings")
+
     company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
     
     if company:
@@ -1105,6 +1119,11 @@ async def invite_employee(invite: EmployeeInvite, request: Request, db: Session 
             raise HTTPException(status_code=401, detail="Not authenticated")
         
         token_data = verify_token(token)
+
+        # RBAC Check
+        current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+        if not current_sup or current_sup.role != 'admin':
+            raise HTTPException(status_code=403, detail="Viewer accounts cannot invite employees")
         
         # Check if email exists (only if provided)
         if invite.email and db.query(Employee).filter(Employee.email == invite.email).first():
