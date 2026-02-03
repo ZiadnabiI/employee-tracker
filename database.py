@@ -35,6 +35,7 @@ class Company(Base):
     stripe_customer_id = Column(String, nullable=True)
     max_employees = Column(Integer, default=5)
     screenshot_frequency = Column(Integer, default=600) # Seconds between screenshots
+    dlp_enabled = Column(Integer, default=0) # 0=Disabled, 1=Enabled (Manual DB toggle)
     
     # Relationships
     employees = relationship("Employee", back_populates="company")

@@ -400,7 +400,25 @@
                                 </p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" checked class="sr-only peer">
+                                <input type="checkbox" id="dlp-toggle" class="sr-only peer">
+                                <div
+                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Data Loss Prevention (DLP) -->
+                        <div class="flex items-center justify-between py-4 border-b border-gray-100">
+                            <div>
+                                <h5 class="font-bold text-gray-700"><i class="fa-solid fa-user-secret mr-2"></i>Data
+                                    Loss Prevention (DLP)</h5>
+                                <p class="text-xs text-gray-500 max-w-md mt-1">
+                                    Automatically detect sensitive windows (e.g. Banking, Email, Passwords) and
+                                    <span class="text-red-500 font-bold">blur the screenshot</span> to protect privacy.
+                                </p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="dlp-setting-toggle" class="sr-only peer">
                                 <div
                                     class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
                                 </div>
@@ -1037,6 +1055,9 @@
                         document.getElementById('freq-slider').value = mins;
                         updateFreqDisplay(mins);
                     }
+                    if (data.dlp_enabled !== undefined) {
+                        document.getElementById('dlp-setting-toggle').checked = (data.dlp_enabled === 1);
+                    }
                 }
             } catch (e) {
                 console.error("Error loading settings:", e);
@@ -1051,12 +1072,16 @@
 
             const freqMins = document.getElementById('freq-slider').value;
             const freqSeconds = freqMins * 60;
+            const dlpEnabled = document.getElementById('dlp-setting-toggle').checked ? 1 : 0;
 
             try {
                 const response = await fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ screenshot_frequency: freqSeconds })
+                    body: JSON.stringify({
+                        screenshot_frequency: freqSeconds,
+                        dlp_enabled: dlpEnabled
+                    })
                 });
 
                 if (response.ok) {

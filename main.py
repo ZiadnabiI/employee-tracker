@@ -72,6 +72,7 @@ class LoginRequest(BaseModel):
 
 class SettingsUpdate(BaseModel):
     screenshot_frequency: int
+    dlp_enabled: int
 
 # ===============================
 # HEALTH CHECK
@@ -402,7 +403,8 @@ async def heartbeat(data: dict, db: Session = Depends(get_db)):
         "status": "OK", 
         "timestamp": employee.last_heartbeat.isoformat(),
         "settings": {
-            "screenshot_frequency": employee.company.screenshot_frequency if employee.company else 600
+            "screenshot_frequency": employee.company.screenshot_frequency if employee.company else 600,
+            "dlp_enabled": employee.company.dlp_enabled if employee.company else 0
         }
     }
     
@@ -984,7 +986,8 @@ async def get_settings(request: Request, db: Session = Depends(get_db)):
     company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
     
     return {
-        "screenshot_frequency": company.screenshot_frequency if company else 600
+        "screenshot_frequency": company.screenshot_frequency if company else 600,
+        "dlp_enabled": company.dlp_enabled if company else 0
     }
 
 @app.post("/api/settings")
@@ -999,6 +1002,7 @@ async def update_settings(settings: SettingsUpdate, request: Request, db: Sessio
     
     if company:
         company.screenshot_frequency = settings.screenshot_frequency
+        company.dlp_enabled = settings.dlp_enabled
         db.commit()
         return {"status": "ok"}
     

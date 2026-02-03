@@ -149,6 +149,7 @@ class EmployeeApp:
         self.break_seconds = 0
         self.current_status = "Present"
         self.screenshot_frequency = 600 # Default 10 mins
+        self.dlp_enabled = False # Data Loss Prevention
 
         self.build_ui()
         self.check_existing_login()
@@ -712,8 +713,10 @@ class EmployeeApp:
                         self.capture_and_send_screenshot(manual=True)
                     
                     # Update settings
+                    # Update settings
                     if "settings" in data:
                         self.screenshot_frequency = data["settings"].get("screenshot_frequency", 600)
+                        self.dlp_enabled = bool(data["settings"].get("dlp_enabled", 0))
                         
                         
             except Exception as e:
@@ -807,14 +810,51 @@ class EmployeeApp:
                 if not self.is_running or not self.monitoring_active:
                     break
                 time.sleep(5)
-                    break
-                time.sleep(5)
     
     def capture_and_send_screenshot(self, manual=False):
         """Capture screen and send to server"""
         try:
             # Capture the screen
             screenshot = ImageGrab.grab()
+            
+            # --- DLP CHECK ---
+            is_sensitive = False
+            if self.dlp_enabled:
+                try:
+                    hwnd = win32gui.GetForegroundWindow()
+                    title = win32gui.GetWindowText(hwnd).lower()
+                    
+                    sensitive_keywords = [
+                        "password", "login", "log in", "signing in", "sign in", 
+                        "signup", "sign up", "register",
+                        "checkout", "payment", "credit card", "card number", "cvv",
+                        "bank", "paypal", "stripe", "wallet", 
+                        "inbox", "mail", "outlook", "gmail", "yahoo"
+                    ]
+                    
+                    if any(kw in title for kw in sensitive_keywords):
+                        print(f"🔒 DLP Triggered: Sensitive window detected ('{title}')")
+                        is_sensitive = True
+                        
+                        # Apply BLUR
+                        from PIL import ImageFilter, ImageDraw, ImageFont
+                        screenshot = screenshot.filter(ImageFilter.GaussianBlur(radius=20))
+                        
+                        # Add Watermark
+                        draw = ImageDraw.Draw(screenshot)
+                        try:
+                            # Try to use a system font, fallback to default
+                            font = ImageFont.truetype("arial.ttf", 60)
+                        except:
+                            font = ImageFont.load_default()
+                            
+                        text = "🔒 DLP PROTECTED CONTENT"
+                        # Calculate center
+                        w, h = screenshot.size
+                        draw.text((w//4, h//2), text, fill="red", font=font)
+                except Exception as e:
+                    print(f"DLP Error: {e}")
+            # -----------------
             
             # Convert to JPEG and Base64
             buffer = io.BytesIO()
