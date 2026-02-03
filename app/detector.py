@@ -184,9 +184,16 @@ class DraggableWindow(tk.Tk):
         min_btn = tk.Button(
             self.title_bar, text="─", bg=Theme.TITLE_BAR, fg=Theme.TEXT_MUTED, 
             activebackground=Theme.BG_CARD, activeforeground="white",
-            relief="flat", bd=0, width=4, command=self.iconify
+            relief="flat", bd=0, width=4, command=self.minimize_window
         )
         min_btn.pack(side="right", fill="y")
+
+    def minimize_window(self):
+        try:
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            ctypes.windll.user32.ShowWindow(hwnd, 6) # SW_MINIMIZE = 6
+        except:
+            self.iconify()
 
     def start_move(self, event):
         self.x = event.x
