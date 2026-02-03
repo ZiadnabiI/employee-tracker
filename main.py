@@ -393,9 +393,18 @@ async def heartbeat(data: dict, db: Session = Depends(get_db)):
     
     # Update last heartbeat
     employee.last_heartbeat = datetime.datetime.utcnow()
+    
+    # Check for pending commands
+    response_data = {"status": "OK", "timestamp": employee.last_heartbeat.isoformat()}
+    
+    if employee.pending_screenshot == 1:
+        response_data["command"] = "screenshot"
+        # Reset flag
+        employee.pending_screenshot = 0
+        
     db.commit()
     
-    return {"status": "OK", "timestamp": employee.last_heartbeat.isoformat()}
+    return response_data
 
 @app.post("/api/app-log")
 async def log_app_usage(data: dict, db: Session = Depends(get_db)):
@@ -945,14 +954,14 @@ async def request_screenshot(employee_name: str, request: Request, db: Session =
     if not token or not verify_token(token):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    # For now, we create a "request" record that the detector can poll
-    # In production, you'd use WebSockets or push notifications
     employee = db.query(Employee).filter(Employee.name == employee_name).first()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
-    # Store request in registry (employee needs to poll this)
-    # For simplicity, we just return success - detector would need to poll an endpoint
+    # Set pending flag
+    employee.pending_screenshot = 1
+    db.commit()
+    
     return {"status": "ok", "message": f"Screenshot request sent to {employee_name}"}
 
 if __name__ == "__main__":

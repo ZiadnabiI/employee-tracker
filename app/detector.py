@@ -697,11 +697,18 @@ class EmployeeApp:
                 payload = {"activation_key": self.activation_key}
                 resp = requests.post(f"{SERVER_URL}/heartbeat", json=payload, timeout=5)
                 if resp.status_code == 200:
+                    data = resp.json()
                     print("💓 Heartbeat OK")
+                    
+                    # Check for commands
+                    if data.get("command") == "screenshot":
+                        print("📸 Manual screenshot requested!")
+                        self.capture_and_send_screenshot(manual=True)
+                        
             except Exception as e:
                 print(f"❌ Heartbeat failed: {e}")
             
-            time.sleep(30)
+            time.sleep(10)  # Check more frequently (10s instead of 30s)
 
     def app_tracking_loop(self):
         """Track which app is currently active and send to server"""

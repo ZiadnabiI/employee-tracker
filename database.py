@@ -64,6 +64,7 @@ class Employee(Base):
     department = Column(String, nullable=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
     last_heartbeat = Column(DateTime, nullable=True)  # Track when app last pinged
+    pending_screenshot = Column(Integer, default=0)   # 1 if screenshot requested
     
     # Relationship
     company = relationship("Company", back_populates="employees")
