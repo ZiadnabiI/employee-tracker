@@ -406,6 +406,35 @@
                                 </div>
                             </label>
                         </div>
+
+                        <!-- Screenshot Frequency -->
+                        <div class="py-6 border-b border-gray-100">
+                            <div class="flex justify-between items-center mb-4">
+                                <div>
+                                    <h5 class="font-bold text-gray-700">Screenshot Frequency</h5>
+                                    <p class="text-xs text-gray-500">How often to capture screenshots from employee
+                                        devices.</p>
+                                </div>
+                                <span id="freq-display"
+                                    class="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">10
+                                    mins</span>
+                            </div>
+                            <input type="range" id="freq-slider" min="1" max="60" value="10"
+                                oninput="updateFreqDisplay(this.value)"
+                                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-400 mt-2">
+                                <span>1 min</span>
+                                <span>30 mins</span>
+                                <span>60 mins</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button id="save-settings-btn" onclick="saveSettings()"
+                                class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <i class="fa-solid fa-save mr-2"></i>Save Configuration
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -489,8 +518,16 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                            <input type="text" id="newEmpDept" placeholder="Engineering"
+                            <select id="newEmpDept"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Engineering">Engineering</option>
+                                <option value="Sales">Sales</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="HR">HR</option>
+                                <option value="Support">Support</option>
+                                <option value="Management">Management</option>
+                                <option value="Other">Other</option>
+                            </select>
                         </div>
                         <div id="addEmpResult" class="hidden p-3 rounded-md text-sm"></div>
                     </form>
@@ -954,10 +991,10 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Adding...';
 
             try {
-                const response = await fetch('/add-employee', {
+                const response = await fetch('/admin/create-employee', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, department: dept || null })
+                    body: JSON.stringify({ name: name, department: dept || 'Other' })
                 });
 
                 const data = await response.json();
@@ -985,8 +1022,75 @@
             btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Add Employee';
         }
 
+        // --- Settings Functions ---
+        function updateFreqDisplay(val) {
+            document.getElementById('freq-display').innerText = val + " mins";
+        }
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.screenshot_frequency) {
+                        const mins = Math.round(data.screenshot_frequency / 60);
+                        document.getElementById('freq-slider').value = mins;
+                        updateFreqDisplay(mins);
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading settings:", e);
+            }
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('save-settings-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saving...';
+            btn.disabled = true;
+
+            const freqMins = document.getElementById('freq-slider').value;
+            const freqSeconds = freqMins * 60;
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ screenshot_frequency: freqSeconds })
+                });
+
+                if (response.ok) {
+                    btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Saved!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    alert('Failed to save settings');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                alert('Error saving settings: ' + e.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
         // --- Init ---
         loadDashboard();
+        // Load initial view data
+        if (document.getElementById('view-settings').classList.contains('active')) {
+            loadSettings();
+        }
+
+        // Update navTo to load settings
+        const originalNavTo = navTo;
+        navTo = function (viewId) {
+            originalNavTo(viewId);
+            if (viewId === 'settings') loadSettings();
+        };
+
         setInterval(loadDashboard, 30000);
     </script>
 </body>

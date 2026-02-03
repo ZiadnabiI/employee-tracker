@@ -70,6 +70,9 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class SettingsUpdate(BaseModel):
+    screenshot_frequency: int
+
 # ===============================
 # HEALTH CHECK
 # ===============================
@@ -152,7 +155,7 @@ async def read_root(request: Request):
     if not token or not verify_token(token):
         return RedirectResponse(url="/login", status_code=302)
     
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("dashboard_new.html", {"request": request})
 
 @app.get("/dashboard-new", response_class=HTMLResponse)
 async def dashboard_new(request: Request, db: Session = Depends(get_db)):
@@ -395,7 +398,13 @@ async def heartbeat(data: dict, db: Session = Depends(get_db)):
     employee.last_heartbeat = datetime.datetime.utcnow()
     
     # Check for pending commands
-    response_data = {"status": "OK", "timestamp": employee.last_heartbeat.isoformat()}
+    response_data = {
+        "status": "OK", 
+        "timestamp": employee.last_heartbeat.isoformat(),
+        "settings": {
+            "screenshot_frequency": employee.company.screenshot_frequency if employee.company else 600
+        }
+    }
     
     if employee.pending_screenshot == 1:
         response_data["command"] = "screenshot"
@@ -963,6 +972,37 @@ async def request_screenshot(employee_name: str, request: Request, db: Session =
     db.commit()
     
     return {"status": "ok", "message": f"Screenshot request sent to {employee_name}"}
+
+@app.get("/api/settings")
+async def get_settings(request: Request, db: Session = Depends(get_db)):
+    """Get company settings"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    return {
+        "screenshot_frequency": company.screenshot_frequency if company else 600
+    }
+
+@app.post("/api/settings")
+async def update_settings(settings: SettingsUpdate, request: Request, db: Session = Depends(get_db)):
+    """Update company settings"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    if company:
+        company.screenshot_frequency = settings.screenshot_frequency
+        db.commit()
+        return {"status": "ok"}
+    
+    raise HTTPException(status_code=404, detail="Company not found")
 
 if __name__ == "__main__":
     import uvicorn

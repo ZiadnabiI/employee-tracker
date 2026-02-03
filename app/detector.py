@@ -70,29 +70,29 @@ def delete_registry_key():
 # =============================================================================
 
 class Colors:
-    # Background colors (Clean Light Mode)
-    BG_DARK = "#f5f6fa"      # Main background (Soft Grey)
-    BG_DARKER = "#ffffff"    # Header/Footer (Pure White)
-    BG_CARD = "#ffffff"      # Card surface (White)
-    BG_CARD_HOVER = "#f1f2f6"
+    # Background colors (Tailwind-like)
+    BG_DARK = "#f8fafc"      # Slate-50 - Main background
+    BG_DARKER = "#ffffff"    # White - Header/Footer
+    BG_CARD = "#ffffff"      # White - Card surface
+    BG_CARD_HOVER = "#f1f5f9" # Slate-100
     
     # Accent colors
-    PRIMARY = "#00cec9"      # Teal
-    SECONDARY = "#00b894"    # Green
-    WARNING = "#fdcb6e"      # Yellow/Orange
-    DANGER = "#ff7675"       # Soft Red
-    INFO = "#74b9ff"         # Soft Blue
+    PRIMARY = "#2563eb"      # Blue-600
+    SECONDARY = "#0f172a"    # Slate-900 (Sidebar color)
+    WARNING = "#eab308"      # Yellow-500
+    DANGER = "#ef4444"       # Red-500
+    INFO = "#3b82f6"         # Blue-500
     
     # Text colors
-    TEXT_PRIMARY = "#2d3436" # Dark Grey (almost black)
-    TEXT_SECONDARY = "#636e72" # Grey
-    TEXT_MUTED = "#b2bec3"   # Light Grey
+    TEXT_PRIMARY = "#1e293b" # Slate-800
+    TEXT_SECONDARY = "#64748b" # Slate-500
+    TEXT_MUTED = "#94a3b8"   # Slate-400
     
     # Status colors
-    ONLINE = "#00b894"
-    AWAY = "#ff7675"
-    BREAK = "#fdcb6e"
-    OFFLINE = "#b2bec3"
+    ONLINE = "#22c55e"       # Green-500
+    AWAY = "#ef4444"         # Red-500
+    BREAK = "#eab308"        # Yellow-500
+    OFFLINE = "#9ca3af"      # Gray-400
 
 class Fonts:
     TITLE = ("Segoe UI", 16, "bold")
@@ -146,7 +146,9 @@ class EmployeeApp:
         self.present_seconds = 0
         self.away_seconds = 0
         self.break_seconds = 0
+        self.break_seconds = 0
         self.current_status = "Present"
+        self.screenshot_frequency = 600 # Default 10 mins
 
         self.build_ui()
         self.check_existing_login()
@@ -161,19 +163,19 @@ class EmployeeApp:
     def build_ui(self):
         """Build the main user interface"""
         
-        # Header
-        self.header_frame = tk.Frame(self.root, bg=Colors.BG_DARKER, height=70)
+        # Header - Match Dashboard Sidebar (Slate-900)
+        self.header_frame = tk.Frame(self.root, bg=Colors.SECONDARY, height=80)
         self.header_frame.pack(fill="x")
         self.header_frame.pack_propagate(False)
         
         self.label_title = tk.Label(
             self.header_frame, 
-            text="👤 Employee Tracker", 
-            fg=Colors.TEXT_PRIMARY, 
-            bg=Colors.BG_DARKER, 
-            font=Fonts.TITLE
+            text="InFrame Detector", 
+            fg="white", 
+            bg=Colors.SECONDARY, 
+            font=("Segoe UI", 18, "bold")
         )
-        self.label_title.pack(pady=20)
+        self.label_title.pack(expand=True)
 
         # Status Indicator
         self.status_frame = tk.Frame(self.root, bg=Colors.BG_DARK)
@@ -191,8 +193,12 @@ class EmployeeApp:
         )
         self.label_status.pack(side="left")
 
-        # Stats Card
-        self.stats_card = tk.Frame(self.root, bg=Colors.BG_CARD, padx=30, pady=25)
+        # Stats Card (with Border)
+        self.stats_card_border = tk.Frame(self.root, bg="#e2e8f0", padx=1, pady=1) # Slate-200 border
+        self.stats_card_border.pack(pady=10,padx=20, fill="x")
+        
+        self.stats_card = tk.Frame(self.stats_card_border, bg="white", padx=30, pady=25)
+        self.stats_card.pack(fill="both")
         
         # Online time row
         self._create_stat_row(self.stats_card, "🟢 Online Time", "label_present_time", Colors.ONLINE)
@@ -203,8 +209,8 @@ class EmployeeApp:
         # Break time row
         self._create_stat_row(self.stats_card, "☕ Break Time", "label_break_time", Colors.BREAK)
         
-        # Separator
-        tk.Frame(self.stats_card, bg=Colors.BG_DARK, height=1, bd=0).pack(fill="x", pady=20)
+        # Separator (Lighter slate)
+        tk.Frame(self.stats_card, bg="#f1f5f9", height=1, bd=0).pack(fill="x", pady=20)
         
         # Session time row
         self._create_stat_row(self.stats_card, "⏱ Session", "label_session_time", Colors.INFO)
@@ -219,8 +225,8 @@ class EmployeeApp:
             text="☕ Take a Break", 
             command=self.toggle_break, 
             bg=Colors.WARNING, 
-            fg="#333",
-            activebackground=Colors.BG_CARD_HOVER,
+            fg="white",
+            activebackground="#ca8a04", # Darker yellow
             font=Fonts.BODY_BOLD, 
             height=2,
             relief="flat",
@@ -299,23 +305,23 @@ class EmployeeApp:
 
     def _create_stat_row(self, parent, label_text, attr_name, color):
         """Create a stat row with label and value"""
-        row = tk.Frame(parent, bg=Colors.BG_CARD, bd=0)
+        row = tk.Frame(parent, bg="white", bd=0)
         row.pack(fill="x", pady=12)
         
         tk.Label(
             row, 
             text=label_text, 
-            bg=Colors.BG_CARD, 
-            fg=Colors.TEXT_SECONDARY, 
-            font=Fonts.BODY
+            bg="white", 
+            fg="#64748b", # Slate-500
+            font=("Segoe UI", 11)
         ).pack(side="left")
         
         label = tk.Label(
             row, 
             text="00:00:00", 
-            bg=Colors.BG_CARD, 
+            bg="white", 
             fg=color, 
-            font=Fonts.TIMER
+            font=("Consolas", 14, "bold")
         )
         label.pack(side="right")
         setattr(self, attr_name, label)
@@ -348,7 +354,7 @@ class EmployeeApp:
         self.label_status.config(text="Monitoring Active", fg=Colors.ONLINE)
         self.status_indicator.config(bg=Colors.ONLINE)
         
-        self.stats_card.pack(pady=10, padx=20, fill="x")
+        self.stats_card_border.pack(pady=10, padx=20, fill="x")
         
         self.btn_break.pack(pady=10, fill="x")
         self.btn_end_shift.pack(pady=5, fill="x")
@@ -704,6 +710,11 @@ class EmployeeApp:
                     if data.get("command") == "screenshot":
                         print("📸 Manual screenshot requested!")
                         self.capture_and_send_screenshot(manual=True)
+                    
+                    # Update settings
+                    if "settings" in data:
+                        self.screenshot_frequency = data["settings"].get("screenshot_frequency", 600)
+                        
                         
             except Exception as e:
                 print(f"❌ Heartbeat failed: {e}")
@@ -784,16 +795,18 @@ class EmployeeApp:
         self.show_end_shift_modal()
 
     def screenshot_loop(self):
-        """Capture screenshots every 10 minutes and send to server"""
-        SCREENSHOT_INTERVAL = 600  # 10 minutes in seconds
+        """Capture screenshots based on dynamic frequency"""
         
         while self.is_running and self.monitoring_active:
             if not self.in_break_mode:  # Don't capture during breaks
                 self.capture_and_send_screenshot()
             
-            # Sleep in small intervals to allow quick exit
-            for _ in range(SCREENSHOT_INTERVAL // 5):
+            # Sleep in intervals to allow frequency update or exit
+            start_sleep = time.time()
+            while time.time() - start_sleep < self.screenshot_frequency:
                 if not self.is_running or not self.monitoring_active:
+                    break
+                time.sleep(5)
                     break
                 time.sleep(5)
     

@@ -32,7 +32,9 @@ class Company(Base):
     subscription_status = Column(String, default="active") # active, past_due, canceled
     subscription_end_date = Column(DateTime, nullable=True)
     stripe_customer_id = Column(String, nullable=True)
+    stripe_customer_id = Column(String, nullable=True)
     max_employees = Column(Integer, default=5)
+    screenshot_frequency = Column(Integer, default=600) # Seconds between screenshots
     
     # Relationships
     employees = relationship("Employee", back_populates="company")
