@@ -74,6 +74,19 @@ class SettingsUpdate(BaseModel):
     screenshot_frequency: int
     dlp_enabled: int
 
+class EmployeeInvite(BaseModel):
+    name: str
+    email: str
+    department: str = "General"
+
+class EmployeeRegister(BaseModel):
+    token: str
+    password: str
+
+class AppLogin(BaseModel):
+    email: str
+    password: str
+
 # ===============================
 # HEALTH CHECK
 # ===============================
@@ -1007,6 +1020,88 @@ async def update_settings(settings: SettingsUpdate, request: Request, db: Sessio
         return {"status": "ok"}
     
     raise HTTPException(status_code=404, detail="Company not found")
+
+# ===============================
+# INVITATION & APP AUTH SYSTEM
+# ===============================
+
+@app.post("/api/employees/invite")
+async def invite_employee(invite: EmployeeInvite, request: Request, db: Session = Depends(get_db)):
+    """Invite an employee via email"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    
+    # Check if email exists
+    if db.query(Employee).filter(Employee.email == invite.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Generate tokens
+    activation_key = f"KEY-{secrets.token_hex(4).upper()}"
+    invite_token = secrets.token_urlsafe(32)
+    expires = datetime.datetime.utcnow() + datetime.timedelta(hours=48)
+    
+    new_employee = Employee(
+        name=invite.name,
+        email=invite.email,
+        department=invite.department,
+        activation_key=activation_key,
+        invite_token=invite_token,
+        invite_expires=expires,
+        company_id=token_data["company_id"],
+        is_active=0,
+        is_registered=0
+    )
+    db.add(new_employee)
+    db.commit()
+    
+    # In a real app, send email here. For now, return the link.
+    invite_link = f"{request.base_url}register?token={invite_token}"
+    return {"status": "ok", "invite_link": invite_link}
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request, token: str):
+    """Render registration page"""
+    return templates.TemplateResponse("register.html", {"request": request, "token": token})
+
+@app.post("/api/register")
+async def register_employee(data: EmployeeRegister, db: Session = Depends(get_db)):
+    """Set password for employee account"""
+    employee = db.query(Employee).filter(Employee.invite_token == data.token).first()
+    
+    if not employee:
+        raise HTTPException(status_code=400, detail="Invalid token")
+        
+    if employee.invite_expires and datetime.datetime.utcnow() > employee.invite_expires:
+        raise HTTPException(status_code=400, detail="Token expired")
+        
+    employee.password_hash = hash_password(data.password)
+    employee.is_registered = 1
+    employee.invite_token = None # Invalidate token
+    db.commit()
+    
+    return {"status": "ok"}
+
+@app.post("/api/app-login")
+async def app_login(data: AppLogin, db: Session = Depends(get_db)):
+    """Authenticate desktop app"""
+    employee = db.query(Employee).filter(Employee.email == data.email).first()
+    
+    if not employee or not employee.password_hash:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+    if not verify_password(data.password, employee.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+    # Return activation key for internal use
+    return {
+        "status": "ok", 
+        "activation_key": employee.activation_key, 
+        "name": employee.name,
+        "company_id": employee.company_id
+    }
 
 if __name__ == "__main__":
     import uvicorn

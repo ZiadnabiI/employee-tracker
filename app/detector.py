@@ -257,30 +257,36 @@ class EmployeeApp:
         # Login Widgets
         self.login_frame = tk.Frame(self.action_frame, bg=Colors.BG_DARK)
         
+        # Email Field
         tk.Label(
-            self.login_frame,
-            text="Enter Activation Key",
-            fg=Colors.TEXT_SECONDARY,
-            bg=Colors.BG_DARK,
-            font=Fonts.SMALL
-        ).pack(pady=(0, 8))
+            self.login_frame, text="Email Address", fg=Colors.TEXT_SECONDARY, 
+            bg=Colors.BG_DARK, font=Fonts.SMALL
+        ).pack(anchor="w", padx=5)
         
-        self.entry_key = tk.Entry(
-            self.login_frame, 
-            font=Fonts.BODY, 
-            justify='center',
-            bg=Colors.BG_CARD,
-            fg=Colors.TEXT_PRIMARY,
-            insertbackground=Colors.TEXT_PRIMARY,
-            relief="flat",
-            width=25
+        self.entry_email = tk.Entry(
+            self.login_frame, font=Fonts.BODY, bg=Colors.BG_CARD, 
+            fg=Colors.TEXT_PRIMARY, insertbackground=Colors.TEXT_PRIMARY, 
+            relief="flat", width=30
         )
-        self.entry_key.pack(pady=5, ipady=10)
+        self.entry_email.pack(pady=(2, 10), ipady=5, padx=5)
+
+        # Password Field
+        tk.Label(
+            self.login_frame, text="Password", fg=Colors.TEXT_SECONDARY, 
+            bg=Colors.BG_DARK, font=Fonts.SMALL
+        ).pack(anchor="w", padx=5)
         
-        self.btn_activate = tk.Button(
+        self.entry_password = tk.Entry(
+            self.login_frame, font=Fonts.BODY, bg=Colors.BG_CARD, 
+            fg=Colors.TEXT_PRIMARY, insertbackground=Colors.TEXT_PRIMARY, 
+            relief="flat", width=30, show="•"
+        )
+        self.entry_password.pack(pady=(2, 15), ipady=5, padx=5)
+        
+        self.btn_login = tk.Button(
             self.login_frame, 
-            text="🔓 Activate Device", 
-            command=self.activate_device, 
+            text="Login", 
+            command=self.perform_login, 
             bg=Colors.PRIMARY, 
             fg="white",
             activebackground=Colors.SECONDARY,
@@ -289,7 +295,7 @@ class EmployeeApp:
             relief="flat",
             cursor="hand2"
         )
-        self.btn_activate.pack(pady=15, fill="x")
+        self.btn_login.pack(pady=5, fill="x")
 
         # Footer
         self.footer_frame = tk.Frame(self.root, bg=Colors.BG_DARKER, height=40)
@@ -343,7 +349,7 @@ class EmployeeApp:
 
     def show_login_ui(self):
         """Show the login interface"""
-        self.label_status.config(text="Please enter your Activation Key")
+        self.label_status.config(text="Please log in to continue")
         self.status_indicator.config(bg=Colors.OFFLINE)
         self.login_frame.pack(pady=20, fill="x")
 
@@ -377,33 +383,38 @@ class EmployeeApp:
             Thread(target=self.screenshot_loop, daemon=True).start()  # Screenshot loop
             self.root.after(1000, self.tick_time)
 
-    def activate_device(self):
-        """Activate device with the entered key"""
-        key = self.entry_key.get().strip()
-        if not key:
-            messagebox.showwarning("Missing Key", "Please enter an activation key")
+    def perform_login(self):
+        """Authenticate with Email/Password"""
+        email = self.entry_email.get().strip()
+        password = self.entry_password.get().strip()
+        
+        if not email or not password:
+            messagebox.showwarning("Missing Credentials", "Please enter both email and password")
             return
         
-        self.label_status.config(text="Activating...", fg=Colors.WARNING)
+        self.label_status.config(text="Logging in...", fg=Colors.WARNING)
         
         try:
-            payload = {"activation_key": key, "hardware_id": self.hardware_id}
-            resp = requests.post(f"{SERVER_URL}/activate-device", json=payload, timeout=10)
+            payload = {"email": email, "password": password}
+            resp = requests.post(f"{SERVER_URL}/api/app-login", json=payload, timeout=10)
             
             if resp.status_code == 200:
                 data = resp.json()
-                self.activation_key = key
-                self.employee_name = data.get("employee_name", "Employee")
+                self.activation_key = data.get("activation_key")
+                self.employee_name = data.get("name", "Employee")
                 
-                # Save to Registry (no files!)
-                set_registry_value("activation_key", key)
+                # Save to Registry
+                set_registry_value("activation_key", self.activation_key)
                 set_registry_value("employee_name", self.employee_name)
+                
+                # Check hardware ID binding (optional, can be done here or on server logic)
+                # For now, just proceed
                 
                 self.show_main_ui()
             else:
-                error_msg = resp.json().get("detail", "Activation failed")
-                messagebox.showerror("Activation Failed", error_msg)
-                self.label_status.config(text="Activation failed", fg=Colors.DANGER)
+                error_msg = resp.json().get("detail", "Login failed")
+                messagebox.showerror("Login Failed", error_msg)
+                self.label_status.config(text="Login failed", fg=Colors.DANGER)
         except Exception as e:
             messagebox.showerror("Connection Error", f"Could not reach server: {e}")
             self.label_status.config(text="Connection error", fg=Colors.DANGER)
@@ -818,12 +829,10 @@ class EmployeeApp:
             screenshot = ImageGrab.grab()
             
             # --- DLP CHECK ---
+            # --- DLP CHECK ---
             is_sensitive = False
             if self.dlp_enabled:
                 try:
-                    hwnd = win32gui.GetForegroundWindow()
-                    title = win32gui.GetWindowText(hwnd).lower()
-                    
                     sensitive_keywords = [
                         "password", "login", "log in", "signing in", "sign in", 
                         "signup", "sign up", "register",
@@ -832,26 +841,58 @@ class EmployeeApp:
                         "inbox", "mail", "outlook", "gmail", "yahoo"
                     ]
                     
-                    if any(kw in title for kw in sensitive_keywords):
-                        print(f"🔒 DLP Triggered: Sensitive window detected ('{title}')")
-                        is_sensitive = True
-                        
-                        # Apply BLUR
-                        from PIL import ImageFilter, ImageDraw, ImageFont
-                        screenshot = screenshot.filter(ImageFilter.GaussianBlur(radius=20))
-                        
-                        # Add Watermark
-                        draw = ImageDraw.Draw(screenshot)
-                        try:
-                            # Try to use a system font, fallback to default
-                            font = ImageFont.truetype("arial.ttf", 60)
-                        except:
-                            font = ImageFont.load_default()
+                    visible_windows = []
+                    
+                    def enum_handler(hwnd, ctx):
+                        if win32gui.IsWindowVisible(hwnd):
+                            title = win32gui.GetWindowText(hwnd).lower()
+                            if title:
+                                visible_windows.append((hwnd, title))
+                    
+                    win32gui.EnumWindows(enum_handler, None)
+                    
+                    from PIL import ImageFilter, ImageDraw, ImageFont
+                    
+                    for hwnd, title in visible_windows:
+                        if any(kw in title for kw in sensitive_keywords):
+                            print(f"🔒 DLP Triggered: Sensitive window detected ('{title}')")
+                            is_sensitive = True
                             
-                        text = "🔒 DLP PROTECTED CONTENT"
-                        # Calculate center
-                        w, h = screenshot.size
-                        draw.text((w//4, h//2), text, fill="red", font=font)
+                            # Get Window Coordinates
+                            try:
+                                rect = win32gui.GetWindowRect(hwnd)
+                                x1, y1, x2, y2 = rect
+                                
+                                # Ensure coordinates are within screenshot bounds
+                                # (Handle negative coords for maximized windows slightly off-screen)
+                                x1 = max(0, x1)
+                                y1 = max(0, y1)
+                                x2 = min(screenshot.width, x2)
+                                y2 = min(screenshot.height, y2)
+                                
+                                if x2 > x1 and y2 > y1:
+                                    # Crop the region
+                                    region = screenshot.crop((x1, y1, x2, y2))
+                                    # Blur heavily
+                                    region = region.filter(ImageFilter.GaussianBlur(radius=30))
+                                    
+                                    # Draw Watermark on the region
+                                    draw_region = ImageDraw.Draw(region)
+                                    try:
+                                        font = ImageFont.truetype("arial.ttf", 40)
+                                    except:
+                                        font = ImageFont.load_default()
+                                    
+                                    msg = "DLP PROTECTED"
+                                    # Simple centering
+                                    rw, rh = region.size
+                                    draw_region.text((rw//4, rh//2), msg, fill="red", font=font)
+                                    
+                                    # Paste back
+                                    screenshot.paste(region, (x1, y1))
+                                    
+                            except Exception as ex:
+                                print(f"Window rect error: {ex}")
                 except Exception as e:
                     print(f"DLP Error: {e}")
             # -----------------

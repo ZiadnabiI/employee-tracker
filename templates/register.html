@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Registration - InFrame</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex items-center justify-center">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-4">
+                <i class="fa-solid fa-user-plus text-xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800">Welcome to InFrame</h2>
+            <p class="text-slate-500 mt-2">Set your password to activate your account</p>
+        </div>
+
+        <form id="registerForm" onsubmit="handleRegister(event)">
+            <input type="hidden" id="token" value="{{ token }}">
+
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Create Password</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-lock text-slate-400"></i>
+                    </div>
+                    <input type="password" id="password" required
+                        class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        placeholder="Enter a strong password">
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Confirm Password</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-lock text-slate-400"></i>
+                    </div>
+                    <input type="password" id="confirmPassword" required
+                        class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        placeholder="Repeat your password">
+                </div>
+                <p id="errorMsg" class="text-red-500 text-xs mt-2 hidden"></p>
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all transform active:scale-95 shadow-lg shadow-blue-500/30 flex items-center justify-center">
+                <span>Activate Account</span>
+                <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        </form>
+
+        <div id="successView" class="hidden text-center">
+            <div
+                class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-check text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">Account Activated!</h3>
+            <p class="text-slate-500 mb-6">You can now log in to the desktop app.</p>
+            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-left">
+                <p class="text-xs font-bold uppercase text-slate-400 mb-2">Next Steps:</p>
+                <ol class="list-decimal list-inside text-sm text-slate-600 space-y-1">
+                    <li>Open <strong>InFrame Detector</strong> app</li>
+                    <li>Enter your <strong>Email</strong></li>
+                    <li>Enter your new <strong>Password</strong></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function handleRegister(e) {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const token = document.getElementById('token').value;
+            const errorMsg = document.getElementById('errorMsg');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (password !== confirm) {
+                errorMsg.textContent = "Passwords do not match";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            if (password.length < 6) {
+                errorMsg.textContent = "Password must be at least 6 characters";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // Loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, password })
+                });
+
+                if (response.ok) {
+                    document.getElementById('registerForm').classList.add('hidden');
+                    document.getElementById('successView').classList.remove('hidden');
+                } else {
+                    const data = await response.json();
+                    errorMsg.textContent = data.detail || "Registration failed";
+                    errorMsg.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span>Activate Account</span><i class="fa-solid fa-arrow-right ml-2"></i>';
+                }
+            } catch (err) {
+                errorMsg.textContent = "Connection error";
+                errorMsg.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Activate Account</span><i class="fa-solid fa-arrow-right ml-2"></i>';
+            }
+        }
+    </script>
+</body>
+
+</html>

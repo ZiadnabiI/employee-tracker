@@ -535,6 +535,11 @@
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                            <input type="email" id="newEmpEmail" required placeholder="john@company.com"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
                             <select id="newEmpDept"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -554,7 +559,7 @@
                             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
                         <button type="submit" form="addEmployeeForm" id="addEmpBtn"
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
-                            <i class="fa-solid fa-plus mr-2"></i>Add Employee
+                            <i class="fa-solid fa-paper-plane mr-2"></i>Send Invitation
                         </button>
                     </div>
                 </div>
@@ -994,39 +999,44 @@
         async function submitAddEmployee(event) {
             event.preventDefault();
             const name = document.getElementById('newEmpName').value.trim();
+            const email = document.getElementById('newEmpEmail').value.trim();
             const dept = document.getElementById('newEmpDept').value.trim();
             const resultDiv = document.getElementById('addEmpResult');
             const btn = document.getElementById('addEmpBtn');
 
-            if (!name) {
-                resultDiv.innerText = 'Please enter employee name';
+            if (!name || !email) {
+                resultDiv.innerText = 'Please enter name and email';
                 resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
                 resultDiv.classList.remove('hidden');
                 return;
             }
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Adding...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Sending...';
 
             try {
-                const response = await fetch('/admin/create-employee', {
+                const response = await fetch('/api/employees/invite', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, department: dept || 'Other' })
+                    body: JSON.stringify({ name: name, email: email, department: dept || 'Other' })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    resultDiv.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i>Employee added! Activation Key: <strong class="select-all font-mono">${data.activation_key}</strong>`;
-                    resultDiv.className = 'p-3 rounded-md text-sm bg-green-100 text-green-700';
-                    resultDiv.classList.remove('hidden');
+                    closeAddEmployeeModal();
+                    // Show Invite Link Modal
+                    showInviteSuccess(data.invite_link, email);
 
-                    // Refresh the dashboard data
+                    // Refresh data
                     await loadDashboard();
                     loadEmployeesTable();
+
+                    // Reset form
+                    document.getElementById('newEmpName').value = '';
+                    document.getElementById('newEmpEmail').value = '';
                 } else {
-                    resultDiv.innerText = data.detail || 'Failed to add employee';
+                    resultDiv.innerText = data.detail || 'Failed to send invitation';
                     resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
                     resultDiv.classList.remove('hidden');
                 }
@@ -1037,7 +1047,40 @@
             }
 
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Add Employee';
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Send Invitation';
+        }
+
+        function showInviteSuccess(link, email) {
+            const modalHtml = `
+                <div id="invite-success-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('invite-success-modal').remove()"></div>
+                    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10 animate-fade-in-up">
+                        <div class="p-6 text-center">
+                            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fa-solid fa-envelope-circle-check text-3xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">Invitation Created!</h3>
+                            <p class="text-gray-600 mb-6">An invitation has been generated for <strong>${email}</strong>.</p>
+                            
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-left mb-6">
+                                <label class="text-xs font-bold uppercase text-gray-400 block mb-2">Invitation Link</label>
+                                <div class="flex gap-2">
+                                    <input type="text" value="${link}" readonly class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono">
+                                    <button onclick="navigator.clipboard.writeText('${link}'); this.innerHTML='<i class=\'fa-solid fa-check\'></i>'" class="px-3 py-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors">
+                                        <i class="fa-regular fa-copy"></i>
+                                    </button>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-2"><i class="fa-solid fa-circle-info mr-1"></i>Share this link with the employee to activate their account.</p>
+                            </div>
+                            
+                            <button onclick="document.getElementById('invite-success-modal').remove()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
         // --- Settings Functions ---

@@ -63,9 +63,18 @@ class Employee(Base):
     name = Column(String, index=True)
     activation_key = Column(String, unique=True, index=True)
     hardware_id = Column(String, nullable=True)
-    is_active = Column(Integer, default=0)
+    is_active = Column(Integer, default=0) # 0=Inactive, 1=Active
     department = Column(String, nullable=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    
+    # Auth & Invitation
+    email = Column(String, unique=True, index=True, nullable=True)
+    password_hash = Column(String, nullable=True)
+    invite_token = Column(String, index=True, nullable=True)
+    invite_expires = Column(DateTime, nullable=True)
+    is_registered = Column(Integer, default=0) # 0=Pending, 1=Registered
+    
+    # Activity Stats
     last_heartbeat = Column(DateTime, nullable=True)  # Track when app last pinged
     pending_screenshot = Column(Integer, default=0)   # 1 if screenshot requested
     
