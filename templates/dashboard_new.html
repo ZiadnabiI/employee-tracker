@@ -454,7 +454,6 @@
                             </label>
                         </div>
 
-                        <!-- Screenshot Frequency -->
                         <div class="py-6 border-b border-gray-100">
                             <div class="flex justify-between items-center mb-4">
                                 <div>
@@ -473,6 +472,44 @@
                                 <span>1 min</span>
                                 <span>30 mins</span>
                                 <span>60 mins</span>
+                            </div>
+                        </div>
+
+                        <!-- Team Management -->
+                        <div class="py-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <div>
+                                    <h5 class="font-bold text-gray-700"><i class="fa-solid fa-users-gear mr-2"></i>Team
+                                        Management</h5>
+                                    <p class="text-xs text-gray-500">Manage supervisors who can access this dashboard.
+                                    </p>
+                                </div>
+                                <button onclick="openAddSupervisorModal()"
+                                    class="text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-3 py-1 rounded border border-blue-100">
+                                    <i class="fa-solid fa-plus mr-1"></i>Add Supervisor
+                                </button>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Name</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Role</th>
+                                            <th
+                                                class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                                Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="supervisors-list" class="divide-y divide-gray-200">
+                                        <tr>
+                                            <td colspan="3" class="px-4 py-4 text-center text-xs text-gray-400">
+                                                Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
@@ -746,6 +783,56 @@
                         <button type="submit" form="addEmployeeForm" id="addEmpBtn"
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
                             <i class="fa-solid fa-paper-plane mr-2"></i>Send Invitation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD SUPERVISOR MODAL -->
+    <div id="add-supervisor-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeAddSupervisorModal()"></div>
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-center justify-center p-4">
+                <div
+                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl w-full max-w-md">
+                    <div class="bg-white px-6 pt-5 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-900"><i
+                                class="fa-solid fa-user-shield mr-2 text-blue-600"></i>Add Supervisor</h3>
+                    </div>
+                    <form id="addSupervisorForm" onsubmit="submitAddSupervisor(event)" class="px-6 py-4 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                            <input type="text" id="newSupName" required placeholder="Admin Name"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <input type="email" id="newSupEmail" required placeholder="admin@company.com"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" id="newSupPass" required
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                            <select id="newSupRole"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                                <option value="admin">Admin (Full Access)</option>
+                                <option value="viewer">Viewer (Read Only)</option>
+                            </select>
+                        </div>
+                        <div id="addSupResult" class="hidden p-3 rounded-md text-sm"></div>
+                    </form>
+                    <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100">
+                        <button type="button" onclick="closeAddSupervisorModal()"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                        <button type="submit" form="addSupervisorForm" id="addSupBtn"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                            <i class="fa-solid fa-plus mr-2"></i>Create Account
                         </button>
                     </div>
                 </div>
@@ -1289,6 +1376,7 @@
             } catch (e) {
                 console.error("Error loading settings:", e);
             }
+            loadSupervisors();
         }
 
         async function saveSettings() {
@@ -1326,6 +1414,103 @@
                 alert('Error saving settings: ' + e.message);
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+            }
+        }
+
+        // --- Supervisor Functions ---
+        function openAddSupervisorModal() {
+            document.getElementById('add-supervisor-modal').classList.remove('hidden');
+            document.getElementById('addSupResult').classList.add('hidden');
+            document.getElementById('addSupervisorForm').reset();
+        }
+
+        function closeAddSupervisorModal() {
+            document.getElementById('add-supervisor-modal').classList.add('hidden');
+        }
+
+        async function submitAddSupervisor(event) {
+            event.preventDefault();
+            const btn = document.getElementById('addSupBtn');
+            const resultDiv = document.getElementById('addSupResult');
+
+            const name = document.getElementById('newSupName').value;
+            const email = document.getElementById('newSupEmail').value;
+            const password = document.getElementById('newSupPass').value;
+            const role = document.getElementById('newSupRole').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Creating...';
+
+            try {
+                const response = await fetch('/api/supervisors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password, role })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    closeAddSupervisorModal();
+                    alert('✅ Supervisor created successfully!');
+                    loadSupervisors(); // Refresh list
+                } else {
+                    resultDiv.innerText = data.detail || 'Failed to create account';
+                    resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
+                    resultDiv.classList.remove('hidden');
+                }
+            } catch (e) {
+                resultDiv.innerText = 'Error: ' + e.message;
+                resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
+                resultDiv.classList.remove('hidden');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Create Account';
+        }
+
+        async function loadSupervisors() {
+            const tbody = document.getElementById('supervisors-list');
+            try {
+                const response = await fetch('/api/supervisors');
+                if (response.ok) {
+                    const supervisors = await response.json();
+                    tbody.innerHTML = '';
+
+                    if (supervisors.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-xs text-gray-400">No supervisors found.</td></tr>';
+                        return;
+                    }
+
+                    supervisors.forEach(sup => {
+                        const roleBadge = sup.role === 'admin'
+                            ? '<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold border border-purple-200">Admin</span>'
+                            : '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold border border-gray-200">Viewer</span>';
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
+                                            ${sup.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div class="ml-3">
+                                            <div class="text-sm font-medium text-gray-900">${sup.name}</div>
+                                            <div class="text-xs text-gray-500">${sup.email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${roleBadge}</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                    <span class="text-gray-300 text-xs italic">Active</span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (e) {
+                console.error("Error loading supervisors:", e);
+                tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-xs text-red-400">Error loading data.</td></tr>';
             }
         }
 

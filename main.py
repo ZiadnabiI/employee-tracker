@@ -88,6 +88,12 @@ class AppLogin(BaseModel):
     email: str
     password: str
 
+class SupervisorInvite(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = "admin" # admin, viewer
+
 # ===============================
 # HEALTH CHECK
 # ===============================
@@ -285,6 +291,59 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         "logs": logs_data,
         "recent_activity": recent_activity  # New field for feed
     }
+
+# ===============================
+# SUPERVISOR MANAGEMENT
+# ===============================
+@app.post("/api/supervisors")
+async def create_supervisor(request: Request, data: SupervisorInvite, db: Session = Depends(get_db)):
+    """Create a new supervisor (dashboard user)"""
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Only existing supervisors (admins) can add new ones
+    current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    if not current_sup:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    # Check email uniqueness
+    if db.query(Supervisor).filter(Supervisor.email == data.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Create new supervisor
+    hashed_pw = hash_password(data.password)
+    new_sup = Supervisor(
+        name=data.name,
+        email=data.email,
+        password_hash=hashed_pw,
+        company_id=current_sup.company_id, # Link to same company
+        role=data.role 
+    )
+    
+    db.add(new_sup)
+    db.commit()
+    return {"status": "ok", "message": "Supervisor created"}
+
+@app.get("/api/supervisors")
+async def list_supervisors(request: Request, db: Session = Depends(get_db)):
+    """List supervisors for the current company"""
+    token = get_token_from_cookies(request)
+    if not token: raise HTTPException(status_code=401)
+    token_data = verify_token(token)
+    
+    supervisors = db.query(Supervisor).filter(Supervisor.company_id == token_data["company_id"]).all()
+    return [{
+        "id": s.id,
+        "name": s.name,
+        "email": s.email,
+        "role": s.role,
+        "created_at": s.created_at.isoformat()
+    } for s in supervisors]
 
 # ===============================
 # EMPLOYEE MANAGEMENT (Protected)

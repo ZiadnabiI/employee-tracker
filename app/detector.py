@@ -622,16 +622,51 @@ class App(DraggableWindow):
         except Exception as e: print(e)
 
     def apply_dlp(self, img):
-        keywords = ["password", "bank", "credit", "inbox"]
+        # Keywords to trigger DLP
+        keywords = ["password", "bank", "credit", "inbox", "login", "sign in", "facebook", "twitter", "instagram", "gmail"]
+        
         def handler(hwnd, _):
             if win32gui.IsWindowVisible(hwnd):
-                t = win32gui.GetWindowText(hwnd).lower()
-                if any(k in t for k in keywords):
+                title = win32gui.GetWindowText(hwnd).lower()
+                if any(k in title for k in keywords):
                     try:
-                        rect = win32gui.GetWindowRect(hwnd)
-                        draw = ImageDraw.Draw(img)
-                        draw.rectangle(rect, fill="black") 
-                    except: pass
+                        # Get Window Coordinates
+                        msg = win32gui.GetWindowRect(hwnd)
+                        x1, y1, x2, y2 = msg
+                        
+                        # Ensure coordinates are improved for High DPI if needed, 
+                        # but for now rely on PIL's coordinate system matching screen.
+                        # Crop the sensitive area
+                        box = (x1, y1, x2, y2)
+                        
+                        # Validate box is within image
+                        if x1 >= 0 and y1 >= 0 and x2 > x1 and y2 > y1:
+                            # 1. Pixelate/Blur Effect
+                            region = img.crop(box)
+                            # Apply heavy blur
+                            blurred = region.filter(ImageFilter.GaussianBlur(radius=15))
+                            img.paste(blurred, box)
+                            
+                            # 2. Add "Sensitive Data" Watermark
+                            draw = ImageDraw.Draw(img)
+                            # Draw a semi-transparent overlay or text
+                            # Since standard PIL doesn't support alpha on RGB direct draw easily without converting,
+                            # we'll just draw text
+                            
+                            # Calculate center
+                            cx, cy = x1 + (x2-x1)//2, y1 + (y2-y1)//2
+                            text = "🔒 SENSITIVE DATA HIDDEN"
+                            
+                            # Use default font if custom not loaded
+                            font = ImageFont.load_default()
+                            
+                            # Draw text with shadow for visibility
+                            draw.text((cx-2, cy-2), text, fill="black", font=font)
+                            draw.text((cx, cy), text, fill="white", font=font)
+                            
+                    except Exception as e:
+                        pass
+        
         win32gui.EnumWindows(handler, None)
 
     def send_log(self, status):
