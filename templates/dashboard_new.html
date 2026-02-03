@@ -179,6 +179,9 @@
                 <a href="#" onclick="navTo('screenshots')" id="nav-screenshots" class="sidebar-link">
                     <i class="fa-regular fa-images w-5 text-center mr-3"></i> Screenshots
                 </a>
+                <a href="#" onclick="navTo('reports')" id="nav-reports" class="sidebar-link">
+                    <i class="fa-solid fa-file-invoice w-5 text-center mr-3"></i> Reports
+                </a>
 
                 <p class="px-6 text-xs font-bold text-slate-500 uppercase mb-2 mt-6">System</p>
                 <a href="#" onclick="navTo('settings')" id="nav-settings" class="sidebar-link">
@@ -399,12 +402,12 @@
                                     (Privacy Safe)
                                 </p>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="dlp-toggle" class="sr-only peer">
-                                <div
-                                    class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
-                                </div>
-                            </label>
+                            <div class="flex items-center">
+                                <span
+                                    class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full border border-green-200">
+                                    <i class="fa-solid fa-lock mr-1"></i>Always Active
+                                </span>
+                            </div>
                         </div>
 
                         <!-- Data Loss Prevention (DLP) -->
@@ -482,6 +485,99 @@
                     </div>
                 </section>
 
+                <!-- 7. REPORTS VIEW -->
+                <section id="view-reports" class="view-section">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                        <h3 class="font-bold text-gray-800 text-lg mb-4">Generate Report</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date Range</label>
+                                <select id="report-range" onchange="updateReportDates(this.value)"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    <option value="today">Today</option>
+                                    <option value="week">Last 7 Days</option>
+                                    <option value="month">Last 30 Days</option>
+                                    <option value="custom">Custom Range</option>
+                                </select>
+                            </div>
+
+                            <div id="custom-date-start" class="hidden">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Date</label>
+                                <input type="date" id="report-start"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                            </div>
+
+                            <div id="custom-date-end" class="hidden">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Date</label>
+                                <input type="date" id="report-end"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Filter By</label>
+                                <select id="report-filter-type" onchange="updateReportFilters(this.value)"
+                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    <option value="all">Entire Company</option>
+                                    <option value="department">By Department</option>
+                                    <option value="employee">Specific Employees</option>
+                                </select>
+                            </div>
+
+                            <div id="report-filter-value-container" class="hidden">
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                                    id="report-filter-label">Select Value</label>
+                                <select id="report-filter-value" multiple
+                                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-10">
+                                    <!-- Populated via JS -->
+                                </select>
+                                <p class="text-[10px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                            </div>
+
+                            <div class="md:col-span-1">
+                                <button onclick="generateReport()"
+                                    class="w-full bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-blue-700 transition">
+                                    <i class="fa-solid fa-file-export mr-2"></i>Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="report-results"
+                        class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h4 class="font-bold text-gray-700">Report Results</h4>
+                            <button onclick="exportReportToCSV()"
+                                class="text-blue-600 text-sm font-medium hover:underline">
+                                <i class="fa-solid fa-download mr-1"></i>Export CSV
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">
+                                            Employee</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Dept
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Score
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">
+                                            Present Time</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Away
+                                            Time</th>
+                                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Days
+                                            Active</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Results via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -532,11 +628,6 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Employee Name *</label>
                             <input type="text" id="newEmpName" required placeholder="John Doe"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                            <input type="email" id="newEmpEmail" required placeholder="john@company.com"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
@@ -999,13 +1090,12 @@
         async function submitAddEmployee(event) {
             event.preventDefault();
             const name = document.getElementById('newEmpName').value.trim();
-            const email = document.getElementById('newEmpEmail').value.trim();
             const dept = document.getElementById('newEmpDept').value.trim();
             const resultDiv = document.getElementById('addEmpResult');
             const btn = document.getElementById('addEmpBtn');
 
-            if (!name || !email) {
-                resultDiv.innerText = 'Please enter name and email';
+            if (!name) {
+                resultDiv.innerText = 'Please enter employee name';
                 resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
                 resultDiv.classList.remove('hidden');
                 return;
@@ -1018,7 +1108,7 @@
                 const response = await fetch('/api/employees/invite', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, email: email, department: dept || 'Other' })
+                    body: JSON.stringify({ name: name, department: dept || 'Other' })
                 });
 
                 const data = await response.json();
@@ -1026,7 +1116,7 @@
                 if (response.ok) {
                     closeAddEmployeeModal();
                     // Show Invite Link Modal
-                    showInviteSuccess(data.invite_link, email);
+                    showInviteSuccess(data.invite_link, name);
 
                     // Refresh data
                     await loadDashboard();
@@ -1034,7 +1124,6 @@
 
                     // Reset form
                     document.getElementById('newEmpName').value = '';
-                    document.getElementById('newEmpEmail').value = '';
                 } else {
                     resultDiv.innerText = data.detail || 'Failed to send invitation';
                     resultDiv.className = 'p-3 rounded-md text-sm bg-red-100 text-red-700';
@@ -1050,7 +1139,7 @@
             btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>Send Invitation';
         }
 
-        function showInviteSuccess(link, email) {
+        function showInviteSuccess(link, name) {
             const modalHtml = `
                 <div id="invite-success-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
                     <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('invite-success-modal').remove()"></div>
@@ -1060,7 +1149,7 @@
                                 <i class="fa-solid fa-envelope-circle-check text-3xl"></i>
                             </div>
                             <h3 class="text-xl font-bold text-gray-800 mb-2">Invitation Created!</h3>
-                            <p class="text-gray-600 mb-6">An invitation has been generated for <strong>${email}</strong>.</p>
+                            <p class="text-gray-600 mb-6">An invitation has been generated for <strong>${name}</strong>.</p>
                             
                             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-left mb-6">
                                 <label class="text-xs font-bold uppercase text-gray-400 block mb-2">Invitation Link</label>
@@ -1143,6 +1232,167 @@
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
+        }
+
+        // --- Reports Functions ---
+        let currentReportData = [];
+
+        function updateReportDates(range) {
+            const startInput = document.getElementById('custom-date-start');
+            const endInput = document.getElementById('custom-date-end');
+
+            if (range === 'custom') {
+                startInput.classList.remove('hidden');
+                endInput.classList.remove('hidden');
+            } else {
+                startInput.classList.add('hidden');
+                endInput.classList.add('hidden');
+            }
+        }
+
+        async function updateReportFilters(type) {
+            const container = document.getElementById('report-filter-value-container');
+            const select = document.getElementById('report-filter-value');
+            const label = document.getElementById('report-filter-label');
+
+            if (type === 'all') {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            select.innerHTML = '<option>Loading...</option>';
+
+            // Re-use dashboard data (dashboardLogs) if available, or fetch
+            if (!dashboardLogs.length) await loadDashboard();
+
+            select.innerHTML = '';
+
+            if (type === 'employee') {
+                label.innerText = 'Select Employees';
+                dashboardLogs.forEach(emp => {
+                    select.innerHTML += `<option value="${emp.employee_name}">${emp.employee_name}</option>`;
+                });
+            } else if (type === 'department') {
+                label.innerText = 'Select Departments';
+                const depts = new Set(dashboardLogs.map(e => e.department || 'General'));
+                depts.forEach(d => {
+                    select.innerHTML += `<option value="${d}">${d}</option>`;
+                });
+            }
+        }
+
+        async function generateReport() {
+            const range = document.getElementById('report-range').value;
+            const filterType = document.getElementById('report-filter-type').value;
+            let startDate, endDate;
+            let filterValues = [];
+
+            // 1. Calculate Dates
+            const today = new Date();
+            if (range === 'custom') {
+                startDate = document.getElementById('report-start').value;
+                endDate = document.getElementById('report-end').value;
+                if (!startDate || !endDate) { alert('Please select start and end dates'); return; }
+            } else {
+                endDate = today.toISOString().split('T')[0];
+                const d = new Date();
+                if (range === 'today') {
+                    startDate = endDate;
+                } else if (range === 'week') {
+                    d.setDate(d.getDate() - 7);
+                    startDate = d.toISOString().split('T')[0];
+                } else if (range === 'month') {
+                    d.setDate(d.getDate() - 30);
+                    startDate = d.toISOString().split('T')[0];
+                }
+            }
+
+            // 2. Get Filters
+            if (filterType !== 'all') {
+                const selected = Array.from(document.getElementById('report-filter-value').selectedOptions);
+                filterValues = selected.map(opt => opt.value);
+                if (filterValues.length === 0) { alert('Please select at least one value'); return; }
+            }
+
+            // 3. API Call
+            const btn = document.querySelector('button[onclick="generateReport()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/reports/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        start_date: startDate,
+                        end_date: endDate,
+                        filter_type: filterType,
+                        filter_values: filterValues
+                    })
+                });
+
+                if (response.ok) {
+                    const res = await response.json();
+                    currentReportData = res.data;
+                    renderReportTable(res.data);
+                } else {
+                    const err = await response.json();
+                    alert('Error: ' + (err.detail || 'Failed to generate report'));
+                }
+            } catch (e) {
+                alert('Network Error: ' + e.message);
+            }
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+        function renderReportTable(data) {
+            const tbody = document.getElementById('report-table-body');
+            const resultsDiv = document.getElementById('report-results');
+
+            tbody.innerHTML = '';
+            resultsDiv.classList.remove('hidden');
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-400">No data found for this period.</td></tr>';
+                return;
+            }
+
+            data.forEach(row => {
+                const s = row.stats;
+                const scoreColor = s.score >= 75 ? 'text-green-600' : (s.score >= 40 ? 'text-yellow-600' : 'text-red-600');
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.department || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${scoreColor}">${s.score} (${s.grade})</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${s.present_hours}h</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${s.away_hours}h</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${s.days_active}</td>
+                    </tr>
+                 `;
+            });
+        }
+
+        function exportReportToCSV() {
+            if (!currentReportData.length) return;
+
+            let csv = 'Employee,Department,Score,Grade,Present Hours,Away Hours,Break Hours,Days Active\n';
+            currentReportData.forEach(row => {
+                const s = row.stats;
+                csv += `"${row.name}","${row.department}","${s.score}","${s.grade}","${s.present_hours}","${s.away_hours}","${s.break_hours}","${s.days_active}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `report_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
         }
 
         // --- Init ---

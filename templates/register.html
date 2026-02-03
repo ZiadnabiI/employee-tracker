@@ -30,6 +30,18 @@
             <input type="hidden" id="token" value="{{ token }}">
 
             <div class="mb-5">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-envelope text-slate-400"></i>
+                    </div>
+                    <input type="email" id="email" required
+                        class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                        placeholder="john@company.com">
+                </div>
+            </div>
+
+            <div class="mb-5">
                 <label class="block text-sm font-medium text-slate-700 mb-2">Create Password</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -82,6 +94,7 @@
     <script>
         async function handleRegister(e) {
             e.preventDefault();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirm = document.getElementById('confirmPassword').value;
             const token = document.getElementById('token').value;
@@ -108,7 +121,7 @@
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token, password })
+                    body: JSON.stringify({ token, password, email })
                 });
 
                 if (response.ok) {

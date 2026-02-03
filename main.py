@@ -76,12 +76,13 @@ class SettingsUpdate(BaseModel):
 
 class EmployeeInvite(BaseModel):
     name: str
-    email: str
+    email: Optional[str] = None
     department: str = "General"
 
 class EmployeeRegister(BaseModel):
     token: str
     password: str
+    email: str
 
 class AppLogin(BaseModel):
     email: str
@@ -604,7 +605,7 @@ async def read_item(name: str, request: Request):
     token = get_token_from_cookies(request)
     if not token or not verify_token(token):
         return RedirectResponse(url="/login", status_code=302)
-    return templates.TemplateResponse("employee_detail.html", {"request": request, "name": name})
+    return templates.TemplateResponse("employee_detail_new.html", {"request": request, "name": name})
 
 @app.get("/api/employee/{name}/stats")
 async def get_employee_stats(name: str, request: Request, db: Session = Depends(get_db)):
@@ -670,11 +671,12 @@ async def get_employee_stats(name: str, request: Request, db: Session = Depends(
 
     return {
         "name": name,
+        "department": employee.department if employee else "-",
         "current_status": current_status,  # New explicit status
         "present_today": f"{int(present_seconds//3600)}h {int((present_seconds%3600)//60)}m",
         "break_today": f"{int(break_seconds//3600)}h {int((break_seconds%3600)//60)}m",
         "away_today": f"{int(away_seconds//3600)}h {int((away_seconds%3600)//60)}m",
-        "logs": filtered_history 
+        "logs": [{"timestamp": l.timestamp, "status": l.status} for l in filtered_history]
     }
 
 # ===============================
@@ -698,6 +700,18 @@ def calculate_employee_score(employee_name: str, db: Session, days: int = 7) -> 
         EmployeeLog.timestamp >= start_date
     ).order_by(EmployeeLog.timestamp).all()
     
+    if not logs:
+        return {
+            "score": 0,
+            "grade": "N/A",
+            "present_hours": 0,
+            "away_hours": 0,
+            "break_hours": 0,
+            "days_active": 0,
+            "details": {"present_score": 0, "away_score": 0, "break_score": 0, "consistency_score": 0}
+        }
+    
+def calculate_stats_from_logs(logs, period_days):
     if not logs:
         return {
             "score": 0,
@@ -736,50 +750,39 @@ def calculate_employee_score(employee_name: str, db: Session, days: int = 7) -> 
     # Total tracked time
     total_seconds = present_seconds + away_seconds + break_seconds
     if total_seconds == 0:
-        total_seconds = 1  # Avoid division by zero
+        total_seconds = 1
     
-    # Expected hours (8 hours per active day)
+    # Expected hours
     expected_hours = len(active_days) * 8
     expected_seconds = expected_hours * 3600
     
-    # 1. Present Time Score (40%): % of time present vs expected
+    # 1. Present Time Score (40%)
     present_ratio = min(present_seconds / max(expected_seconds, 1), 1.0)
     present_score = present_ratio * 100
     
-    # 2. Away Time Score (25%): Penalize excessive away time
+    # 2. Away Time Score (25%)
     away_ratio = away_seconds / max(total_seconds, 1)
-    away_score = max(0, 100 - (away_ratio * 200))  # 50% away = 0 score
+    away_score = max(0, 100 - (away_ratio * 200))
     
-    # 3. Break Discipline (15%): Reasonable breaks (30min-1hr per day)
+    # 3. Break Discipline (15%)
     breaks_per_day = break_seconds / max(len(active_days), 1)
-    ideal_break = 45 * 60  # 45 minutes ideal
+    ideal_break = 45 * 60
     break_deviation = abs(breaks_per_day - ideal_break) / ideal_break
     break_score = max(0, 100 - (break_deviation * 50))
     
-    # 4. Consistency (20%): Days active vs expected
-    consistency_ratio = len(active_days) / max(days, 1)
+    # 4. Consistency (20%)
+    consistency_ratio = len(active_days) / max(period_days, 1)
     consistency_score = min(consistency_ratio * 100, 100)
     
-    # Final weighted score
-    final_score = (
-        present_score * 0.40 +
-        away_score * 0.25 +
-        break_score * 0.15 +
-        consistency_score * 0.20
-    )
+    # Final Score
+    final_score = (present_score * 0.40 + away_score * 0.25 + break_score * 0.15 + consistency_score * 0.20)
     final_score = min(max(round(final_score), 0), 100)
     
-    # Grade
-    if final_score >= 90:
-        grade = "Excellent"
-    elif final_score >= 75:
-        grade = "Good"
-    elif final_score >= 60:
-        grade = "Average"
-    elif final_score >= 40:
-        grade = "Needs Improvement"
-    else:
-        grade = "Poor"
+    grade = "Poor"
+    if final_score >= 90: grade = "Excellent"
+    elif final_score >= 75: grade = "Good"
+    elif final_score >= 60: grade = "Average"
+    elif final_score >= 40: grade = "Needs Improvement"
     
     return {
         "score": final_score,
@@ -795,6 +798,15 @@ def calculate_employee_score(employee_name: str, db: Session, days: int = 7) -> 
             "consistency_score": round(consistency_score)
         }
     }
+
+def calculate_employee_score(employee_name: str, db: Session, days: int = 7) -> dict:
+    start_date = datetime.datetime.utcnow() - datetime.timedelta(days=days)
+    logs = db.query(EmployeeLog).filter(
+        EmployeeLog.employee_name == employee_name,
+        EmployeeLog.timestamp >= start_date
+    ).order_by(EmployeeLog.timestamp).all()
+    
+    return calculate_stats_from_logs(logs, days)
 
 @app.get("/api/scores")
 async def get_all_scores(request: Request, days: int = 7, db: Session = Depends(get_db)):
@@ -1028,38 +1040,46 @@ async def update_settings(settings: SettingsUpdate, request: Request, db: Sessio
 @app.post("/api/employees/invite")
 async def invite_employee(invite: EmployeeInvite, request: Request, db: Session = Depends(get_db)):
     """Invite an employee via email"""
-    token = get_token_from_cookies(request)
-    if not token or not verify_token(token):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    token_data = verify_token(token)
-    
-    # Check if email exists
-    if db.query(Employee).filter(Employee.email == invite.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Generate tokens
-    activation_key = f"KEY-{secrets.token_hex(4).upper()}"
-    invite_token = secrets.token_urlsafe(32)
-    expires = datetime.datetime.utcnow() + datetime.timedelta(hours=48)
-    
-    new_employee = Employee(
-        name=invite.name,
-        email=invite.email,
-        department=invite.department,
-        activation_key=activation_key,
-        invite_token=invite_token,
-        invite_expires=expires,
-        company_id=token_data["company_id"],
-        is_active=0,
-        is_registered=0
-    )
-    db.add(new_employee)
-    db.commit()
-    
-    # In a real app, send email here. For now, return the link.
-    invite_link = f"{request.base_url}register?token={invite_token}"
-    return {"status": "ok", "invite_link": invite_link}
+    try:
+        token = get_token_from_cookies(request)
+        if not token or not verify_token(token):
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        
+        token_data = verify_token(token)
+        
+        # Check if email exists (only if provided)
+        if invite.email and db.query(Employee).filter(Employee.email == invite.email).first():
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Generate tokens
+        activation_key = f"KEY-{secrets.token_hex(4).upper()}"
+        invite_token = secrets.token_urlsafe(32)
+        expires = datetime.datetime.utcnow() + datetime.timedelta(hours=48)
+        
+        new_employee = Employee(
+            name=invite.name,
+            email=invite.email, # Can be None
+            department=invite.department,
+            activation_key=activation_key,
+            invite_token=invite_token,
+            invite_expires=expires,
+            company_id=token_data["company_id"],
+            is_active=0,
+            is_registered=0
+        )
+        db.add(new_employee)
+        db.commit()
+        
+        # In a real app, send email here. For now, return the link.
+        invite_link = f"{request.base_url}register?token={invite_token}"
+        return {"status": "ok", "invite_link": invite_link}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"❌ Invite Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request, token: str):
@@ -1068,7 +1088,7 @@ async def register_page(request: Request, token: str):
 
 @app.post("/api/register")
 async def register_employee(data: EmployeeRegister, db: Session = Depends(get_db)):
-    """Set password for employee account"""
+    """Set password and email for employee account"""
     employee = db.query(Employee).filter(Employee.invite_token == data.token).first()
     
     if not employee:
@@ -1076,8 +1096,14 @@ async def register_employee(data: EmployeeRegister, db: Session = Depends(get_db
         
     if employee.invite_expires and datetime.datetime.utcnow() > employee.invite_expires:
         raise HTTPException(status_code=400, detail="Token expired")
-        
+    
+    # Check if email is already taken by ANOTHER employee
+    existing = db.query(Employee).filter(Employee.email == data.email).first()
+    if existing and existing.id != employee.id:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
     employee.password_hash = hash_password(data.password)
+    employee.email = data.email
     employee.is_registered = 1
     employee.invite_token = None # Invalidate token
     db.commit()
@@ -1101,6 +1127,110 @@ async def app_login(data: AppLogin, db: Session = Depends(get_db)):
         "activation_key": employee.activation_key, 
         "name": employee.name,
         "company_id": employee.company_id
+    }
+
+@app.get("/api/app-usage-stats")
+async def get_app_usage_stats(request: Request, employee_name: Optional[str] = None, db: Session = Depends(get_db)):
+    """Get top apps usage stats - can be filtered by employee"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    query = db.query(AppLog).filter(AppLog.timestamp >= today_start)
+    
+    # Filter by company employees
+    company_id = token_data["company_id"]
+    is_super_admin = token_data.get("is_super_admin", False)
+    
+    if not is_super_admin:
+        # Get company employees first
+        employees = db.query(Employee).filter(Employee.company_id == company_id).all()
+        emp_names = [e.name for e in employees]
+        query = query.filter(AppLog.employee_name.in_(emp_names))
+    
+    # Filter by specific employee if requested
+    if employee_name:
+        query = query.filter(AppLog.employee_name == employee_name)
+        
+    logs = query.all()
+    
+    # Aggregate duration by app
+    app_durations = {}
+    
+    for log in logs:
+        app_name = log.app_name
+        duration = log.duration_seconds
+        app_durations[app_name] = app_durations.get(app_name, 0) + duration
+        
+    # Sort by duration
+    sorted_apps = sorted(app_durations.items(), key=lambda x: x[1], reverse=True)
+    
+    # Format for chart (Top 10)
+    top_apps = [{"app": name, "duration": dur} for name, dur in sorted_apps[:10]]
+    
+    return {"top_apps": top_apps}
+
+class ReportRequest(BaseModel):
+    start_date: str
+    end_date: str
+    filter_type: str  # 'all', 'department', 'employee', 'company'
+    filter_values: List[str] = []
+
+@app.post("/api/reports/generate")
+async def generate_report(request: Request, report: ReportRequest, db: Session = Depends(get_db)):
+    """Generate detailed reports based on filters"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    company_id = token_data["company_id"]
+    is_super_admin = token_data.get("is_super_admin", False)
+    
+    # Parse dates
+    try:
+        start_dt = datetime.datetime.strptime(report.start_date, "%Y-%m-%d")
+        end_dt = datetime.datetime.strptime(report.end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        period_days = (end_dt.date() - start_dt.date()).days + 1
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        
+    query = db.query(Employee)
+    
+    if not is_super_admin:
+        query = query.filter(Employee.company_id == company_id)
+        
+    # Apply filters
+    if report.filter_type == 'employee':
+        query = query.filter(Employee.name.in_(report.filter_values))
+    elif report.filter_type == 'department':
+        query = query.filter(Employee.department.in_(report.filter_values))
+    # 'all' or 'company' just takes company filter already applied
+    
+    employees = query.all()
+    results = []
+    
+    for emp in employees:
+        logs = db.query(EmployeeLog).filter(
+            EmployeeLog.employee_name == emp.name,
+            EmployeeLog.timestamp >= start_dt,
+            EmployeeLog.timestamp <= end_dt
+        ).order_by(EmployeeLog.timestamp).all()
+        
+        stats = calculate_stats_from_logs(logs, period_days)
+        results.append({
+            "employee_id": emp.id,
+            "name": emp.name,
+            "department": emp.department,
+            "stats": stats
+        })
+        
+    return {
+        "period": {"start": report.start_date, "end": report.end_date, "days": period_days},
+        "data": results
     }
 
 if __name__ == "__main__":

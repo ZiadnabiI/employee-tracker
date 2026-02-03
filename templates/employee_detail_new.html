@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Details - InFrame</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style type="text/tailwindcss">
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #94a3b8;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        .tab-btn {
+            @apply px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 transition-colors;
+        }
+
+        .tab-btn.active {
+            @apply text-blue-600 border-blue-600;
+        }
+    </style>
+</head>
+
+<body class="h-screen overflow-hidden flex flex-col">
+
+    <div id="app-layout" class="flex h-screen overflow-hidden">
+
+        <!-- SIDEBAR (Simplified for Detail Page) -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col flex-shrink-0">
+            <div class="h-16 flex items-center px-6 border-b border-slate-800">
+                <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white mr-3">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <span class="font-bold text-lg tracking-wide">InFrame</span>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+                <a href="/" class="sidebar-link">
+                    <i class="fa-solid fa-arrow-left w-5 text-center mr-3"></i> Back to Dashboard
+                </a>
+            </nav>
+            <div class="p-4 border-t border-slate-800 bg-slate-900">
+                <div class="flex items-center">
+                    <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">AD
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-white">Admin</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col bg-gray-50 min-w-0">
+            <!-- Header -->
+            <header
+                class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10">
+                <div class="flex items-center">
+                    <div
+                        class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-4 text-sm">
+                        {{ name[:2] | upper }}
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">{{ name }}</h2>
+                        <p id="emp-dept" class="text-xs text-gray-500">Loading...</p>
+                    </div>
+                </div>
+                <div id="emp-status-badge"></div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-auto p-6 scroll-smooth">
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Present Today</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-2" id="kpi-present">--</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Break Time</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-2" id="kpi-break">--</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Away Time</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-2" id="kpi-away">--</h3>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="mb-6 border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8">
+                        <button onclick="switchTab('activity')" id="tab-activity" class="tab-btn active">Activity
+                            Log</button>
+                        <button onclick="switchTab('apps')" id="tab-apps" class="tab-btn">App Usage</button>
+                        <button onclick="switchTab('screenshots')" id="tab-screenshots"
+                            class="tab-btn">Screenshots</button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content -->
+
+                <!-- 1. Activity Log -->
+                <div id="view-activity" class="block">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Timestamp
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status
+                                        Change</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. App Usage -->
+                <div id="view-apps" class="hidden">
+                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm h-96">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Top Applications Used Today</h3>
+                        <div class="relative h-full w-full pb-10">
+                            <canvas id="empAppChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Screenshots -->
+                <div id="view-screenshots" class="hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-sm text-gray-500">Recent captures for {{ name }}</p>
+                        <button onclick="requestScreenshot('{{ name }}')"
+                            class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-blue-700">
+                            <i class="fa-solid fa-camera mr-2"></i>Request New
+                        </button>
+                    </div>
+                    <div id="screenshots-grid"
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <p class="text-gray-400">Loading...</p>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Screenshot Modal -->
+    <script>
+        const empName = "{{ name }}";
+        let appChart = null;
+
+        function switchTab(tab) {
+            ['activity', 'apps', 'screenshots'].forEach(t => {
+                document.getElementById('view-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('active');
+            });
+            document.getElementById('view-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).classList.add('active');
+
+            if (tab === 'apps') loadAppUsage();
+            if (tab === 'screenshots') loadScreenshots();
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch(`/api/employee/${empName}/stats`);
+                const data = await res.json();
+
+                document.getElementById('kpi-present').innerText = data.present_today;
+                document.getElementById('kpi-break').innerText = data.break_today;
+                document.getElementById('kpi-away').innerText = data.away_today;
+                document.getElementById('emp-dept').innerText = data.department || 'Employee';
+
+                const badge = document.getElementById('emp-status-badge');
+                if (['Present', 'WORK_START', 'BREAK_END'].includes(data.current_status)) {
+                    badge.innerHTML = '<span class="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-sm">Online</span>';
+                } else if (data.current_status === 'Away') {
+                    badge.innerHTML = '<span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-sm">Away</span>';
+                } else if (data.current_status === 'BREAK_START') {
+                    badge.innerHTML = '<span class="bg-yellow-100 text-yellow-700 font-bold px-3 py-1 rounded-full text-sm">On Break</span>';
+                } else {
+                    badge.innerHTML = '<span class="bg-gray-100 text-gray-700 font-bold px-3 py-1 rounded-full text-sm">Offline</span>';
+                }
+
+                const tbody = document.getElementById('logsTableBody');
+                tbody.innerHTML = '';
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => {
+                        const time = new Date(log.timestamp + (log.timestamp.endsWith('Z') ? '' : 'Z')).toLocaleTimeString();
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${time}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">${log.status}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-400">No activity today</td></tr>';
+                }
+
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadAppUsage() {
+            try {
+                const res = await fetch(`/api/app-usage-stats?employee_name=${encodeURIComponent(empName)}`);
+                const data = await res.json();
+
+                const ctx = document.getElementById('empAppChart');
+                if (appChart) appChart.destroy();
+
+                const labels = data.top_apps.map(a => a.app.replace('.exe', ''));
+                const values = data.top_apps.map(a => Math.round(a.duration / 60));
+
+                appChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Minutes',
+                            data: values,
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadScreenshots() {
+            const grid = document.getElementById('screenshots-grid');
+            try {
+                const res = await fetch(`/api/screenshots/${encodeURIComponent(empName)}`);
+                const screenshots = await res.json();
+
+                if (!screenshots.length) {
+                    grid.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">No screenshots found.</p>';
+                    return;
+                }
+
+                let html = '';
+                screenshots.forEach(s => {
+                    const time = new Date(s.timestamp).toLocaleString();
+                    html += `
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md cursor-pointer" onclick="openScreenshotModal('${s.image_data}', '${time}')">
+                             <div class="aspect-video bg-gray-100 relative overflow-hidden">
+                                <img src="data:image/jpeg;base64,${s.image_data}" class="w-full h-full object-cover">
+                                ${s.manual_request ? '<span class="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">Requested</span>' : ''}
+                            </div>
+                            <div class="p-3 text-xs text-gray-500">
+                                <i class="fa-solid fa-clock mr-1"></i>${time}
+                            </div>
+                        </div>
+                    `;
+                });
+                grid.innerHTML = html;
+
+            } catch (e) {
+                grid.innerHTML = '<p class="text-red-500 col-span-full text-center">Failed to load screenshots.</p>';
+                console.error(e);
+            }
+        }
+
+        function openScreenshotModal(img, time) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4';
+            modal.onclick = () => modal.remove();
+            modal.innerHTML = `
+                <div class="relative max-w-6xl max-h-full">
+                    <button class="absolute -top-10 right-0 text-white text-xl" onclick="this.parentElement.parentElement.remove()"><i class="fa-solid fa-xmark"></i> Close</button>
+                    <img src="data:image/jpeg;base64,${img}" class="max-w-full max-h-[85vh] rounded shadow-2xl object-contain">
+                    <p class="text-center text-white mt-4">${time}</p>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        async function requestScreenshot(name) {
+            try {
+                const response = await fetch(`/api/request-screenshot/${encodeURIComponent(name)}`, { method: 'POST' });
+                if (response.ok) alert('✅ Screenshot request sent');
+                else alert('❌ Failed');
+            } catch (e) { alert('❌ Error'); }
+        }
+
+        // Init
+        loadStats();
+    </script>
+</body>
+
+</html>

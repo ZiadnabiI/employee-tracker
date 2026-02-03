@@ -4,7 +4,7 @@
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS email VARCHAR(255);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS invite_token VARCHAR(255);
-ALTER TABLE employees ADD COLUMN IF NOT EXISTS invite_expires DATETIME;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS invite_expires TIMESTAMP;
 ALTER TABLE employees ADD COLUMN IF NOT EXISTS is_registered INTEGER DEFAULT 0;
 
 -- Ensure email is unique per company (or globally unique if preferred, here globally for simplicity)
