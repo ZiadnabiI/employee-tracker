@@ -140,6 +140,24 @@ class DraggableWindow(tk.Tk):
         self.geometry("400x650")
         self.configure(bg=Theme.BG_MAIN)
         self.title_bar = None
+        self.after(10, self.set_app_window)
+        
+    def set_app_window(self):
+        GWL_EXSTYLE = -20
+        WS_EX_APPWINDOW = 0x00040000
+        WS_EX_TOOLWINDOW = 0x00000080
+        
+        try:
+            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            style = style & ~WS_EX_TOOLWINDOW
+            style = style | WS_EX_APPWINDOW
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+            # Toggle visibility to apply changes
+            self.withdraw()
+            self.after(10, self.deiconify)
+        except Exception as e:
+            print(e)
         
     def add_custom_title_bar(self, title_text="Employee App"):
         # Title Bar Frame
@@ -191,7 +209,8 @@ class DraggableWindow(tk.Tk):
 class App(DraggableWindow):
     def __init__(self):
         super().__init__()
-        self.add_custom_title_bar("InFrame | Employee Monitor")
+        self.add_custom_title_bar("INFRAME | Employee Monitor")
+        self.center_on_screen()
         
         # App State
         self.activation_key = None
@@ -210,6 +229,7 @@ class App(DraggableWindow):
         # Settings
         self.screenshot_frequency = 600
         self.dlp_enabled = False
+        self.logo_img = None # Keep reference
         
         # Initialize UI Container
         self.container = tk.Frame(self, bg=Theme.BG_MAIN)
@@ -218,6 +238,24 @@ class App(DraggableWindow):
         # Check Session
         self.check_existing_session()
 
+    def center_on_screen(self):
+        self.update_idletasks()
+        width = 450  # Wider to let counters breathe
+        height = 680
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def load_logo(self, size=(100, 100)):
+        try:
+            if os.path.exists(LOGO_PATH):
+                img = Image.open(LOGO_PATH)
+                img = img.resize(size, Image.Resampling.LANCZOS)
+                return ImageTk.PhotoImage(img)
+        except Exception as e:
+            print(f"Logo error: {e}")
+        return None
+
     def check_existing_session(self):
         key = get_registry_value("activation_key")
         name = get_registry_value("employee_name")
@@ -225,7 +263,6 @@ class App(DraggableWindow):
         if key:
             self.activation_key = key
             if name: self.employee_name = name
-            # Verify session in background, but show main UI immediately for UX
             self.verify_session_async() 
             self.show_main_ui()
         else:
@@ -236,11 +273,10 @@ class App(DraggableWindow):
             try:
                 resp = requests.post(f"{SERVER_URL}/verify-checkin", json={"activation_key": self.activation_key}, timeout=5)
                 if resp.status_code != 200:
-                    # Invalid session
                     set_registry_value("activation_key", "")
                     self.show_login_ui()
             except:
-                pass # Offline mode?
+                pass
         Thread(target=verify, daemon=True).start()
 
     # -------------------------------------------------------------------------
@@ -250,35 +286,49 @@ class App(DraggableWindow):
         for widget in self.container.winfo_children():
             widget.destroy()
             
-        # Center Content
-        frame = tk.Frame(self.container, bg=Theme.BG_MAIN)
-        frame.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.85)
+        # Black Banner for Logo
+        banner = tk.Frame(self.container, bg="black", height=140)
+        banner.pack(fill="x", side="top")
+        banner.pack_propagate(False) # Force height
         
-        # Logo/Icon
-        icon_label = tk.Label(frame, text="🔒", font=("Segoe UI", 48), bg=Theme.BG_MAIN, fg=Theme.PRIMARY)
-        icon_label.pack(pady=(0, 10))
+        # Center Content Wrapper for Logo
+        center_frame = tk.Frame(banner, bg="black")
+        center_frame.place(relx=0.5, rely=0.5, anchor="center")
+
+        try:
+            from PIL import Image, ImageTk
+            if os.path.exists(LOGO_PATH):
+                img = Image.open(LOGO_PATH)
+                img.thumbnail((200, 90))
+                self.login_logo = ImageTk.PhotoImage(img)
+                tk.Label(center_frame, image=self.login_logo, bg="black", bd=0).pack()
+            else:
+                tk.Label(center_frame, text="INFRAME", font=("Segoe UI", 32, "bold"), bg="black", fg="white").pack()
+        except:
+             tk.Label(center_frame, text="INFRAME", font=("Segoe UI", 32, "bold"), bg="black", fg="white").pack()
         
-        title = tk.Label(frame, text="Welcome Back", font=Theme.FONT_HEADER, bg=Theme.BG_MAIN, fg="white")
-        title.pack(pady=(0, 5))
+        # Form Container
+        form_frame = tk.Frame(self.container, bg=Theme.BG_MAIN)
+        form_frame.pack(fill="both", expand=True, padx=40, pady=20)
         
-        subtitle = tk.Label(frame, text="Sign in to start your shift", font=Theme.FONT_BODY, bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED)
-        subtitle.pack(pady=(0, 30))
+        tk.Label(form_frame, text="Sign In", font=Theme.FONT_HEADER, bg=Theme.BG_MAIN, fg=Theme.TEXT_MAIN).pack(pady=(10, 5))
+        tk.Label(form_frame, text="Enter your credentials to continue", font=Theme.FONT_BODY, bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED).pack(pady=(0, 30))
         
-        # Form
-        tk.Label(frame, text="Email Address", bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED, font=Theme.FONT_SMALL).pack(anchor="w")
-        self.entry_email = tk.Entry(frame, font=Theme.FONT_BODY, bg=Theme.BG_INPUT, fg="white", relief="flat", insertbackground="white")
+        # Form Elements
+        tk.Label(form_frame, text="Email Address", bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED, font=Theme.FONT_SMALL).pack(anchor="w")
+        self.entry_email = tk.Entry(form_frame, font=Theme.FONT_BODY, bg=Theme.BG_INPUT, fg=Theme.TEXT_MAIN, relief="flat", insertbackground=Theme.PRIMARY)
         self.entry_email.pack(fill="x", pady=(5, 15), ipady=8)
         
-        tk.Label(frame, text="Password", bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED, font=Theme.FONT_SMALL).pack(anchor="w")
-        self.entry_pass = tk.Entry(frame, font=Theme.FONT_BODY, bg=Theme.BG_INPUT, fg="white", relief="flat", show="•", insertbackground="white")
+        tk.Label(form_frame, text="Password", bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED, font=Theme.FONT_SMALL).pack(anchor="w")
+        self.entry_pass = tk.Entry(form_frame, font=Theme.FONT_BODY, bg=Theme.BG_INPUT, fg=Theme.TEXT_MAIN, relief="flat", show="•", insertbackground=Theme.PRIMARY)
         self.entry_pass.pack(fill="x", pady=(5, 25), ipady=8)
         
         # Login Button
-        self.btn_login = ModernButton(frame, text="Sign In", command=self.perform_login, font=Theme.FONT_BODY_BOLD, height=2)
+        self.btn_login = ModernButton(form_frame, text="Sign In", command=self.perform_login, font=Theme.FONT_BODY_BOLD, height=2)
         self.btn_login.pack(fill="x")
         
-        # Status Msg
-        self.lbl_login_status = tk.Label(frame, text="", bg=Theme.BG_MAIN, fg=Theme.DANGER, font=Theme.FONT_SMALL)
+        # Status
+        self.lbl_login_status = tk.Label(form_frame, text="", bg=Theme.BG_MAIN, fg=Theme.DANGER, font=Theme.FONT_SMALL)
         self.lbl_login_status.pack(pady=10)
 
     def perform_login(self):
@@ -299,17 +349,14 @@ class App(DraggableWindow):
                     data = resp.json()
                     self.activation_key = data['activation_key']
                     self.employee_name = data['name']
-                    
                     set_registry_value("activation_key", self.activation_key)
                     set_registry_value("employee_name", self.employee_name)
-                    
                     self.container.after(0, self.show_main_ui)
                 else:
                     msg = resp.json().get("detail", "Login failed")
                     self.container.after(0, lambda: self.login_failed(msg))
-            except Exception as e:
+            except:
                 self.container.after(0, lambda: self.login_failed("Connection failed"))
-                
         Thread(target=login_thread, daemon=True).start()
 
     def login_failed(self, msg):
@@ -323,65 +370,72 @@ class App(DraggableWindow):
         for widget in self.container.winfo_children():
             widget.destroy()
             
-        # Top Info Bar
-        top_bar = tk.Frame(self.container, bg=Theme.BG_SIDEBAR, height=80)
+        # Top Info Bar (Black Header)
+        top_bar = tk.Frame(self.container, bg="black", height=110)
         top_bar.pack(fill="x")
+        top_bar.pack_propagate(False)
         
-        # Avatar placeholder
-        avatar = tk.Label(top_bar, text=self.employee_name[0], font=("Segoe UI", 16, "bold"), 
-                         bg=Theme.PRIMARY, fg="white", width=3, height=1)
-        avatar.pack(side="left", padx=20)
+        # Logo in Header
+        try:
+            from PIL import Image, ImageTk
+            if os.path.exists(LOGO_PATH):
+                img = Image.open(LOGO_PATH)
+                img.thumbnail((120, 50))
+                self.dash_logo = ImageTk.PhotoImage(img) # Keep ref
+                tk.Label(top_bar, image=self.dash_logo, bg="black", bd=0).pack(side="left", padx=25)
+            else:
+                tk.Label(top_bar, text="INFRAME", font=("Segoe UI", 18, "bold"), bg="black", fg="white").pack(side="left", padx=25)
+        except:
+             tk.Label(top_bar, text="INFRAME", font=("Segoe UI", 18, "bold"), bg="black", fg="white").pack(side="left", padx=25)
         
-        # Name & Status
-        info_col = tk.Frame(top_bar, bg=Theme.BG_SIDEBAR)
-        info_col.pack(side="left", fill="y", pady=15)
+        # User Info (Right aligned)
+        info_col = tk.Frame(top_bar, bg="black")
+        info_col.pack(side="right", fill="y", pady=25, padx=20)
         
-        tk.Label(info_col, text=self.employee_name, font=Theme.FONT_TITLE, bg=Theme.BG_SIDEBAR, fg="white").pack(anchor="w")
-        self.lbl_status = tk.Label(info_col, text="● Initializing...", font=Theme.FONT_SMALL, bg=Theme.BG_SIDEBAR, fg=Theme.TEXT_MUTED)
-        self.lbl_status.pack(anchor="w")
+        tk.Label(info_col, text=self.employee_name, font=("Segoe UI", 11, "bold"), bg="black", fg="white").pack(anchor="e")
+        self.lbl_status = tk.Label(info_col, text="● Initializing...", font=Theme.FONT_SMALL, bg="black", fg="#9ca3af")
+        self.lbl_status.pack(anchor="e")
         
-        # Main Content Area
-        content = tk.Frame(self.container, bg=Theme.BG_MAIN, padx=20, pady=20)
+        # Main Content (Gray background for contrast)
+        content = tk.Frame(self.container, bg=Theme.BG_SIDEBAR, padx=25, pady=25)
         content.pack(fill="both", expand=True)
         
-        # Stats Card
-        stats_frame = tk.Frame(content, bg=Theme.BG_CARD, padx=15, pady=15)
-        stats_frame.pack(fill="x", pady=(0, 20))
+        # Stats Card (White card on gray bg)
+        stats_frame = tk.Frame(content, bg=Theme.BG_MAIN, padx=15, pady=15)
+        stats_frame.pack(fill="x", pady=(0, 25))
         
-        tk.Label(stats_frame, text="SESSION STATS", font=("Segoe UI", 8, "bold"), bg=Theme.BG_CARD, fg=Theme.TEXT_MUTED).pack(anchor="w", pady=(0, 10))
+        tk.Label(stats_frame, text="TODAY'S ACTIVITY", font=("Segoe UI", 9, "bold"), bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED).pack(anchor="w", pady=(0, 15))
         
-        # Grid for stats
-        grid = tk.Frame(stats_frame, bg=Theme.BG_CARD)
-        grid.pack(fill="x")
+        # Stats Layout
+        stats_row = tk.Frame(stats_frame, bg=Theme.BG_MAIN)
+        stats_row.pack(fill="x")
         
-        self.create_stat_item(grid, 0, "Online", "00:00:00", Theme.SUCCESS, "lbl_present")
-        self.create_stat_item(grid, 1, "Away", "00:00:00", Theme.DANGER, "lbl_away")
-        self.create_stat_item(grid, 2, "Break", "00:00:00", Theme.WARNING, "lbl_break")
+        self.create_stat_item(stats_row, "Active", "00:00:00", Theme.SUCCESS, "lbl_present")
+        self.create_stat_item(stats_row, "Away", "00:00:00", Theme.DANGER, "lbl_away")
+        self.create_stat_item(stats_row, "Break", "00:00:00", Theme.WARNING, "lbl_break")
         
         # Actions
-        tk.Label(content, text="QUICK ACTIONS", font=("Segoe UI", 8, "bold"), bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED).pack(anchor="w", pady=(0, 10))
+        tk.Label(content, text="CONTROLS", font=("Segoe UI", 9, "bold"), bg=Theme.BG_SIDEBAR, fg=Theme.TEXT_MUTED).pack(anchor="w", pady=(0, 10))
         
         self.btn_break = ModernButton(content, text="☕ Take a Break", bg=Theme.WARNING, hover_bg="#ca8a04", command=self.toggle_break, height=2, font=Theme.FONT_BODY_BOLD)
-        self.btn_break.pack(fill="x", pady=(0, 10))
-        
-        ModernButton(content, text="📸 Capture Now", bg=Theme.BG_CARD, hover_bg=Theme.BG_INPUT, fg="white", command=lambda: self.capture_and_send_screenshot(True), height=2).pack(fill="x", pady=(0, 10))
+        self.btn_break.pack(fill="x", pady=(0, 15))
         
         ModernButton(content, text="🛑 End Shift", bg=Theme.DANGER, hover_bg=Theme.DANGER_HOVER, command=self.on_close, height=2).pack(fill="x")
         
-        # Device Info Footer
-        tk.Label(self.container, text=f"ID: {self.hardware_id}", bg=Theme.BG_MAIN, fg=Theme.BG_INPUT, font=("Segoe UI", 7)).pack(side="bottom", pady=5)
+        tk.Label(self.container, text=f"Device ID: {self.hardware_id}", bg=Theme.BG_SIDEBAR, fg=Theme.BG_INPUT, font=("Segoe UI", 8)).pack(side="bottom", pady=10)
         
-        # Start Threads
+        # Separator Line for Header
+        tk.Frame(self.container, bg=Theme.BG_INPUT, height=1).place(x=0, y=99, relwidth=1.0)
+        
         self.start_monitoring()
 
-    def create_stat_item(self, parent, col, title, value, color, attr_name):
-        f = tk.Frame(parent, bg=Theme.BG_CARD)
-        f.grid(row=0, column=col, sticky="ew", padx=5)
-        parent.grid_columnconfigure(col, weight=1)
+    def create_stat_item(self, parent, title, value, color, attr_name):
+        f = tk.Frame(parent, bg=Theme.BG_MAIN)
+        f.pack(side="left", expand=True, fill="both", padx=2)
         
-        tk.Label(f, text=title, bg=Theme.BG_CARD, fg="#94a3b8", font=("Segoe UI", 9)).pack(anchor="w")
-        l = tk.Label(f, text=value, bg=Theme.BG_CARD, fg=color, font=("Consolas", 16, "bold"))
-        l.pack(anchor="w")
+        tk.Label(f, text=title, bg=Theme.BG_MAIN, fg="#94a3b8", font=("Segoe UI", 10)).pack(anchor="center")
+        l = tk.Label(f, text=value, bg=Theme.BG_MAIN, fg=color, font=("Consolas", 14, "bold"))
+        l.pack(anchor="center", pady=(5, 0))
         setattr(self, attr_name, l)
 
     # -------------------------------------------------------------------------
@@ -390,24 +444,23 @@ class App(DraggableWindow):
     def format_time(self, seconds):
         h = int(seconds // 3600)
         m = int((seconds % 3600) // 60)
-        s = int(seconds % 60)
-        return f"{h:02d}:{m:02d}:{s:02d}"
+        # s = int(seconds % 60) # Seconds removed for cleaner look
+        return f"{h}h {m}m"
 
     def update_status(self, text, color):
-        self.lbl_status.config(text=f"● {text}", fg=color)
+        if hasattr(self, 'lbl_status') and self.lbl_status.winfo_exists():
+            self.lbl_status.config(text=f"● {text}", fg=color)
 
     def start_monitoring(self):
         if self.monitoring_active: return
         self.monitoring_active = True
         
-        # Threads
         Thread(target=self.loop_camera, daemon=True).start()
         Thread(target=self.loop_ticks, daemon=True).start()
         Thread(target=self.loop_heartbeat, daemon=True).start()
         Thread(target=self.loop_apps, daemon=True).start()
         Thread(target=self.loop_screenshots, daemon=True).start()
         
-        # Wait a sec then fetch time
         self.after(1000, self.fetch_server_time)
 
     def fetch_server_time(self):
@@ -432,7 +485,6 @@ class App(DraggableWindow):
                 elif self.current_status == "Away":
                     self.away_seconds += 1
                 
-                # Update UI
                 self.after(0, self.update_timers)
             time.sleep(1)
 
@@ -461,42 +513,43 @@ class App(DraggableWindow):
         consecutive_present = 0
         
         while self.is_running:
-            if self.in_break_mode:
-                time.sleep(1)
-                continue
+            try:
+                if self.in_break_mode:
+                    time.sleep(1)
+                    continue
+                    
+                ret, frame = cap.read()
+                if not ret:
+                    time.sleep(1)
+                    continue
+                    
+                results = model(frame, verbose=False)
+                person = False
+                for r in results:
+                    for box in r.boxes:
+                        if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
+                            person = True; break
+                    if person: break
                 
-            ret, frame = cap.read()
-            if not ret:
-                time.sleep(1)
-                continue
-                
-            results = model(frame, verbose=False)
-            person = False
-            for r in results:
-                for box in r.boxes:
-                    if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
-                        person = True; break
-                if person: break
-            
-            if person:
-                consecutive_present += 1
-                consecutive_away = 0
-                if consecutive_present >= PRESENT_LIMIT and self.current_status != "Present":
-                    self.current_status = "Present"
-                    self.send_log("Present")
-                    self.after(0, lambda: self.update_status("Active", Theme.SUCCESS))
-                    self.after(0, self.hide_warning)
-            else:
-                consecutive_present = 0
-                consecutive_away += 1
-                if consecutive_away >= AWAY_LIMIT and self.current_status != "Away":
-                    self.current_status = "Away"
-                    self.send_log("Away")
-                    self.after(0, lambda: self.update_status("Away Detected", Theme.DANGER))
-                    self.after(0, self.show_warning)
-            
+                if person:
+                    consecutive_present += 1
+                    consecutive_away = 0
+                    if consecutive_present >= PRESENT_LIMIT and self.current_status != "Present":
+                        self.current_status = "Present"
+                        self.send_log("Present")
+                        self.after(0, lambda: self.update_status("Active", Theme.SUCCESS))
+                        self.after(0, self.hide_warning)
+                else:
+                    consecutive_present = 0
+                    consecutive_away += 1
+                    if consecutive_away >= AWAY_LIMIT and self.current_status != "Away":
+                        self.current_status = "Away"
+                        self.send_log("Away")
+                        self.after(0, lambda: self.update_status("Away Detected", Theme.DANGER))
+                        self.after(0, self.show_warning)
+            except: pass
             time.sleep(1)
-        cap.release()
+        if cap: cap.release()
 
     def loop_heartbeat(self):
         while self.is_running:
@@ -540,7 +593,6 @@ class App(DraggableWindow):
             if not self.in_break_mode:
                 self.capture_and_send_screenshot()
             
-            # Smart sleep
             target = time.time() + self.screenshot_frequency
             while time.time() < target:
                 if not self.is_running: break
@@ -549,7 +601,6 @@ class App(DraggableWindow):
     def capture_and_send_screenshot(self, manual=False):
         try:
             screen = ImageGrab.grab()
-            # DLP
             if self.dlp_enabled:
                 self.apply_dlp(screen)
             
@@ -564,18 +615,15 @@ class App(DraggableWindow):
         except Exception as e: print(e)
 
     def apply_dlp(self, img):
-        # Simply logic from before
         keywords = ["password", "bank", "credit", "inbox"]
-        windows = []
         def handler(hwnd, _):
             if win32gui.IsWindowVisible(hwnd):
                 t = win32gui.GetWindowText(hwnd).lower()
                 if any(k in t for k in keywords):
                     try:
                         rect = win32gui.GetWindowRect(hwnd)
-                        # Basic blur
                         draw = ImageDraw.Draw(img)
-                        draw.rectangle(rect, fill="black") # Blackout is safer/easier than blur for now
+                        draw.rectangle(rect, fill="black") 
                     except: pass
         win32gui.EnumWindows(handler, None)
 
@@ -604,6 +652,8 @@ class App(DraggableWindow):
             self.send_log("WORK_END")
             self.is_running = False
             self.destroy()
+            import os
+            os._exit(0)
 
 if __name__ == "__main__":
     app = App()
