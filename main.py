@@ -170,13 +170,22 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
 # DASHBOARD (Protected)
 # ===============================
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def read_root(request: Request, db: Session = Depends(get_db)):
     """Protected dashboard - requires login"""
     token = get_token_from_cookies(request)
     if not token or not verify_token(token):
         return RedirectResponse(url="/login", status_code=302)
     
-    return templates.TemplateResponse("dashboard_new.html", {"request": request})
+    token_data = verify_token(token)
+    supervisor = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    return templates.TemplateResponse("dashboard_new.html", {
+        "request": request,
+        "supervisor_name": supervisor.name if supervisor else "Admin",
+        "company_name": company.name if company else "Company",
+        "role": supervisor.role if supervisor else "viewer"
+    })
 
 @app.get("/dashboard-new", response_class=HTMLResponse)
 async def dashboard_new(request: Request, db: Session = Depends(get_db)):
@@ -192,7 +201,8 @@ async def dashboard_new(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("dashboard_new.html", {
         "request": request,
         "supervisor_name": supervisor.name if supervisor else "Admin",
-        "company_name": company.name if company else "Company"
+        "company_name": company.name if company else "Company",
+        "role": supervisor.role if supervisor else "viewer"
     })
 
 @app.get("/dashboard/stats")
@@ -275,12 +285,19 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
         if last_time and current_state in ["Present", "WORK_START", "BREAK_END"]:
              user_present += (datetime.datetime.utcnow() - last_time).total_seconds()
 
+        # Get latest screenshot
+        latest_screenshot = db.query(Screenshot).filter(
+            Screenshot.employee_name == emp.name
+        ).order_by(Screenshot.timestamp.desc()).first()
+
         logs_data.append({
+            "id": emp.id,
             "employee_name": emp.name,
             "department": emp.department or "-",
             "status": status,
             "timestamp": last_log.timestamp if last_log else datetime.datetime.utcnow(),
-            "present_time": f"{int(user_present//3600)}h {int((user_present%3600)//60)}m"
+            "present_time": f"{int(user_present//3600)}h {int((user_present%3600)//60)}m",
+            "last_screenshot": latest_screenshot.image_data if latest_screenshot else None
         })
 
     return {
@@ -332,6 +349,43 @@ async def create_supervisor(request: Request, data: SupervisorInvite, db: Sessio
     db.add(new_sup)
     db.commit()
     return {"status": "ok", "message": "Supervisor created"}
+
+class EmployeeUpdate(BaseModel):
+    name: Optional[str] = None
+    department: Optional[str] = None
+
+@app.put("/api/employees/{employee_id}")
+async def update_employee(employee_id: int, data: EmployeeUpdate, request: Request, db: Session = Depends(get_db)):
+    """Update employee details (Admin only)"""
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # RBAC Check
+    current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    if not current_sup or current_sup.role != 'admin':
+        raise HTTPException(status_code=403, detail="Viewer accounts cannot edit employees")
+    
+    # Check employee belongs to company
+    employee = db.query(Employee).filter(
+        Employee.id == employee_id,
+        Employee.company_id == token_data["company_id"]
+    ).first()
+    
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    if data.name:
+        employee.name = data.name
+    if data.department:
+        employee.department = data.department
+    
+    db.commit()
+    return {"status": "ok", "message": "Employee updated"}
 
 @app.get("/api/supervisors")
 async def list_supervisors(request: Request, db: Session = Depends(get_db)):

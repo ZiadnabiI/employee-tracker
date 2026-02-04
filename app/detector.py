@@ -132,6 +132,29 @@ class ModernButton(tk.Button):
 
     def on_leave(self, e):
         self['background'] = self.bg
+    
+    def config(self, cnf=None, **kw):
+        # Accept custom 'hover_bg' and ensure underlying tk options are kept in sync
+        hover = None
+        if cnf and isinstance(cnf, dict):
+            hover = cnf.pop('hover_bg', None)
+        hover = kw.pop('hover_bg', hover)
+        if hover is not None:
+            self.hover_bg = hover
+            kw['activebackground'] = hover
+
+        # Handle bg/background provided either via dict or kwargs
+        bg_val = None
+        if cnf and isinstance(cnf, dict):
+            bg_val = cnf.pop('bg', None) or cnf.pop('background', None)
+        bg_val = kw.get('bg') or kw.get('background') or bg_val
+        if bg_val is not None:
+            self.bg = bg_val
+            kw['background'] = bg_val
+
+        return super().config(cnf or {}, **kw)
+
+    configure = config
 
 class DraggableWindow(tk.Tk):
     def __init__(self):
