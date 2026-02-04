@@ -970,6 +970,14 @@
                 // Load App Usage
                 loadAppUsage();
 
+                // Refresh Active View
+                if (document.getElementById('view-live-monitoring').classList.contains('active')) {
+                    loadLiveMonitoring(false);
+                }
+                if (document.getElementById('view-employees').classList.contains('active')) {
+                    loadEmployeesTable(false);
+                }
+
             } catch (error) {
                 console.error('Dashboard load error:', error);
             }
@@ -1075,9 +1083,9 @@
         }
 
         // --- Live Monitoring ---
-        async function loadLiveMonitoring() {
+        async function loadLiveMonitoring(ensureData = true) {
             const grid = document.getElementById('live-grid');
-            if (!dashboardLogs.length) await loadDashboard();
+            if (ensureData && !dashboardLogs.length) await loadDashboard();
 
             let html = '';
             dashboardLogs.forEach(emp => {
@@ -1119,8 +1127,8 @@
         }
 
         // --- Employees Table ---
-        async function loadEmployeesTable() {
-            if (!dashboardLogs.length) await loadDashboard();
+        async function loadEmployeesTable(ensureData = true) {
+            if (ensureData && !dashboardLogs.length) await loadDashboard();
 
             const tbody = document.getElementById('employeeTableBody');
             let html = '';
@@ -2068,7 +2076,7 @@
             if (viewId === 'employee-performance') loadLeaderboard();
         };
 
-        setInterval(loadDashboard, 30000);
+        setInterval(loadDashboard, 10000); // 10 seconds refresh
     </script>
 </body>
 
