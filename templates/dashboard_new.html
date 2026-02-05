@@ -434,10 +434,14 @@
                                     </span>
                                 </p>
                             </div>
-                            <div class="flex gap-3">
-                                <button onclick="upgradeToPro()" id="upgrade-btn"
-                                    class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:shadow-lg transition-all text-sm">
-                                    <i class="fa-solid fa-rocket mr-2"></i>Upgrade to Pro
+                            <div class="flex gap-2" id="upgrade-buttons">
+                                <button onclick="upgradeToPlan('basic')" id="upgrade-basic-btn"
+                                    class="border border-blue-500 text-blue-600 px-4 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all text-sm">
+                                    <i class="fa-solid fa-star mr-1"></i>Basic $5/user
+                                </button>
+                                <button onclick="upgradeToPlan('pro')" id="upgrade-pro-btn"
+                                    class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all text-sm">
+                                    <i class="fa-solid fa-rocket mr-1"></i>Pro $8.99/user
                                 </button>
                                 <button onclick="manageSubscription()" id="manage-btn"
                                     class="hidden border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-all text-sm">
@@ -2137,22 +2141,36 @@
                 document.getElementById('employee-count').textContent = data.current_employees;
                 document.getElementById('max-employees').textContent = data.max_employees >= 1000 ? '∞' : data.max_employees;
 
-                const upgradeBtn = document.getElementById('upgrade-btn');
+                const upgradeButtons = document.getElementById('upgrade-buttons');
                 const manageBtn = document.getElementById('manage-btn');
                 const planBadge = document.getElementById('plan-badge');
                 const limitWarning = document.getElementById('limit-warning');
                 const subscriptionFeatures = document.getElementById('subscription-features');
+                const basicBtn = document.getElementById('upgrade-basic-btn');
+                const proBtn = document.getElementById('upgrade-pro-btn');
 
                 if (data.plan === 'pro' || data.plan === 'enterprise') {
-                    // Pro/Enterprise user
-                    upgradeBtn.classList.add('hidden');
+                    // Pro/Enterprise user - hide upgrade buttons, show manage
+                    if (basicBtn) basicBtn.classList.add('hidden');
+                    if (proBtn) proBtn.classList.add('hidden');
                     manageBtn.classList.remove('hidden');
                     planBadge.classList.remove('hidden');
+                    planBadge.textContent = data.plan.toUpperCase();
                     subscriptionFeatures.classList.remove('hidden');
                     limitWarning.classList.add('hidden');
+                } else if (data.plan === 'basic') {
+                    // Basic user - hide basic button, show pro upgrade
+                    if (basicBtn) basicBtn.classList.add('hidden');
+                    if (proBtn) proBtn.classList.remove('hidden');
+                    manageBtn.classList.remove('hidden');
+                    planBadge.classList.remove('hidden');
+                    planBadge.textContent = 'BASIC';
+                    subscriptionFeatures.classList.add('hidden');
+                    limitWarning.classList.add('hidden');
                 } else {
-                    // Free user
-                    upgradeBtn.classList.remove('hidden');
+                    // Free user - show both upgrade options
+                    if (basicBtn) basicBtn.classList.remove('hidden');
+                    if (proBtn) proBtn.classList.remove('hidden');
                     manageBtn.classList.add('hidden');
                     planBadge.classList.add('hidden');
                     subscriptionFeatures.classList.add('hidden');
@@ -2169,8 +2187,8 @@
             }
         }
 
-        async function upgradeToPro() {
-            const btn = document.getElementById('upgrade-btn');
+        async function upgradeToPlan(plan = 'pro') {
+            const btn = document.getElementById(plan === 'basic' ? 'upgrade-basic-btn' : 'upgrade-pro-btn');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
             btn.disabled = true;
@@ -2178,7 +2196,8 @@
             try {
                 const response = await fetch('/api/stripe/create-checkout', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan: plan })
                 });
 
                 const data = await response.json();
@@ -2197,6 +2216,9 @@
                 btn.disabled = false;
             }
         }
+
+        // Keep for backwards compatibility
+        function upgradeToPro() { upgradeToPlan('pro'); }
 
         async function manageSubscription() {
             const btn = document.getElementById('manage-btn');

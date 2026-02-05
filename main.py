@@ -1487,8 +1487,21 @@ async def get_subscription_status(request: Request, db: Session = Depends(get_db
 @app.post("/api/stripe/create-checkout")
 async def create_checkout_session(request: Request, db: Session = Depends(get_db)):
     """Create Stripe Checkout Session for subscription upgrade"""
-    if not stripe.api_key or not STRIPE_PRICE_ID:
-        raise HTTPException(status_code=500, detail="Stripe not configured. Please set STRIPE_SECRET_KEY and STRIPE_PRICE_ID")
+    # Parse request body for plan selection
+    try:
+        body = await request.json()
+        plan = body.get("plan", "pro")  # Default to pro
+    except:
+        plan = "pro"
+    
+    # Select price based on plan
+    if plan == "basic":
+        price_id = STRIPE_PRICE_ID_BASIC
+    else:
+        price_id = STRIPE_PRICE_ID_PRO or STRIPE_PRICE_ID
+    
+    if not stripe.api_key or not price_id:
+        raise HTTPException(status_code=500, detail=f"Stripe not configured for {plan} plan. Please set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_{plan.upper()}")
     
     token = get_token_from_cookies(request)
     if not token:
@@ -1519,11 +1532,12 @@ async def create_checkout_session(request: Request, db: Session = Depends(get_db
         customer=company.stripe_customer_id,
         payment_method_types=["card"],
         line_items=[{
-            "price": STRIPE_PRICE_ID,
+            "price": price_id,
         }],
         mode="subscription",
-        success_url=f"{base_url}/?payment=success",
+        success_url=f"{base_url}/?payment=success&plan={plan}",
         cancel_url=f"{base_url}/?payment=cancelled",
+        metadata={"plan": plan}
     )
     
     return {"checkout_url": session.url}
