@@ -25,7 +25,8 @@
         .animated-bg {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         .blob {
@@ -139,7 +140,7 @@
     </style>
 </head>
 
-<body class="animated-bg min-h-screen flex items-center justify-center p-4">
+<body class="animated-bg min-h-screen flex items-center justify-center py-12 px-4">
 
     <!-- Animated Background Blobs -->
     <div class="blob w-96 h-96 bg-blue-500 top-10 -left-32"></div>

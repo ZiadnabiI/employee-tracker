@@ -216,7 +216,7 @@ async def register_company(
         password_hash=hash_password(password),
         name=name,
         company_id=new_company.id,
-        role="owner",
+        role="admin",
         is_super_admin=0
     )
     db.add(new_supervisor)
