@@ -416,6 +416,46 @@
 
                 <!-- 5. SETTINGS VIEW -->
                 <section id="view-settings" class="view-section">
+                    <!-- Subscription Status Card -->
+                    <div id="subscription-card"
+                        class="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 mb-6 max-w-3xl">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-bold text-gray-800">Current Plan:</h4>
+                                    <span id="current-plan" class="text-blue-600 font-bold uppercase">Loading...</span>
+                                    <span id="plan-badge"
+                                        class="hidden bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">PRO</span>
+                                </div>
+                                <p class="text-sm text-gray-500">
+                                    <span id="employee-count">-</span> / <span id="max-employees">-</span> employees
+                                    <span id="limit-warning" class="hidden text-red-500 font-semibold ml-2">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> Limit reached!
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="upgradeToPro()" id="upgrade-btn"
+                                    class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:shadow-lg transition-all text-sm">
+                                    <i class="fa-solid fa-rocket mr-2"></i>Upgrade to Pro
+                                </button>
+                                <button onclick="manageSubscription()" id="manage-btn"
+                                    class="hidden border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-all text-sm">
+                                    <i class="fa-solid fa-gear mr-2"></i>Manage
+                                </button>
+                            </div>
+                        </div>
+                        <div id="subscription-features" class="mt-4 pt-4 border-t border-blue-200 hidden">
+                            <div class="flex flex-wrap gap-4 text-xs text-gray-600">
+                                <span><i class="fa-solid fa-check text-green-500 mr-1"></i>Unlimited Employees</span>
+                                <span><i class="fa-solid fa-check text-green-500 mr-1"></i>Smart Screenshots</span>
+                                <span><i class="fa-solid fa-check text-green-500 mr-1"></i>DLP (Privacy Blur)</span>
+                                <span><i class="fa-solid fa-check text-green-500 mr-1"></i>App Tracking</span>
+                                <span><i class="fa-solid fa-check text-green-500 mr-1"></i>Priority Support</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6 max-w-3xl">
                         <h4 class="text-lg font-bold text-gray-800 mb-4">Monitoring Configuration</h4>
 
@@ -2063,6 +2103,7 @@
 
         // --- Init ---
         loadDashboard();
+        loadSubscriptionStatus(); // Load subscription on init
         // Load initial view data
         if (document.getElementById('view-settings').classList.contains('active')) {
             loadSettings();
@@ -2072,11 +2113,131 @@
         const originalNavTo = navTo;
         navTo = function (viewId) {
             originalNavTo(viewId);
-            if (viewId === 'settings') loadSettings();
+            if (viewId === 'settings') {
+                loadSettings();
+                loadSubscriptionStatus();
+            }
             if (viewId === 'employee-performance') loadLeaderboard();
         };
 
         setInterval(loadDashboard, 10000); // 10 seconds refresh
+
+        // ===============================
+        // STRIPE SUBSCRIPTION FUNCTIONS
+        // ===============================
+        async function loadSubscriptionStatus() {
+            try {
+                const response = await fetch('/api/subscription-status');
+                if (!response.ok) return;
+
+                const data = await response.json();
+
+                // Update UI elements
+                document.getElementById('current-plan').textContent = data.plan.toUpperCase();
+                document.getElementById('employee-count').textContent = data.current_employees;
+                document.getElementById('max-employees').textContent = data.max_employees >= 1000 ? '∞' : data.max_employees;
+
+                const upgradeBtn = document.getElementById('upgrade-btn');
+                const manageBtn = document.getElementById('manage-btn');
+                const planBadge = document.getElementById('plan-badge');
+                const limitWarning = document.getElementById('limit-warning');
+                const subscriptionFeatures = document.getElementById('subscription-features');
+
+                if (data.plan === 'pro' || data.plan === 'enterprise') {
+                    // Pro/Enterprise user
+                    upgradeBtn.classList.add('hidden');
+                    manageBtn.classList.remove('hidden');
+                    planBadge.classList.remove('hidden');
+                    subscriptionFeatures.classList.remove('hidden');
+                    limitWarning.classList.add('hidden');
+                } else {
+                    // Free user
+                    upgradeBtn.classList.remove('hidden');
+                    manageBtn.classList.add('hidden');
+                    planBadge.classList.add('hidden');
+                    subscriptionFeatures.classList.add('hidden');
+
+                    // Show warning if at limit
+                    if (!data.can_add_employees) {
+                        limitWarning.classList.remove('hidden');
+                    } else {
+                        limitWarning.classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load subscription status:', error);
+            }
+        }
+
+        async function upgradeToPro() {
+            const btn = document.getElementById('upgrade-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/stripe/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else if (data.detail) {
+                    alert('Error: ' + data.detail);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Checkout error:', error);
+                alert('Failed to start checkout. Please try again.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function manageSubscription() {
+            const btn = document.getElementById('manage-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/stripe/portal');
+                const data = await response.json();
+
+                if (data.portal_url) {
+                    window.location.href = data.portal_url;
+                } else if (data.detail) {
+                    alert('Error: ' + data.detail);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Portal error:', error);
+                alert('Failed to open billing portal. Please try again.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Check for payment success/cancelled URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('payment') === 'success') {
+            setTimeout(() => {
+                alert('🎉 Payment successful! Your plan has been upgraded to Pro.');
+                loadSubscriptionStatus();
+                // Remove the query param
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }, 500);
+        } else if (urlParams.get('payment') === 'cancelled') {
+            setTimeout(() => {
+                alert('Payment was cancelled. You can try again anytime.');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }, 500);
+        }
     </script>
 </body>
 

@@ -1387,6 +1387,229 @@ async def generate_report(request: Request, report: ReportRequest, db: Session =
         "data": results
     }
 
+# ===============================
+# STRIPE BILLING ENDPOINTS  
+# ===============================
+import stripe
+
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PRICE_ID_BASIC = os.getenv("STRIPE_PRICE_ID_BASIC")  # For Basic plan
+STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO")      # For Pro plan (default upgrade)
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID") or STRIPE_PRICE_ID_PRO  # Fallback
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+@app.get("/api/subscription-status")
+async def get_subscription_status(request: Request, db: Session = Depends(get_db)):
+    """Get current company subscription status"""
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    employee_count = db.query(Employee).filter(Employee.company_id == company.id).count()
+    
+    return {
+        "plan": company.subscription_plan or "free",
+        "status": company.subscription_status or "active",
+        "max_employees": company.max_employees or 5,
+        "current_employees": employee_count,
+        "can_add_employees": employee_count < (company.max_employees or 5)
+    }
+
+@app.post("/api/stripe/create-checkout")
+async def create_checkout_session(request: Request, db: Session = Depends(get_db)):
+    """Create Stripe Checkout Session for subscription upgrade"""
+    if not stripe.api_key or not STRIPE_PRICE_ID:
+        raise HTTPException(status_code=500, detail="Stripe not configured. Please set STRIPE_SECRET_KEY and STRIPE_PRICE_ID")
+    
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    supervisor = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    
+    # Create or get Stripe Customer
+    if not company.stripe_customer_id:
+        customer = stripe.Customer.create(
+            email=supervisor.email if supervisor else None,
+            name=company.name,
+            metadata={"company_id": str(company.id)}
+        )
+        company.stripe_customer_id = customer.id
+        db.commit()
+    
+    # Determine base URL
+    base_url = str(request.base_url).rstrip('/')
+    
+    # Create Checkout Session
+    session = stripe.checkout.Session.create(
+        customer=company.stripe_customer_id,
+        payment_method_types=["card"],
+        line_items=[{
+            "price": STRIPE_PRICE_ID,
+        }],
+        mode="subscription",
+        success_url=f"{base_url}/?payment=success",
+        cancel_url=f"{base_url}/?payment=cancelled",
+    )
+    
+    return {"checkout_url": session.url}
+
+@app.post("/api/stripe/webhook")
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
+    """Handle Stripe webhook events"""
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+    
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    
+    # Handle subscription events
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        customer_id = session.get("customer")
+        
+        if customer_id:
+            company = db.query(Company).filter(Company.stripe_customer_id == customer_id).first()
+            if company:
+                company.subscription_plan = "pro"
+                company.subscription_status = "active"
+                company.max_employees = 1000  # Effectively unlimited for Pro
+                db.commit()
+                print(f"✅ Subscription activated for company: {company.name}")
+    
+    elif event["type"] == "customer.subscription.updated":
+        subscription = event["data"]["object"]
+        customer_id = subscription.get("customer")
+        status = subscription.get("status")
+        
+        if customer_id:
+            company = db.query(Company).filter(Company.stripe_customer_id == customer_id).first()
+            if company:
+                company.subscription_status = status
+                if status in ["canceled", "unpaid"]:
+                    company.subscription_plan = "free"
+                    company.max_employees = 5
+                db.commit()
+    
+    elif event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        customer_id = subscription.get("customer")
+        
+        if customer_id:
+            company = db.query(Company).filter(Company.stripe_customer_id == customer_id).first()
+            if company:
+                company.subscription_plan = "free"
+                company.subscription_status = "canceled"
+                company.max_employees = 5
+                db.commit()
+                print(f"⚠️ Subscription canceled for company: {company.name}")
+    
+    elif event["type"] == "invoice.payment_failed":
+        invoice = event["data"]["object"]
+        customer_id = invoice.get("customer")
+        
+        if customer_id:
+            company = db.query(Company).filter(Company.stripe_customer_id == customer_id).first()
+            if company:
+                company.subscription_status = "past_due"
+                db.commit()
+    
+    return {"status": "success"}
+
+@app.post("/api/stripe/report-usage")
+async def report_employee_usage(db: Session = Depends(get_db)):
+    """
+    Report employee count to Stripe for metered billing.
+    Call this endpoint daily via cron job (e.g., Render Cron Jobs or external scheduler).
+    """
+    if not stripe.api_key:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    companies = db.query(Company).filter(
+        Company.subscription_plan == "pro",
+        Company.stripe_customer_id.isnot(None)
+    ).all()
+    
+    reported = 0
+    errors = []
+    
+    for company in companies:
+        try:
+            employee_count = db.query(Employee).filter(Employee.company_id == company.id).count()
+            
+            # Get active subscription
+            subscriptions = stripe.Subscription.list(
+                customer=company.stripe_customer_id, 
+                status="active",
+                limit=1
+            )
+            
+            if subscriptions.data:
+                sub_item_id = subscriptions.data[0]["items"]["data"][0]["id"]
+                
+                # Report usage (set to current count)
+                stripe.SubscriptionItem.create_usage_record(
+                    sub_item_id,
+                    quantity=employee_count,
+                    timestamp=int(datetime.datetime.utcnow().timestamp()),
+                    action="set"
+                )
+                reported += 1
+                print(f"📊 Reported {employee_count} employees for {company.name}")
+        except Exception as e:
+            errors.append({"company": company.name, "error": str(e)})
+    
+    return {
+        "status": "usage_reported",
+        "companies_processed": reported,
+        "errors": errors if errors else None
+    }
+
+@app.get("/api/stripe/portal")
+async def create_customer_portal(request: Request, db: Session = Depends(get_db)):
+    """Create Stripe Customer Portal session for managing subscription"""
+    if not stripe.api_key:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    if not company.stripe_customer_id:
+        raise HTTPException(status_code=400, detail="No subscription found")
+    
+    base_url = str(request.base_url).rstrip('/')
+    
+    session = stripe.billing_portal.Session.create(
+        customer=company.stripe_customer_id,
+        return_url=f"{base_url}/"
+    )
+    
+    return {"portal_url": session.url}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
