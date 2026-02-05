@@ -8,6 +8,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+import stripe
+import os
+
+# Stripe Configuration
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PRICE_ID_BASIC = os.getenv("STRIPE_PRICE_ID_BASIC")
+STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO")
+
+stripe.api_key = STRIPE_SECRET_KEY
+
 
 from pydantic import BaseModel
 from database import SessionLocal, engine, Company, Supervisor, Employee, EmployeeLog, AppLog, Screenshot, Department, Base, engine
@@ -664,6 +674,84 @@ async def list_supervisors(request: Request, db: Session = Depends(get_db)):
 # ===============================
 # EMPLOYEE MANAGEMENT (Protected)
 # ===============================
+
+def update_stripe_usage(company_id: int, db: Session):
+    """
+    Syncs the Stripe subscription quantity with the number of active employees.
+    """
+    try:
+        company = db.query(Company).filter(Company.id == company_id).first()
+        if not company or not company.stripe_customer_id:
+            print(f"⚠️ Company {company_id} has no Stripe ID. Skipping sync.")
+            return
+
+        # Count active employees
+        # Note: Depending on business logic, this might be all employees or just active ones.
+        # Assuming 'is_active' determines billable seats, or just total count.
+        # Docs say: "usage updates automatically adds/removes users from the invoice"
+        # We'll count all existing employees for the company as seats.
+        employee_count = db.query(Employee).filter(Employee.company_id == company_id).count()
+        
+        # Ensure at least 1 seat if required, or 0.
+        # Standard seat based billing usually counts all provisioned users.
+        
+        if not stripe.api_key:
+            print("⚠️ Stripe API key missing. Skipping sync.")
+            return
+
+        # Find active subscription
+        subscriptions = stripe.Subscription.list(customer=company.stripe_customer_id, status='active', limit=1)
+        if not subscriptions.data:
+            print(f"⚠️ No active subscription for company {company.name}")
+            return
+            
+        subscription = subscriptions.data[0]
+        subscription_item_id = subscription['items']['data'][0].id
+        
+        # Update usage
+        try:
+            # Try standard quantity update (for Per-Seat / Licensed plans)
+            stripe.SubscriptionItem.modify(
+                subscription_item_id,
+                quantity=employee_count
+            )
+            print(f"✅ Updated Stripe usage (Licensed) for {company.name}: {employee_count} employees")
+        except stripe.error.InvalidRequestError as e:
+            if "metered plans" in str(e):
+                # Fallback for Metered plans: Send usage record
+                # Fallback for Metered plans: Send usage record via raw API
+                # (Library version issues detected, using raw requests for stability)
+                import requests
+                import time
+                
+                resp = requests.post(
+                    f"https://api.stripe.com/v1/subscription_items/{subscription_item_id}/usage_records",
+                    auth=(stripe.api_key, ""),
+                    data={
+                        "quantity": employee_count,
+                        "timestamp": int(datetime.datetime.utcnow().timestamp()),
+                        "action": "set"
+                    }
+                )
+                
+                if not resp.ok:
+                    if "billing/meter_events" in resp.text:
+                        print("❌ Stripe Configuration Error: Your Price is set to 'New Metered Billing' which requires Event Streams.")
+                        print("👉 ACTION REQUIRED: Please create a new Price in Stripe with 'Standard Pricing' (Recurring / Per-Seat).")
+                        print("   Then update STRIPE_PRICE_ID in your environment variables.")
+                    else:
+                        print(f"❌ Stripe Usage Log Failed: {resp.text}")
+                else:
+                    print(f"✅ Updated Stripe usage (Metered) for {company.name}: {employee_count} employees")
+            else:
+                raise e
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Error updating Stripe usage: {e}")
+        # print(traceback.format_exc()) # Uncomment for deep debugging
+
+
 @app.post("/admin/create-employee")
 async def create_employee(request: Request, employee: EmployeeCreate, db: Session = Depends(get_db)):
     """Create employee - assigns to supervisor's company"""
@@ -698,6 +786,10 @@ async def create_employee(request: Request, employee: EmployeeCreate, db: Sessio
     db.refresh(new_employee)
     
     print(f"ADMIN: Created employee {employee.name} with key {key} for company {token_data['company_id']}")
+    
+    # Sync Stripe Usage
+    update_stripe_usage(token_data["company_id"], db)
+    
     return {"activation_key": key, "name": employee.name}
 
 # ===============================
