@@ -235,7 +235,7 @@ async def register_company(
             db.commit()
             
             # Select price based on plan
-            price_id = STRIPE_PRICE_ID_BASIC if plan == "basic" else STRIPE_PRICE_ID_PRO
+            price_id = resolve_price_id(STRIPE_PRICE_ID_BASIC) if plan == "basic" else resolve_price_id(STRIPE_PRICE_ID_PRO)
             
             if price_id:
                 # Create checkout session
@@ -1567,6 +1567,39 @@ STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO")      # For Pro plan (defa
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID") or STRIPE_PRICE_ID_PRO  # Fallback
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
+# Cache for resolved price IDs to avoid frequent API calls
+_price_id_cache = {}
+
+def resolve_price_id(price_or_product_id: str) -> Optional[str]:
+    """
+    Resolve a potential Product ID (prod_...) to its active Price ID (price_...).
+    If the input is already a Price ID (price_... or plan_...), returns it as is.
+    """
+    if not price_or_product_id:
+        return None
+        
+    # specific fix for user's explicit request if they stuck with prod_
+    if price_or_product_id.startswith("prod_"):
+        if price_or_product_id in _price_id_cache:
+            return _price_id_cache[price_or_product_id]
+            
+        try:
+            if not stripe.api_key:
+                return None
+            
+            prices = stripe.Price.list(product=price_or_product_id, active=True, limit=1)
+            if prices.data:
+                resolved_id = prices.data[0].id
+                _price_id_cache[price_or_product_id] = resolved_id
+                print(f"🔧 Resolved Product {price_or_product_id} -> Price {resolved_id}")
+                return resolved_id
+            else:
+                print(f"❌ No active price found for product {price_or_product_id}")
+        except Exception as e:
+            print(f"❌ Error resolving price ID: {e}")
+            
+    return price_or_product_id
+
 @app.get("/api/subscription-status")
 async def get_subscription_status(request: Request, db: Session = Depends(get_db)):
     """Get current company subscription status"""
@@ -1601,9 +1634,9 @@ async def create_checkout_session(request: Request, db: Session = Depends(get_db
     
     # Select price based on plan
     if plan == "basic":
-        price_id = STRIPE_PRICE_ID_BASIC
+        price_id = resolve_price_id(STRIPE_PRICE_ID_BASIC)
     else:
-        price_id = STRIPE_PRICE_ID_PRO or STRIPE_PRICE_ID
+        price_id = resolve_price_id(STRIPE_PRICE_ID_PRO) or resolve_price_id(STRIPE_PRICE_ID)
     
     if not stripe.api_key or not price_id:
         raise HTTPException(status_code=500, detail=f"Stripe not configured for {plan} plan. Please set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_{plan.upper()}")
