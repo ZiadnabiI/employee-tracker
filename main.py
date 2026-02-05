@@ -707,29 +707,6 @@ def update_stripe_usage(company_id: int, db: Session):
         subscription = subscriptions.data[0]
         subscription_item_id = subscription['items']['data'][0].id
         
-        # Check if subscription uses flexible billing mode
-        billing_mode = subscription.get('billing_cycle_anchor_config', {})
-        is_flexible = subscription.get('collection_method') == 'charge_automatically' and billing_mode.get('mode') == 'phase'
-        
-        # If subscription has flexible billing mode, use metered usage API directly
-        if is_flexible or subscription.get('billing_mode', {}).get('type') == 'flexible':
-            import requests
-            resp = requests.post(
-                f"https://api.stripe.com/v1/subscription_items/{subscription_item_id}/usage_records",
-                auth=(stripe.api_key, ""),
-                data={
-                    "quantity": employee_count,
-                    "timestamp": int(datetime.datetime.utcnow().timestamp()),
-                    "action": "set"
-                }
-            )
-            
-            if resp.ok:
-                print(f"✅ Updated Stripe usage (Flexible Billing) for {company.name}: {employee_count} employees")
-            else:
-                print(f"❌ Stripe Usage Failed: {resp.text}")
-            return
-        
         # Update usage
         try:
             # Try standard quantity update (for Per-Seat / Licensed plans)
@@ -739,8 +716,10 @@ def update_stripe_usage(company_id: int, db: Session):
             )
             print(f"✅ Updated Stripe usage (Licensed) for {company.name}: {employee_count} employees")
         except stripe.error.InvalidRequestError as e:
-            if "metered plans" in str(e) or "billing_mode.type=flexible" in str(e):
-                # Fallback for Metered plans: Send usage record via raw API
+            error_message = str(e)
+            # Check for flexible billing or metered plan errors
+            if "metered plans" in error_message or "billing_mode.type=flexible" in error_message or "quantity" in error_message:
+                # Fallback for Metered/Flexible plans: Send usage record via raw API
                 import requests
                 
                 resp = requests.post(
@@ -761,7 +740,7 @@ def update_stripe_usage(company_id: int, db: Session):
                     else:
                         print(f"❌ Stripe Usage Log Failed: {resp.text}")
                 else:
-                    print(f"✅ Updated Stripe usage (Metered) for {company.name}: {employee_count} employees")
+                    print(f"✅ Updated Stripe usage (Metered/Flexible) for {company.name}: {employee_count} employees")
             else:
                 raise e
         
