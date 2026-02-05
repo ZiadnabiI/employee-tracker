@@ -179,9 +179,10 @@ async def register_company(
     name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
+    plan: str = Form("pro"),  # Default plan selection
     db: Session = Depends(get_db)
 ):
-    """Register a new company with admin account"""
+    """Register a new company with admin account - redirects to payment"""
     # Check if email already exists
     existing = db.query(Supervisor).filter(Supervisor.email == email).first()
     if existing:
@@ -198,12 +199,12 @@ async def register_company(
             "error": "Company name already taken. Please choose another."
         })
     
-    # Create new company
+    # Create new company with PENDING status (no access until payment)
     new_company = Company(
         name=company_name,
-        subscription_plan="free",
-        subscription_status="active",
-        max_employees=5  # Free tier
+        subscription_plan="pending",  # Will be updated after payment
+        subscription_status="pending",
+        max_employees=0  # No employees allowed until payment
     )
     db.add(new_company)
     db.commit()
@@ -222,16 +223,116 @@ async def register_company(
     db.commit()
     db.refresh(new_supervisor)
     
-    # Auto-login
+    # Create Stripe customer immediately
+    if stripe.api_key:
+        try:
+            customer = stripe.Customer.create(
+                email=email,
+                name=company_name,
+                metadata={"company_id": str(new_company.id)}
+            )
+            new_company.stripe_customer_id = customer.id
+            db.commit()
+            
+            # Select price based on plan
+            price_id = STRIPE_PRICE_ID_BASIC if plan == "basic" else STRIPE_PRICE_ID_PRO
+            
+            if price_id:
+                # Create checkout session
+                base_url = str(request.base_url).rstrip('/')
+                session = stripe.checkout.Session.create(
+                    customer=customer.id,
+                    payment_method_types=["card"],
+                    line_items=[{"price": price_id}],
+                    mode="subscription",
+                    success_url=f"{base_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}",
+                    cancel_url=f"{base_url}/payment-cancelled",
+                    metadata={"plan": plan, "company_id": str(new_company.id)}
+                )
+                
+                # Set auth cookie and redirect to Stripe
+                response = RedirectResponse(url=session.url, status_code=302)
+                token = create_token(
+                    supervisor_id=new_supervisor.id,
+                    company_id=new_company.id,
+                    is_super_admin=False
+                )
+                response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+                return response
+        except Exception as e:
+            print(f"Stripe error during registration: {e}")
+    
+    # Fallback: redirect to choose plan page if Stripe not configured
     token = create_token(
         supervisor_id=new_supervisor.id,
         company_id=new_company.id,
         is_super_admin=False
     )
-    
-    response = RedirectResponse(url="/", status_code=302)
+    response = RedirectResponse(url="/choose-plan", status_code=302)
     response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
     return response
+
+# ===============================
+# PAYMENT FLOW PAGES
+# ===============================
+@app.get("/choose-plan", response_class=HTMLResponse)
+async def choose_plan_page(request: Request, db: Session = Depends(get_db)):
+    """Show plan selection page for pending users"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    token_data = verify_token(token)
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    # If already subscribed, go to dashboard
+    if company and company.subscription_status not in ["pending", None]:
+        return RedirectResponse(url="/", status_code=302)
+    
+    return templates.TemplateResponse("pricing.html", {
+        "request": request,
+        "show_signup": False,  # Hide signup form, show plan buttons only
+        "company_name": company.name if company else ""
+    })
+
+@app.get("/payment-success", response_class=HTMLResponse)
+async def payment_success_page(request: Request, session_id: str = None, db: Session = Depends(get_db)):
+    """Handle successful payment - activate subscription and redirect to dashboard"""
+    token = get_token_from_cookies(request)
+    
+    if session_id and stripe.api_key:
+        try:
+            # Retrieve the checkout session to get plan info
+            checkout_session = stripe.checkout.Session.retrieve(session_id)
+            company_id = checkout_session.metadata.get("company_id")
+            plan = checkout_session.metadata.get("plan", "pro")
+            
+            if company_id:
+                company = db.query(Company).filter(Company.id == int(company_id)).first()
+                if company:
+                    company.subscription_plan = plan
+                    company.subscription_status = "active"
+                    company.max_employees = 1000 if plan == "pro" else 100
+                    db.commit()
+                    print(f"✅ Payment success: {company.name} upgraded to {plan}")
+        except Exception as e:
+            print(f"Error processing payment success: {e}")
+    
+    # Redirect to dashboard with success param
+    plan_param = "pro"
+    if session_id:
+        try:
+            checkout_session = stripe.checkout.Session.retrieve(session_id)
+            plan_param = checkout_session.metadata.get("plan", "pro")
+        except:
+            pass
+    
+    return RedirectResponse(url=f"/?payment=success&plan={plan_param}", status_code=302)
+
+@app.get("/payment-cancelled", response_class=HTMLResponse)
+async def payment_cancelled_page(request: Request):
+    """Handle cancelled payment - redirect back to plan selection"""
+    return RedirectResponse(url="/choose-plan?cancelled=true", status_code=302)
 
 @app.get("/auth/me")
 async def get_me(request: Request, db: Session = Depends(get_db)):
@@ -257,7 +358,7 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
 # ===============================
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, db: Session = Depends(get_db)):
-    """Root route - redirect to home if not logged in, dashboard if logged in"""
+    """Root route - redirect based on login and subscription status"""
     token = get_token_from_cookies(request)
     if not token or not verify_token(token):
         return RedirectResponse(url="/home", status_code=302)
@@ -265,6 +366,10 @@ async def read_root(request: Request, db: Session = Depends(get_db)):
     token_data = verify_token(token)
     supervisor = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
     company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    # Check if subscription is pending (not paid yet)
+    if company and company.subscription_status == "pending":
+        return RedirectResponse(url="/choose-plan", status_code=302)
     
     return templates.TemplateResponse("dashboard_new.html", {
         "request": request,

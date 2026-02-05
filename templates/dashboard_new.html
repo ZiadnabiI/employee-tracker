@@ -143,10 +143,307 @@
             transform: scale(0.95);
             transition: opacity 0.2s ease-in, transform 0.2s ease-in;
         }
+
+        /* Professional Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        /* Success Animation */
+        .success-checkmark {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes successPop {
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .success-checkmark i {
+            color: white;
+            font-size: 40px;
+            animation: checkDraw 0.4s ease 0.3s both;
+        }
+
+        @keyframes checkDraw {
+            0% {
+                opacity: 0;
+                transform: scale(0);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Confetti Effect */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #f59e0b;
+            animation: confettiFall 3s ease-out forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(400px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Onboarding Tour */
+        .tour-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 9998;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .tour-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .tour-spotlight {
+            position: absolute;
+            border-radius: 12px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 9999;
+        }
+
+        .tour-tooltip {
+            position: absolute;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 360px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            animation: tooltipBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes tooltipBounce {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tour-tooltip::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            transform: rotate(45deg);
+        }
+
+        .tour-tooltip.arrow-top::before {
+            top: -8px;
+            left: 30px;
+        }
+
+        .tour-tooltip.arrow-bottom::before {
+            bottom: -8px;
+            left: 30px;
+        }
+
+        .tour-tooltip.arrow-left::before {
+            left: -8px;
+            top: 30px;
+        }
+
+        .tour-progress {
+            display: flex;
+            gap: 6px;
+            margin-top: 16px;
+        }
+
+        .tour-progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .tour-progress-dot.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        /* Subscription Gate */
+        .subscription-gate {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            z-index: 9990;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .subscription-gate.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .gate-card {
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            max-width: 500px;
+            text-align: center;
+            animation: gateSlide 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes gateSlide {
+            0% {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Pulse Animation for CTA */
+        .pulse-btn {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
+            }
+        }
     </style>
 </head>
 
 <body class="h-screen overflow-hidden flex flex-col">
+
+    <!-- PROFESSIONAL SUCCESS MODAL -->
+    <div id="success-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="success-checkmark">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2" id="modal-title">Payment Successful!</h2>
+            <p class="text-gray-600 mb-6" id="modal-message">Your plan has been upgraded. Welcome to Pro!</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeSuccessModal()"
+                    class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all">
+                    <i class="fa-solid fa-rocket mr-2"></i>Start Tour
+                </button>
+                <button onclick="closeSuccessModal(true)"
+                    class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all">
+                    Skip
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ONBOARDING TOUR -->
+    <div id="tour-container" class="tour-overlay">
+        <div id="tour-spotlight" class="tour-spotlight"></div>
+        <div id="tour-tooltip" class="tour-tooltip arrow-top">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold"
+                    id="tour-step-num">1</div>
+                <h3 class="font-bold text-lg text-gray-900" id="tour-title">Welcome to InFrame!</h3>
+            </div>
+            <p class="text-gray-600 mb-4" id="tour-description">Let's take a quick tour of your new dashboard.</p>
+            <div class="flex items-center justify-between">
+                <div class="tour-progress" id="tour-progress"></div>
+                <div class="flex gap-2">
+                    <button onclick="prevTourStep()" id="tour-prev"
+                        class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 hidden">
+                        <i class="fa-solid fa-arrow-left mr-1"></i>Back
+                    </button>
+                    <button onclick="nextTourStep()" id="tour-next"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        Next<i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- MAIN APP LAYOUT -->
     <div id="app-layout" class="flex h-screen overflow-hidden">
@@ -2245,21 +2542,203 @@
             }
         }
 
+        // ===============================
+        // PROFESSIONAL MODAL & ONBOARDING TOUR
+        // ===============================
+
+        // Tour Steps Configuration
+        const tourSteps = [
+            {
+                target: '#nav-dashboard',
+                title: 'Dashboard Overview',
+                description: 'Get a real-time summary of all employee activity, presence rates, and key metrics at a glance.',
+                position: 'right'
+            },
+            {
+                target: '#nav-live-monitoring',
+                title: 'Live Monitoring',
+                description: 'Watch employee activity in real-time with presence detection and status updates.',
+                position: 'right'
+            },
+            {
+                target: '#nav-employees',
+                title: 'Manage Employees',
+                description: 'Add, remove, and manage your team. Send invite links and track individual performance.',
+                position: 'right'
+            },
+            {
+                target: '#nav-screenshots',
+                title: 'Smart Screenshots',
+                description: 'View periodic screen captures. DLP automatically blurs sensitive content like banking and passwords.',
+                position: 'right'
+            },
+            {
+                target: '#nav-settings',
+                title: 'Settings & Billing',
+                description: 'Configure monitoring preferences, manage your subscription, and invite team supervisors.',
+                position: 'right'
+            }
+        ];
+
+        let currentTourStep = 0;
+
+        function showSuccessModal(plan = 'Pro') {
+            const modal = document.getElementById('success-modal');
+            const title = document.getElementById('modal-title');
+            const message = document.getElementById('modal-message');
+
+            title.textContent = 'Payment Successful! 🎉';
+            message.textContent = `Your plan has been upgraded to ${plan}. Let's show you around!`;
+
+            modal.classList.add('active');
+
+            // Add confetti effect
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+            const modal = document.getElementById('success-modal');
+
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                modal.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        function closeSuccessModal(skipTour = false) {
+            const modal = document.getElementById('success-modal');
+            modal.classList.remove('active');
+
+            if (!skipTour) {
+                setTimeout(() => startTour(), 300);
+            }
+
+            loadSubscriptionStatus();
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        function startTour() {
+            currentTourStep = 0;
+            const container = document.getElementById('tour-container');
+            container.classList.add('active');
+
+            renderTourProgress();
+            showTourStep(0);
+        }
+
+        function renderTourProgress() {
+            const progress = document.getElementById('tour-progress');
+            progress.innerHTML = '';
+
+            for (let i = 0; i < tourSteps.length; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'tour-progress-dot' + (i === currentTourStep ? ' active' : '');
+                progress.appendChild(dot);
+            }
+        }
+
+        function showTourStep(index) {
+            const step = tourSteps[index];
+            const target = document.querySelector(step.target);
+
+            if (!target) {
+                nextTourStep();
+                return;
+            }
+
+            const rect = target.getBoundingClientRect();
+            const spotlight = document.getElementById('tour-spotlight');
+            const tooltip = document.getElementById('tour-tooltip');
+            const prevBtn = document.getElementById('tour-prev');
+            const nextBtn = document.getElementById('tour-next');
+
+            // Position spotlight
+            spotlight.style.top = (rect.top - 8) + 'px';
+            spotlight.style.left = (rect.left - 8) + 'px';
+            spotlight.style.width = (rect.width + 16) + 'px';
+            spotlight.style.height = (rect.height + 16) + 'px';
+
+            // Position tooltip
+            if (step.position === 'right') {
+                tooltip.style.top = rect.top + 'px';
+                tooltip.style.left = (rect.right + 20) + 'px';
+                tooltip.className = 'tour-tooltip arrow-left';
+            } else if (step.position === 'bottom') {
+                tooltip.style.top = (rect.bottom + 20) + 'px';
+                tooltip.style.left = rect.left + 'px';
+                tooltip.className = 'tour-tooltip arrow-top';
+            }
+
+            // Update content
+            document.getElementById('tour-step-num').textContent = index + 1;
+            document.getElementById('tour-title').textContent = step.title;
+            document.getElementById('tour-description').textContent = step.description;
+
+            // Update buttons
+            prevBtn.classList.toggle('hidden', index === 0);
+            nextBtn.innerHTML = index === tourSteps.length - 1
+                ? 'Finish<i class="fa-solid fa-check ml-1"></i>'
+                : 'Next<i class="fa-solid fa-arrow-right ml-1"></i>';
+
+            renderTourProgress();
+        }
+
+        function nextTourStep() {
+            currentTourStep++;
+            if (currentTourStep >= tourSteps.length) {
+                endTour();
+            } else {
+                showTourStep(currentTourStep);
+            }
+        }
+
+        function prevTourStep() {
+            if (currentTourStep > 0) {
+                currentTourStep--;
+                showTourStep(currentTourStep);
+            }
+        }
+
+        function endTour() {
+            const container = document.getElementById('tour-container');
+            container.classList.remove('active');
+
+            // Mark tour as completed
+            localStorage.setItem('inframe_tour_completed', 'true');
+        }
+
         // Check for payment success/cancelled URL params
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('payment') === 'success') {
+            const plan = urlParams.get('plan') || 'Pro';
             setTimeout(() => {
-                alert('🎉 Payment successful! Your plan has been upgraded to Pro.');
-                loadSubscriptionStatus();
-                // Remove the query param
-                window.history.replaceState({}, document.title, window.location.pathname);
+                showSuccessModal(plan.charAt(0).toUpperCase() + plan.slice(1));
             }, 500);
         } else if (urlParams.get('payment') === 'cancelled') {
             setTimeout(() => {
-                alert('Payment was cancelled. You can try again anytime.');
+                // Show a subtle notification instead of alert
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-6 py-3 rounded-xl shadow-lg z-50 animate-pulse';
+                notification.innerHTML = '<i class="fa-solid fa-info-circle mr-2"></i>Payment was cancelled. You can try again anytime.';
+                document.body.appendChild(notification);
+
+                setTimeout(() => notification.remove(), 5000);
                 window.history.replaceState({}, document.title, window.location.pathname);
             }, 500);
         }
+
+        // Auto-start tour for new users (optional)
+        // if (!localStorage.getItem('inframe_tour_completed')) {
+        //     setTimeout(() => startTour(), 2000);
+        // }
     </script>
 </body>
 
