@@ -684,6 +684,7 @@ async def list_supervisors(request: Request, db: Session = Depends(get_db)):
 def update_stripe_usage(company_id: int, db: Session):
     """
     Syncs the Stripe subscription quantity with the number of active employees.
+    Handles both per-seat (licensed) and metered billing modes, including flexible billing.
     """
     try:
         company = db.query(Company).filter(Company.id == company_id).first()
@@ -691,15 +692,7 @@ def update_stripe_usage(company_id: int, db: Session):
             print(f"⚠️ Company {company_id} has no Stripe ID. Skipping sync.")
             return
 
-        # Count active employees
-        # Note: Depending on business logic, this might be all employees or just active ones.
-        # Assuming 'is_active' determines billable seats, or just total count.
-        # Docs say: "usage updates automatically adds/removes users from the invoice"
-        # We'll count all existing employees for the company as seats.
         employee_count = db.query(Employee).filter(Employee.company_id == company_id).count()
-        
-        # Ensure at least 1 seat if required, or 0.
-        # Standard seat based billing usually counts all provisioned users.
         
         if not stripe.api_key:
             print("⚠️ Stripe API key missing. Skipping sync.")
@@ -714,6 +707,29 @@ def update_stripe_usage(company_id: int, db: Session):
         subscription = subscriptions.data[0]
         subscription_item_id = subscription['items']['data'][0].id
         
+        # Check if subscription uses flexible billing mode
+        billing_mode = subscription.get('billing_cycle_anchor_config', {})
+        is_flexible = subscription.get('collection_method') == 'charge_automatically' and billing_mode.get('mode') == 'phase'
+        
+        # If subscription has flexible billing mode, use metered usage API directly
+        if is_flexible or subscription.get('billing_mode', {}).get('type') == 'flexible':
+            import requests
+            resp = requests.post(
+                f"https://api.stripe.com/v1/subscription_items/{subscription_item_id}/usage_records",
+                auth=(stripe.api_key, ""),
+                data={
+                    "quantity": employee_count,
+                    "timestamp": int(datetime.datetime.utcnow().timestamp()),
+                    "action": "set"
+                }
+            )
+            
+            if resp.ok:
+                print(f"✅ Updated Stripe usage (Flexible Billing) for {company.name}: {employee_count} employees")
+            else:
+                print(f"❌ Stripe Usage Failed: {resp.text}")
+            return
+        
         # Update usage
         try:
             # Try standard quantity update (for Per-Seat / Licensed plans)
@@ -724,11 +740,8 @@ def update_stripe_usage(company_id: int, db: Session):
             print(f"✅ Updated Stripe usage (Licensed) for {company.name}: {employee_count} employees")
         except stripe.error.InvalidRequestError as e:
             if "metered plans" in str(e) or "billing_mode.type=flexible" in str(e):
-                # Fallback for Metered plans: Send usage record
                 # Fallback for Metered plans: Send usage record via raw API
-                # (Library version issues detected, using raw requests for stability)
                 import requests
-                import time
                 
                 resp = requests.post(
                     f"https://api.stripe.com/v1/subscription_items/{subscription_item_id}/usage_records",
@@ -1812,51 +1825,9 @@ def resolve_price_id(price_or_product_id: str) -> Optional[str]:
 def sync_stripe_quantity(db: Session, company_id: int):
     """
     Sync Stripe usage/quantity with local employee count.
-    Updates either Metered Usage Record or Subscription Quantity.
+    Delegates to the main update_stripe_usage function.
     """
-    try:
-        if not stripe.api_key: return
-
-        company = db.query(Company).filter(Company.id == company_id).first()
-        if not company or not company.stripe_customer_id: return
-        
-        # Get active subscription
-        subscriptions = stripe.Subscription.list(customer=company.stripe_customer_id, status="active", limit=1)
-        if not subscriptions.data: return
-        
-        sub = subscriptions.data[0]
-        if not sub.get("items", {}).get("data"): return
-
-        sub_item = sub["items"]["data"][0]
-        sub_item_id = sub_item["id"]
-        
-        # Count all employees (seats occupied)
-        count = db.query(Employee).filter(Employee.company_id == company_id).count()
-        
-        # Check usage type from price
-        price = sub_item.get("price", {})
-        recurring = price.get("recurring", {})
-        usage_type = recurring.get("usage_type")
-        
-        if usage_type == 'metered':
-            # For metered billing, report usage
-            stripe.UsageRecord.create(
-                subscription_item=sub_item_id,
-                quantity=count,
-                timestamp=int(datetime.datetime.utcnow().timestamp()),
-                action="set"
-            )
-            print(f"🔄 Synced Stripe Usage (Metered): {count} employees for company {company_id}")
-        else:
-            # For per-seat billing, update quantity
-            stripe.Subscription.modify(
-                sub["id"],
-                quantity=count
-            )
-            print(f"🔄 Synced Stripe Quantity (Seat): {count} employees for company {company_id}")
-            
-    except Exception as e:
-        print(f"❌ Stripe Sync Error: {e}")
+    update_stripe_usage(company_id, db)
 
 @app.get("/api/subscription-status")
 async def get_subscription_status(request: Request, db: Session = Depends(get_db)):
@@ -2039,14 +2010,23 @@ async def report_employee_usage(db: Session = Depends(get_db)):
                 sub_item_id = subscriptions.data[0]["items"]["data"][0]["id"]
                 
                 # Report usage (set to current count)
-                stripe.SubscriptionItem.create_usage_record(
-                    sub_item_id,
-                    quantity=employee_count,
-                    timestamp=int(datetime.datetime.utcnow().timestamp()),
-                    action="set"
+                # Use raw API for compatibility with flexible billing mode
+                import requests
+                resp = requests.post(
+                    f"https://api.stripe.com/v1/subscription_items/{sub_item_id}/usage_records",
+                    auth=(stripe.api_key, ""),
+                    data={
+                        "quantity": employee_count,
+                        "timestamp": int(datetime.datetime.utcnow().timestamp()),
+                        "action": "set"
+                    }
                 )
-                reported += 1
-                print(f"📊 Reported {employee_count} employees for {company.name}")
+                
+                if resp.ok:
+                    reported += 1
+                    print(f"📊 Reported {employee_count} employees for {company.name}")
+                else:
+                    errors.append({"company": company.name, "error": f"HTTP {resp.status_code}: {resp.text}"})
         except Exception as e:
             errors.append({"company": company.name, "error": str(e)})
     
