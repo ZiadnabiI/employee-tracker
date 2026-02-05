@@ -39,8 +39,16 @@ Add these environment variables to **Render** (NOT in code):
 | Plan | Price | Max Employees |
 |------|-------|---------------|
 | **Free** | $0 | 5 employees |
-| **Basic** | $5/user/month | Usage-based |
-| **Pro** | $8.99/user/month | Usage-based |
+| **Basic** | $5/user/month | Auto-Synced |
+| **Pro** | $8.99/user/month | Auto-Synced |
+
+## 🔄 Real-time Usage Sync (New!)
+
+No manual configuration needed! The system is standard compliant:
+
+1.  **Usage Updates**: Automatically adds/removes users from the invoice the moment you Invite/Delete an employee.
+2.  **Smart IDs**: You can use either `price_...` OR `prod_...` IDs. The system auto-resolves them.
+3.  **Billing Type**: Works with both **Per-seat (Licensed)** and **Metered** billing types automatically.
 
 ---
 

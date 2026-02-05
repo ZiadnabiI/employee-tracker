@@ -1395,6 +1395,14 @@ async def invite_employee(invite: EmployeeInvite, request: Request, db: Session 
         
         # In a real app, send email here. For now, return the link.
         invite_link = f"{request.base_url}register?token={invite_token}"
+        
+        # Sync Stripe Usage - Add 1 employee to invoice immediately
+        try:
+            # We use background task or immediate call. Immediate for simplicity now.
+            sync_stripe_quantity(db, token_data["company_id"])
+        except Exception as e:
+            print(f"⚠️ Failed to sync Stripe usage: {e}")
+
         return {"status": "ok", "invite_link": invite_link}
     except HTTPException as he:
         raise he
@@ -1402,6 +1410,42 @@ async def invite_employee(invite: EmployeeInvite, request: Request, db: Session 
         print(f"❌ Invite Error: {e}")
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/employees/{employee_id}")
+async def delete_employee(employee_id: int, request: Request, db: Session = Depends(get_db)):
+    """Delete an employee and sync Stripe usage"""
+    try:
+        token = get_token_from_cookies(request)
+        if not token or not verify_token(token):
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        
+        token_data = verify_token(token)
+        company_id = token_data["company_id"]
+        
+        # RBAC Check
+        current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+        if not current_sup or current_sup.role != 'admin':
+            raise HTTPException(status_code=403, detail="Viewer accounts cannot delete employees")
+            
+        employee = db.query(Employee).filter(Employee.id == employee_id, Employee.company_id == company_id).first()
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee not found")
+            
+        db.delete(employee)
+        db.commit()
+        
+        # Sync Stripe Usage - Remove 1 employee from invoice immediately
+        try:
+            sync_stripe_quantity(db, company_id)
+        except Exception as e:
+            print(f"⚠️ Failed to sync Stripe usage: {e}")
+            
+        return {"status": "ok", "message": "Employee deleted"}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"❌ Delete Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/register", response_class=HTMLResponse)
@@ -1599,6 +1643,55 @@ def resolve_price_id(price_or_product_id: str) -> Optional[str]:
             print(f"❌ Error resolving price ID: {e}")
             
     return price_or_product_id
+
+def sync_stripe_quantity(db: Session, company_id: int):
+    """
+    Sync Stripe usage/quantity with local employee count.
+    Updates either Metered Usage Record or Subscription Quantity.
+    """
+    try:
+        if not stripe.api_key: return
+
+        company = db.query(Company).filter(Company.id == company_id).first()
+        if not company or not company.stripe_customer_id: return
+        
+        # Get active subscription
+        subscriptions = stripe.Subscription.list(customer=company.stripe_customer_id, status="active", limit=1)
+        if not subscriptions.data: return
+        
+        sub = subscriptions.data[0]
+        if not sub.get("items", {}).get("data"): return
+
+        sub_item = sub["items"]["data"][0]
+        sub_item_id = sub_item["id"]
+        
+        # Count all employees (seats occupied)
+        count = db.query(Employee).filter(Employee.company_id == company_id).count()
+        
+        # Check usage type from price
+        price = sub_item.get("price", {})
+        recurring = price.get("recurring", {})
+        usage_type = recurring.get("usage_type")
+        
+        if usage_type == 'metered':
+            # For metered billing, report usage
+            stripe.SubscriptionItem.create_usage_record(
+                sub_item_id,
+                quantity=count,
+                timestamp=int(datetime.datetime.utcnow().timestamp()),
+                action="set"
+            )
+            print(f"🔄 Synced Stripe Usage (Metered): {count} employees for company {company_id}")
+        else:
+            # For per-seat billing, update quantity
+            stripe.Subscription.modify(
+                sub["id"],
+                quantity=count
+            )
+            print(f"🔄 Synced Stripe Quantity (Seat): {count} employees for company {company_id}")
+            
+    except Exception as e:
+        print(f"❌ Stripe Sync Error: {e}")
 
 @app.get("/api/subscription-status")
 async def get_subscription_status(request: Request, db: Session = Depends(get_db)):
