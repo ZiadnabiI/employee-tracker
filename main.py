@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from pydantic import BaseModel
-from database import SessionLocal, EmployeeLog, Employee, Company, Supervisor, AppLog, Screenshot, Base, engine
+from database import SessionLocal, engine, Company, Supervisor, Employee, EmployeeLog, AppLog, Screenshot, Department, Base, engine
 from auth import (
     hash_password, verify_password, create_token, verify_token, 
     invalidate_token, get_token_from_cookies, get_current_supervisor, require_auth
@@ -68,6 +68,9 @@ class SupervisorCreate(BaseModel):
     company_id: int
 
 class CompanyCreate(BaseModel):
+    name: str
+
+class DepartmentCreate(BaseModel):
     name: str
 
 class LoginRequest(BaseModel):
@@ -222,6 +225,70 @@ async def register_company(
     db.add(new_supervisor)
     db.commit()
     db.refresh(new_supervisor)
+
+    # Seed Default Departments
+    default_depts = ["Sales", "Marketing", "Engineering", "HR", "Operations"]
+    for d_name in default_depts:
+        db.add(Department(name=d_name, company_id=new_company.id))
+    db.commit()
+
+# ===============================
+# DEPARTMENT MANAGEMENT
+# ===============================
+@app.get("/api/departments")
+async def list_departments(request: Request, db: Session = Depends(get_db)):
+    """List departments for current company"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    depts = db.query(Department).filter(Department.company_id == token_data["company_id"]).all()
+    return [{"id": d.id, "name": d.name} for d in depts]
+
+@app.post("/api/departments")
+async def create_department(request: Request, dept: DepartmentCreate, db: Session = Depends(get_db)):
+    """Create new department"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    
+    # Check duplicate
+    existing = db.query(Department).filter(
+        Department.name == dept.name, 
+        Department.company_id == token_data["company_id"]
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Department already exists")
+    
+    new_dept = Department(name=dept.name, company_id=token_data["company_id"])
+    db.add(new_dept)
+    db.commit()
+    return {"status": "ok", "id": new_dept.id}
+
+@app.delete("/api/departments/{dept_id}")
+async def delete_department(dept_id: int, request: Request, db: Session = Depends(get_db)):
+    """Delete a department"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    
+    dept = db.query(Department).filter(
+        Department.id == dept_id,
+        Department.company_id == token_data["company_id"]
+    ).first()
+    
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+        
+    db.delete(dept)
+    db.commit()
+    return {"status": "ok"}
+
     
     # Create Stripe customer immediately
     if stripe.api_key:
@@ -1675,8 +1742,8 @@ def sync_stripe_quantity(db: Session, company_id: int):
         
         if usage_type == 'metered':
             # For metered billing, report usage
-            stripe.SubscriptionItem.create_usage_record(
-                sub_item_id,
+            stripe.UsageRecord.create(
+                subscription_item=sub_item_id,
                 quantity=count,
                 timestamp=int(datetime.datetime.utcnow().timestamp()),
                 action="set"

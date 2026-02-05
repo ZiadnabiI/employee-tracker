@@ -40,6 +40,16 @@ class Company(Base):
     # Relationships
     employees = relationship("Employee", back_populates="company")
     supervisors = relationship("Supervisor", back_populates="company")
+    departments = relationship("Department", back_populates="company")
+
+# --- Department Model ---
+class Department(Base):
+    __tablename__ = "departments"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    company_id = Column(Integer, ForeignKey("companies.id"))
+    
+    company = relationship("Company", back_populates="departments")
 
 # --- Supervisor Model (Dashboard Users) ---
 class Supervisor(Base):
