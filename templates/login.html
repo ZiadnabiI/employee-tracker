@@ -4,120 +4,329 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Employee Tracker</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Login - inframe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
         }
 
-        .login-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            width: 100%;
-            max-width: 420px;
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
+        /* Animated Background */
+        .animated-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            position: relative;
+            overflow: hidden;
         }
 
-        .login-header h1 {
-            color: #333;
-            font-weight: 700;
-            font-size: 28px;
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 8s ease-in-out infinite;
         }
 
-        .login-header p {
-            color: #666;
-            font-size: 14px;
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            50% {
+                transform: translateY(-20px) scale(1.05);
+            }
         }
 
-        .form-control {
-            border-radius: 10px;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            font-size: 16px;
+        /* Card Animation */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        .animate-slide-up {
+            animation: slideUp 0.6s ease-out forwards;
         }
 
-        .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 10px;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            width: 100%;
+        /* Input Focus Effect */
+        .input-group:focus-within .input-icon {
+            color: #3b82f6;
+        }
+
+        .input-group:focus-within input {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Button Shine Effect */
+        .shine {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to right,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.15) 50%,
+                    rgba(255, 255, 255, 0) 100%);
+            transform: rotate(30deg);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%) rotate(30deg);
+            }
+
+            100% {
+                transform: translateX(100%) rotate(30deg);
+            }
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Tab Styles */
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             color: white;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .error-message {
-            background: #fff3f3;
-            border: 1px solid #ffcdd2;
-            color: #c62828;
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .logo-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
+        .tab-btn:not(.active):hover {
+            background: rgba(59, 130, 246, 0.1);
         }
     </style>
 </head>
 
-<body>
-    <div class="login-card">
-        <div class="login-header">
-            <div class="logo-icon">👁️</div>
-            <h1>Employee Tracker</h1>
-            <p>Supervisor Dashboard Login</p>
+<body class="animated-bg min-h-screen flex items-center justify-center p-4">
+
+    <!-- Animated Background Blobs -->
+    <div class="blob w-96 h-96 bg-blue-500 top-10 -left-32"></div>
+    <div class="blob w-80 h-80 bg-purple-500 bottom-10 right-10" style="animation-delay: -4s;"></div>
+    <div class="blob w-64 h-64 bg-cyan-500 top-1/2 right-1/4" style="animation-delay: -2s;"></div>
+
+    <!-- Login Card -->
+    <div class="relative z-10 w-full max-w-md animate-slide-up">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <a href="/home" class="inline-flex items-center gap-2 group">
+                <img src="/static/Logo.png" alt="inframe" class="h-10 transition-transform group-hover:scale-110"
+                    onerror="this.style.display='none'">
+                <span class="text-3xl font-bold gradient-text">inframe</span>
+            </a>
         </div>
 
-        {% if error %}
-        <div class="error-message">
-            ⚠️ {{ error }}
-        </div>
-        {% endif %}
+        <!-- Card -->
+        <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl p-8 pulse">
+            <!-- Tabs -->
+            <div class="flex bg-slate-800 rounded-xl p-1 mb-8">
+                <button type="button" id="tab-login"
+                    class="tab-btn active flex-1 py-3 px-4 rounded-lg text-sm font-semibold"
+                    onclick="switchTab('login')">
+                    <i class="fa-solid fa-right-to-bracket mr-2"></i>Sign In
+                </button>
+                <button type="button" id="tab-signup"
+                    class="tab-btn flex-1 py-3 px-4 rounded-lg text-sm font-semibold text-slate-400"
+                    onclick="switchTab('signup')">
+                    <i class="fa-solid fa-user-plus mr-2"></i>Sign Up
+                </button>
+            </div>
 
-        <form method="POST" action="/login">
-            <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" name="email" placeholder="supervisor@company.com"
-                    required>
+            <!-- Error Message -->
+            {% if error %}
+            <div
+                class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl mb-6 flex items-center gap-3">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>{{ error }}</span>
             </div>
-            <div class="mb-4">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••"
-                    required>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form id="form-login" method="POST" action="/login" class="space-y-6">
+                <div class="input-group">
+                    <label for="email" class="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
+                    <div class="relative">
+                        <span
+                            class="input-icon absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input type="email" id="email" name="email"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all"
+                            placeholder="you@company.com" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="password" class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                    <div class="relative">
+                        <span
+                            class="input-icon absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="password" name="password"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all"
+                            placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-semibold transition-all transform hover:scale-[1.02] shine">
+                    <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i>Sign In
+                </button>
+            </form>
+
+            <!-- Sign Up Form (Hidden by default) -->
+            <form id="form-signup" method="POST" action="/register" class="space-y-6 hidden">
+                <div class="input-group">
+                    <label for="signup-company" class="block text-sm font-medium text-slate-300 mb-2">Company
+                        Name</label>
+                    <div class="relative">
+                        <span
+                            class="input-icon absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors">
+                            <i class="fa-solid fa-building"></i>
+                        </span>
+                        <input type="text" id="signup-company" name="company_name"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all"
+                            placeholder="Acme Inc." required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="signup-name" class="block text-sm font-medium text-slate-300 mb-2">Your Name</label>
+                    <div class="relative">
+                        <span
+                            class="input-icon absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="signup-name" name="name"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all"
+                            placeholder="John Doe" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="signup-email" class="block text-sm font-medium text-slate-300 mb-2">Email
+                        Address</label>
+                    <div class="relative">
+                        <span
+                            class="input-icon absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input type="email" id="signup-email" name="email"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all"
+                            placeholder="you@company.com" required>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="signup-password" class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                    <div class="relative">
+                        <span
+                            class="input-icon absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="signup-password" name="password"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all"
+                            placeholder="Min. 8 characters" required minlength="8">
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-semibold transition-all transform hover:scale-[1.02] shine">
+                    <i class="fa-solid fa-rocket mr-2"></i>Create Account
+                </button>
+
+                <p class="text-xs text-slate-500 text-center">
+                    By signing up, you agree to our <a href="/privacy#terms" class="text-blue-400 hover:underline">Terms
+                        of Service</a> and <a href="/privacy" class="text-blue-400 hover:underline">Privacy Policy</a>.
+                </p>
+            </form>
+
+            <!-- Divider -->
+            <div class="flex items-center gap-4 my-6">
+                <div class="flex-1 h-px bg-slate-700"></div>
+                <span class="text-slate-500 text-sm">or</span>
+                <div class="flex-1 h-px bg-slate-700"></div>
             </div>
-            <button type="submit" class="btn btn-login">
-                Sign In
-            </button>
-        </form>
+
+            <!-- Back to Home -->
+            <a href="/home"
+                class="block w-full text-center border border-slate-600 hover:border-blue-500 hover:bg-blue-500/10 text-slate-300 hover:text-white py-3 rounded-xl font-medium transition-all">
+                <i class="fa-solid fa-arrow-left mr-2"></i>Back to Home
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-slate-500 text-sm mt-6">
+            &copy; 2024 inframe. All rights reserved.
+        </p>
     </div>
+
+    <script>
+        function switchTab(tab) {
+            const loginTab = document.getElementById('tab-login');
+            const signupTab = document.getElementById('tab-signup');
+            const loginForm = document.getElementById('form-login');
+            const signupForm = document.getElementById('form-signup');
+
+            if (tab === 'login') {
+                loginTab.classList.add('active');
+                loginTab.classList.remove('text-slate-400');
+                signupTab.classList.remove('active');
+                signupTab.classList.add('text-slate-400');
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+            } else {
+                signupTab.classList.add('active');
+                signupTab.classList.remove('text-slate-400');
+                loginTab.classList.remove('active');
+                loginTab.classList.add('text-slate-400');
+                signupForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        }
+    </script>
 </body>
 
 </html>

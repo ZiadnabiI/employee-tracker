@@ -193,10 +193,10 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
 # ===============================
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request, db: Session = Depends(get_db)):
-    """Protected dashboard - requires login"""
+    """Root route - redirect to home if not logged in, dashboard if logged in"""
     token = get_token_from_cookies(request)
     if not token or not verify_token(token):
-        return RedirectResponse(url="/login", status_code=302)
+        return RedirectResponse(url="/home", status_code=302)
     
     token_data = verify_token(token)
     supervisor = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
