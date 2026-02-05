@@ -169,6 +169,70 @@ async def logout(request: Request):
     response.delete_cookie("auth_token")
     return response
 
+# ===============================
+# COMPANY SELF-REGISTRATION
+# ===============================
+@app.post("/register")
+async def register_company(
+    request: Request,
+    company_name: str = Form(...),
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Register a new company with admin account"""
+    # Check if email already exists
+    existing = db.query(Supervisor).filter(Supervisor.email == email).first()
+    if existing:
+        return templates.TemplateResponse("login.html", {
+            "request": request, 
+            "error": "Email already registered. Please login."
+        })
+    
+    # Check if company name already exists
+    existing_company = db.query(Company).filter(Company.name == company_name).first()
+    if existing_company:
+        return templates.TemplateResponse("login.html", {
+            "request": request, 
+            "error": "Company name already taken. Please choose another."
+        })
+    
+    # Create new company
+    new_company = Company(
+        name=company_name,
+        subscription_plan="free",
+        subscription_status="active",
+        max_employees=5  # Free tier
+    )
+    db.add(new_company)
+    db.commit()
+    db.refresh(new_company)
+    
+    # Create admin supervisor
+    new_supervisor = Supervisor(
+        email=email,
+        password_hash=hash_password(password),
+        name=name,
+        company_id=new_company.id,
+        role="owner",
+        is_super_admin=0
+    )
+    db.add(new_supervisor)
+    db.commit()
+    db.refresh(new_supervisor)
+    
+    # Auto-login
+    token = create_token(
+        supervisor_id=new_supervisor.id,
+        company_id=new_company.id,
+        is_super_admin=False
+    )
+    
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+    return response
+
 @app.get("/auth/me")
 async def get_me(request: Request, db: Session = Depends(get_db)):
     """Get current logged-in supervisor info"""
