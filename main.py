@@ -31,6 +31,10 @@ app.add_middleware(
 
 templates = Jinja2Templates(directory="templates")
 
+# Static files (CSS, images, etc.)
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Health Check for UptimeRobot
 @app.get("/health")
 def health_check():
@@ -100,6 +104,24 @@ class SupervisorInvite(BaseModel):
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "employee-tracker"}
+
+# ===============================
+# PUBLIC MARKETING PAGES
+# ===============================
+@app.get("/home", response_class=HTMLResponse)
+async def landing_page(request: Request):
+    """Public landing page"""
+    return templates.TemplateResponse("landing.html", {"request": request})
+
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request):
+    """Public pricing page"""
+    return templates.TemplateResponse("pricing.html", {"request": request})
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    """Public privacy policy page"""
+    return templates.TemplateResponse("privacy.html", {"request": request})
 
 # ===============================
 # AUTHENTICATION ROUTES

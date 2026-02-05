@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>inframe - Smart Employee Monitoring</title>
+    <meta name="description"
+        content="inframe provides intelligent employee monitoring with AI-powered presence detection, smart screenshots, and productivity analytics. Privacy-first design.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px rgba(59, 130, 246, 0.15);
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            50% {
+                transform: translateY(-20px) scale(1.05);
+            }
+        }
+
+        .feature-icon {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white antialiased">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="flex items-center gap-2">
+                <img src="/static/Logo.png" alt="inframe" class="h-8" onerror="this.style.display='none'">
+                <span class="text-2xl font-bold gradient-text">inframe</span>
+            </a>
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#features" class="text-slate-300 hover:text-white transition">Features</a>
+                <a href="#how-it-works" class="text-slate-300 hover:text-white transition">How It Works</a>
+                <a href="/pricing" class="text-slate-300 hover:text-white transition">Pricing</a>
+                <a href="/privacy" class="text-slate-300 hover:text-white transition">Privacy</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/login" class="text-slate-300 hover:text-white transition">Login</a>
+                <a href="/login"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg relative overflow-hidden pt-32 pb-20 min-h-screen flex items-center">
+        <!-- Background Blobs -->
+        <div class="blob w-96 h-96 bg-blue-500 top-20 -left-48"></div>
+        <div class="blob w-80 h-80 bg-purple-500 bottom-20 right-10" style="animation-delay: -4s;"></div>
+
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <span
+                        class="inline-block bg-blue-500/10 text-blue-400 px-4 py-1 rounded-full text-sm font-medium mb-6 border border-blue-500/20">
+                        🚀 Trusted by 500+ Companies
+                    </span>
+                    <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-6">
+                        Smart Employee <span class="gradient-text">Monitoring</span> for Modern Teams
+                    </h1>
+                    <p class="text-xl text-slate-400 mb-8 leading-relaxed">
+                        Boost productivity with AI-powered presence detection, intelligent screenshots, and real-time
+                        analytics.
+                        <strong class="text-white">Privacy-first</strong> by design.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="/login"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition shadow-lg shadow-blue-500/25 text-center">
+                            Start Free Trial <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </a>
+                        <a href="#features"
+                            class="border border-slate-600 hover:border-slate-500 text-white px-8 py-4 rounded-xl font-semibold text-lg transition text-center">
+                            See Features
+                        </a>
+                    </div>
+                    <div class="flex items-center gap-4 mt-8 text-slate-400 text-sm">
+                        <span><i class="fa-solid fa-check text-green-500 mr-2"></i>No credit card required</span>
+                        <span><i class="fa-solid fa-check text-green-500 mr-2"></i>14-day free trial</span>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-700 shadow-2xl">
+                        <div class="bg-slate-900 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="font-bold text-lg">Live Dashboard</h3>
+                                <span class="text-green-400 text-sm"><i
+                                        class="fa-solid fa-circle text-xs mr-1"></i>Real-time</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-center">
+                                    <div class="text-3xl font-bold text-green-400">12</div>
+                                    <div class="text-xs text-slate-400">Online</div>
+                                </div>
+                                <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 text-center">
+                                    <div class="text-3xl font-bold text-yellow-400">3</div>
+                                    <div class="text-xs text-slate-400">On Break</div>
+                                </div>
+                                <div class="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-center">
+                                    <div class="text-3xl font-bold text-red-400">2</div>
+                                    <div class="text-xs text-slate-400">Away</div>
+                                </div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between bg-slate-800 rounded-lg p-3">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold">
+                                            JD</div>
+                                        <span class="text-sm">John Doe</span>
+                                    </div>
+                                    <span class="text-green-400 text-xs"><i
+                                            class="fa-solid fa-circle text-[8px] mr-1"></i>Online</span>
+                                </div>
+                                <div class="flex items-center justify-between bg-slate-800 rounded-lg p-3">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-xs font-bold">
+                                            AS</div>
+                                        <span class="text-sm">Alice Smith</span>
+                                    </div>
+                                    <span class="text-yellow-400 text-xs"><i
+                                            class="fa-solid fa-mug-hot text-[10px] mr-1"></i>Break</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 bg-slate-950">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <span class="text-blue-400 font-semibold">FEATURES</span>
+                <h2 class="text-4xl font-bold mt-2">Everything You Need to <span class="gradient-text">Boost
+                        Productivity</span></h2>
+                <p class="text-slate-400 mt-4 max-w-2xl mx-auto">Powerful tools designed to help you understand your
+                    team's work patterns while respecting their privacy.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Feature 1 -->
+                <div
+                    class="bg-slate-900 border border-slate-800 rounded-2xl p-6 card-hover transition-all duration-300">
+                    <div class="feature-icon w-14 h-14 rounded-xl flex items-center justify-center mb-5">
+                        <i class="fa-solid fa-camera text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">AI Presence Detection</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Local AI detects if the employee is at their desk. <strong class="text-blue-400">No video is
+                            ever recorded or transmitted.</strong>
+                    </p>
+                </div>
+                <!-- Feature 2 -->
+                <div
+                    class="bg-slate-900 border border-slate-800 rounded-2xl p-6 card-hover transition-all duration-300">
+                    <div class="feature-icon w-14 h-14 rounded-xl flex items-center justify-center mb-5">
+                        <i class="fa-solid fa-image text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Smart Screenshots</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Periodic screenshots help managers understand workflow. Configurable frequency from 1 to 60
+                        minutes.
+                    </p>
+                </div>
+                <!-- Feature 3 -->
+                <div
+                    class="bg-slate-900 border border-slate-800 rounded-2xl p-6 card-hover transition-all duration-300">
+                    <div class="feature-icon w-14 h-14 rounded-xl flex items-center justify-center mb-5">
+                        <i class="fa-solid fa-shield-halved text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Data Loss Prevention</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Automatically detects sensitive windows (banking, passwords) and <strong
+                            class="text-red-400">blurs them</strong> in screenshots.
+                    </p>
+                </div>
+                <!-- Feature 4 -->
+                <div
+                    class="bg-slate-900 border border-slate-800 rounded-2xl p-6 card-hover transition-all duration-300">
+                    <div class="feature-icon w-14 h-14 rounded-xl flex items-center justify-center mb-5">
+                        <i class="fa-solid fa-chart-pie text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">App Usage Analytics</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        See which applications your team uses most. Identify productivity patterns and bottlenecks.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="py-24 bg-slate-900">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <span class="text-blue-400 font-semibold">HOW IT WORKS</span>
+                <h2 class="text-4xl font-bold mt-2">Get Started in <span class="gradient-text">3 Simple Steps</span>
+                </h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div
+                        class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                        1</div>
+                    <h3 class="text-xl font-bold mb-3">Create Your Account</h3>
+                    <p class="text-slate-400">Sign up and create your company workspace in under 2 minutes. No credit
+                        card needed.</p>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                        2</div>
+                    <h3 class="text-xl font-bold mb-3">Invite Your Team</h3>
+                    <p class="text-slate-400">Send email invitations to employees. They register and download the
+                        lightweight desktop app.</p>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
+                        3</div>
+                    <h3 class="text-xl font-bold mb-3">Monitor & Optimize</h3>
+                    <p class="text-slate-400">View real-time presence, analyze productivity trends, and make data-driven
+                        decisions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Preview -->
+    <section id="pricing" class="py-24 bg-slate-950">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <span class="text-blue-400 font-semibold">PRICING</span>
+                <h2 class="text-4xl font-bold mt-2">Simple, Transparent <span class="gradient-text">Pricing</span></h2>
+                <p class="text-slate-400 mt-4">Start free. Upgrade when you need more.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <!-- Free -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+                    <h3 class="text-xl font-bold mb-2">Free</h3>
+                    <p class="text-slate-400 text-sm mb-6">For small teams getting started</p>
+                    <div class="text-4xl font-bold mb-6">$0<span class="text-lg text-slate-400 font-normal">/mo</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-slate-300 mb-8">
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Up to 5 employees</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Presence detection</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Basic analytics</li>
+                    </ul>
+                    <a href="/login"
+                        class="block w-full text-center border border-slate-600 hover:border-slate-500 py-3 rounded-lg font-medium transition">Get
+                        Started</a>
+                </div>
+                <!-- Pro -->
+                <div
+                    class="bg-gradient-to-b from-blue-600/20 to-slate-900 border-2 border-blue-500 rounded-2xl p-8 relative">
+                    <span
+                        class="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-xs font-bold px-4 py-1 rounded-full">MOST
+                        POPULAR</span>
+                    <h3 class="text-xl font-bold mb-2">Pro</h3>
+                    <p class="text-slate-400 text-sm mb-6">For growing businesses</p>
+                    <div class="text-4xl font-bold mb-6">$8<span
+                            class="text-lg text-slate-400 font-normal">/user/mo</span></div>
+                    <ul class="space-y-3 text-sm text-slate-300 mb-8">
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Unlimited employees</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Smart screenshots</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>DLP (Data Loss Prevention)</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Priority support</li>
+                    </ul>
+                    <a href="/login"
+                        class="block w-full text-center bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-medium transition">Start
+                        Free Trial</a>
+                </div>
+                <!-- Enterprise -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+                    <h3 class="text-xl font-bold mb-2">Enterprise</h3>
+                    <p class="text-slate-400 text-sm mb-6">For large organizations</p>
+                    <div class="text-4xl font-bold mb-6">Custom</div>
+                    <ul class="space-y-3 text-sm text-slate-300 mb-8">
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Everything in Pro</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>SSO / SAML integration</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Dedicated support</li>
+                        <li><i class="fa-solid fa-check text-green-500 mr-2"></i>Custom SLA</li>
+                    </ul>
+                    <a href="mailto:sales@inframe.io"
+                        class="block w-full text-center border border-slate-600 hover:border-slate-500 py-3 rounded-lg font-medium transition">Contact
+                        Sales</a>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <a href="/pricing" class="text-blue-400 hover:text-blue-300 font-medium">View full pricing comparison <i
+                        class="fa-solid fa-arrow-right ml-1"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-24 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="text-4xl font-bold mb-6">Ready to Boost Your Team's Productivity?</h2>
+            <p class="text-xl text-blue-100 mb-8">Join hundreds of companies using inframe to build more efficient
+                teams.</p>
+            <a href="/login"
+                class="inline-block bg-white text-blue-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-slate-100 transition shadow-lg">
+                Start Your Free Trial <i class="fa-solid fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <img src="/static/Logo.png" alt="inframe" class="h-6" onerror="this.style.display='none'">
+                        <span class="text-xl font-bold gradient-text">inframe</span>
+                    </div>
+                    <p class="text-slate-400 text-sm">Smart employee monitoring for modern teams. Privacy-first by
+                        design.</p>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">Product</h5>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><a href="#features" class="hover:text-white transition">Features</a></li>
+                        <li><a href="/pricing" class="hover:text-white transition">Pricing</a></li>
+                        <li><a href="#how-it-works" class="hover:text-white transition">How It Works</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">Legal</h5>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><a href="/privacy" class="hover:text-white transition">Privacy Policy</a></li>
+                        <li><a href="/privacy#terms" class="hover:text-white transition">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-semibold mb-4">Contact</h5>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><a href="mailto:support@inframe.io"
+                                class="hover:text-white transition">support@inframe.io</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
+                &copy; 2024 inframe. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
