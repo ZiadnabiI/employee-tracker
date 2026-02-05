@@ -236,11 +236,17 @@ async def register_company(
     db.commit()
     db.refresh(new_supervisor)
 
-    # Seed Default Departments
-    default_depts = ["Sales", "Marketing", "Engineering", "HR", "Operations"]
-    for d_name in default_depts:
-        db.add(Department(name=d_name, company_id=new_company.id))
-    db.commit()
+    # Create token for immediate login
+    token = create_token(
+        supervisor_id=new_supervisor.id,
+        company_id=new_company.id,
+        is_super_admin=False
+    )
+
+    # Redirect to dashboard
+    response = RedirectResponse(url="/?welcome=true", status_code=302)
+    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+    return response
 
 # ===============================
 # DEPARTMENT MANAGEMENT
@@ -717,7 +723,7 @@ def update_stripe_usage(company_id: int, db: Session):
             )
             print(f"✅ Updated Stripe usage (Licensed) for {company.name}: {employee_count} employees")
         except stripe.error.InvalidRequestError as e:
-            if "metered plans" in str(e):
+            if "metered plans" in str(e) or "billing_mode.type=flexible" in str(e):
                 # Fallback for Metered plans: Send usage record
                 # Fallback for Metered plans: Send usage record via raw API
                 # (Library version issues detected, using raw requests for stability)
