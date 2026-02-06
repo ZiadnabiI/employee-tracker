@@ -2133,6 +2133,9 @@ async def change_subscription_plan(data: ChangePlanRequest, request: Request, db
         company.max_employees = new_max_employees
         db.commit()
         
+        # Sync employee count to new subscription
+        update_stripe_usage(company.id, db)
+        
         print(f"✅ Plan changed: {company.name} -> {data.plan.upper()}")
         
         return {
