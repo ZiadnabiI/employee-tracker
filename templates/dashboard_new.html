@@ -2492,6 +2492,9 @@
 
                 const data = await response.json();
 
+                // Track the current plan for upgrade/downgrade logic
+                currentSubscriptionPlan = data.plan;
+
                 // Update UI elements
                 document.getElementById('current-plan').textContent = data.plan.toUpperCase();
                 document.getElementById('employee-count').textContent = data.current_employees;
@@ -2547,6 +2550,9 @@
             }
         }
 
+        // Track current plan for upgrade/downgrade logic
+        let currentSubscriptionPlan = 'free';
+
         async function upgradeToPlan(plan = 'pro') {
             const btn = document.getElementById(plan === 'basic' ? 'upgrade-basic-btn' : 'upgrade-pro-btn');
             const originalText = btn.innerHTML;
@@ -2554,24 +2560,46 @@
             btn.disabled = true;
 
             try {
-                const response = await fetch('/api/stripe/create-checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plan: plan })
-                });
+                // If user already has a paid subscription, use change-plan API
+                if (currentSubscriptionPlan === 'basic' || currentSubscriptionPlan === 'pro') {
+                    const response = await fetch('/api/stripe/change-plan', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ plan: plan })
+                    });
+                    const data = await response.json();
 
-                const data = await response.json();
+                    if (response.ok && data.status === 'success') {
+                        alert('✅ ' + data.message);
+                        loadSubscriptionStatus();
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    } else {
+                        alert('Error: ' + (data.detail || 'Failed to change plan'));
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                } else {
+                    // Free user - create new checkout session
+                    const response = await fetch('/api/stripe/create-checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ plan: plan })
+                    });
 
-                if (data.checkout_url) {
-                    window.location.href = data.checkout_url;
-                } else if (data.detail) {
-                    alert('Error: ' + data.detail);
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
+                    const data = await response.json();
+
+                    if (data.checkout_url) {
+                        window.location.href = data.checkout_url;
+                    } else if (data.detail) {
+                        alert('Error: ' + data.detail);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
-                alert('Failed to start checkout. Please try again.');
+                alert('Failed to process. Please try again.');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
