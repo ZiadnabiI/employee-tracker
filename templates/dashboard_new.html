@@ -781,6 +781,10 @@
                                     class="hidden border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-all text-sm">
                                     <i class="fa-solid fa-gear mr-2"></i>Manage
                                 </button>
+                                <button onclick="downgradeToPlan('basic')" id="downgrade-basic-btn"
+                                    class="hidden border border-orange-400 text-orange-600 px-4 py-2 rounded-lg font-semibold hover:bg-orange-50 transition-all text-sm">
+                                    <i class="fa-solid fa-arrow-down mr-1"></i>Downgrade to Basic
+                                </button>
                             </div>
                         </div>
                         <div id="subscription-features" class="mt-4 pt-4 border-t border-blue-200 hidden">
@@ -853,33 +857,7 @@
                             </div>
                         </div>
 
-                        <!-- Department Management -->
-                        <div class="py-6 border-b border-gray-100">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <h5 class="font-bold text-gray-700"><i
-                                            class="fa-solid fa-building mr-2"></i>Departments</h5>
-                                    <p class="text-xs text-gray-500">Manage company departments for employee
-                                        categorization.</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="text" id="new-dept-name" placeholder="New Department"
-                                        class="border border-gray-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 outline-none">
-                                    <button onclick="createDepartment()"
-                                        class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700">
-                                        <i class="fa-solid fa-plus"></i> Add
-                                    </button>
-                                </div>
-                            </div>
-                            <div
-                                class="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden max-h-48 overflow-y-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <tbody id="departments-list-settings" class="divide-y divide-gray-200">
-                                        <!-- Depts populated here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+
 
                         <!-- Team Management -->
                         <div class="py-6">
@@ -1542,7 +1520,8 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${emp.present_time || '0h 0m'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             ${CURRENT_USER_ROLE === 'admin' ?
-                        `<button onclick="openEditEmployeeModal(${emp.id}, '${emp.employee_name}', '${emp.department || 'Other'}')" class="text-gray-600 hover:text-blue-600 mr-3"><i class="fa-solid fa-pen-to-square"></i></button>`
+                        `<button onclick="openEditEmployeeModal(${emp.id}, '${emp.employee_name}', '${emp.department || 'Other'}')" class="text-gray-600 hover:text-blue-600 mr-3" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                         <button onclick="deleteEmployee(${emp.id}, '${emp.employee_name}')" class="text-red-400 hover:text-red-600 mr-3" title="Delete"><i class="fa-solid fa-trash"></i></button>`
                         : ''}
                             <a href="/employee/${emp.employee_name}" class="text-blue-600 hover:text-blue-900"><i class="fa-solid fa-chart-line mr-1"></i> View</a>
                         </td>
@@ -1809,6 +1788,29 @@
 
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Save Changes';
+        }
+
+        async function deleteEmployee(id, name) {
+            if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/employees/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('✅ Employee deleted successfully');
+                    await loadDashboard();
+                    loadEmployeesTable();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + (data.detail || 'Failed to delete employee'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
         }
 
         async function submitAddEmployee(event) {
@@ -2502,12 +2504,14 @@
                 const subscriptionFeatures = document.getElementById('subscription-features');
                 const basicBtn = document.getElementById('upgrade-basic-btn');
                 const proBtn = document.getElementById('upgrade-pro-btn');
+                const downgradeBtn = document.getElementById('downgrade-basic-btn');
 
                 if (data.plan === 'pro' || data.plan === 'enterprise') {
-                    // Pro/Enterprise user - hide upgrade buttons, show manage
+                    // Pro/Enterprise user - hide upgrade buttons, show manage and downgrade
                     if (basicBtn) basicBtn.classList.add('hidden');
                     if (proBtn) proBtn.classList.add('hidden');
                     manageBtn.classList.remove('hidden');
+                    if (downgradeBtn) downgradeBtn.classList.remove('hidden');
                     planBadge.classList.remove('hidden');
                     planBadge.textContent = data.plan.toUpperCase();
                     subscriptionFeatures.classList.remove('hidden');
@@ -2516,6 +2520,7 @@
                     // Basic user - hide basic button, show pro upgrade
                     if (basicBtn) basicBtn.classList.add('hidden');
                     if (proBtn) proBtn.classList.remove('hidden');
+                    if (downgradeBtn) downgradeBtn.classList.add('hidden');
                     manageBtn.classList.remove('hidden');
                     planBadge.classList.remove('hidden');
                     planBadge.textContent = 'BASIC';
@@ -2525,6 +2530,7 @@
                     // Free user - show both upgrade options
                     if (basicBtn) basicBtn.classList.remove('hidden');
                     if (proBtn) proBtn.classList.remove('hidden');
+                    if (downgradeBtn) downgradeBtn.classList.add('hidden');
                     manageBtn.classList.add('hidden');
                     planBadge.classList.add('hidden');
                     subscriptionFeatures.classList.add('hidden');
@@ -2573,6 +2579,36 @@
 
         // Keep for backwards compatibility
         function upgradeToPro() { upgradeToPlan('pro'); }
+
+        async function downgradeToPlan(plan = 'basic') {
+            if (!confirm('Are you sure you want to downgrade to the ' + plan.toUpperCase() + ' plan? Your features will be reduced accordingly.')) {
+                return;
+            }
+
+            const btn = document.getElementById('downgrade-basic-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
+            btn.disabled = true;
+
+            try {
+                // Redirect to Stripe portal where they can change the plan
+                const response = await fetch('/api/stripe/portal');
+                const data = await response.json();
+
+                if (data.portal_url) {
+                    window.location.href = data.portal_url;
+                } else if (data.detail) {
+                    alert('Error: ' + data.detail);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Downgrade error:', error);
+                alert('Failed to open billing portal. Please try again.');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
 
         async function manageSubscription() {
             const btn = document.getElementById('manage-btn');
