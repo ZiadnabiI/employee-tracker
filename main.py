@@ -2064,6 +2064,88 @@ async def create_customer_portal(request: Request, db: Session = Depends(get_db)
     
     return {"portal_url": session.url}
 
+class ChangePlanRequest(BaseModel):
+    plan: str  # 'basic' or 'pro'
+
+@app.post("/api/stripe/change-plan")
+async def change_subscription_plan(data: ChangePlanRequest, request: Request, db: Session = Depends(get_db)):
+    """Change the subscription plan directly via Stripe API"""
+    if not stripe.api_key:
+        raise HTTPException(status_code=500, detail="Stripe not configured")
+    
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # RBAC Check - only admins can change plans
+    current_sup = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    if not current_sup or current_sup.role != 'admin':
+        raise HTTPException(status_code=403, detail="Only admins can change subscription plans")
+    
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    if not company or not company.stripe_customer_id:
+        raise HTTPException(status_code=400, detail="No subscription found")
+    
+    # Get the target price ID
+    if data.plan == "basic":
+        new_price_id = resolve_price_id(STRIPE_PRICE_ID_BASIC)
+        new_max_employees = 100
+    elif data.plan == "pro":
+        new_price_id = resolve_price_id(STRIPE_PRICE_ID_PRO) or resolve_price_id(STRIPE_PRICE_ID)
+        new_max_employees = 1000
+    else:
+        raise HTTPException(status_code=400, detail="Invalid plan. Must be 'basic' or 'pro'")
+    
+    if not new_price_id:
+        raise HTTPException(status_code=500, detail=f"Price ID for {data.plan} plan not configured")
+    
+    try:
+        # Get current subscription
+        subscriptions = stripe.Subscription.list(
+            customer=company.stripe_customer_id,
+            status="active",
+            limit=1
+        )
+        
+        if not subscriptions.data:
+            raise HTTPException(status_code=400, detail="No active subscription found")
+        
+        subscription = subscriptions.data[0]
+        subscription_item_id = subscription["items"]["data"][0]["id"]
+        
+        # Update the subscription to the new price
+        stripe.Subscription.modify(
+            subscription.id,
+            items=[{
+                "id": subscription_item_id,
+                "price": new_price_id
+            }],
+            proration_behavior="create_prorations"  # Prorated billing
+        )
+        
+        # Update local database
+        company.subscription_plan = data.plan
+        company.max_employees = new_max_employees
+        db.commit()
+        
+        print(f"✅ Plan changed: {company.name} -> {data.plan.upper()}")
+        
+        return {
+            "status": "success",
+            "message": f"Successfully changed to {data.plan.upper()} plan",
+            "new_plan": data.plan,
+            "max_employees": new_max_employees
+        }
+        
+    except stripe.error.StripeError as e:
+        print(f"❌ Stripe error changing plan: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

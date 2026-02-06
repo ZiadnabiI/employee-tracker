@@ -2587,24 +2587,30 @@
 
             const btn = document.getElementById('downgrade-basic-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Changing...';
             btn.disabled = true;
 
             try {
-                // Redirect to Stripe portal where they can change the plan
-                const response = await fetch('/api/stripe/portal');
+                const response = await fetch('/api/stripe/change-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan: plan })
+                });
                 const data = await response.json();
 
-                if (data.portal_url) {
-                    window.location.href = data.portal_url;
-                } else if (data.detail) {
-                    alert('Error: ' + data.detail);
+                if (response.ok && data.status === 'success') {
+                    alert('✅ ' + data.message);
+                    loadSubscriptionStatus(); // Refresh the UI
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                } else {
+                    alert('Error: ' + (data.detail || 'Failed to change plan'));
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
             } catch (error) {
                 console.error('Downgrade error:', error);
-                alert('Failed to open billing portal. Please try again.');
+                alert('Failed to change plan. Please try again.');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
