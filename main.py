@@ -1927,6 +1927,27 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             company = db.query(Company).filter(Company.stripe_customer_id == customer_id).first()
             if company:
                 company.subscription_status = status
+                
+                # Sync plan from Stripe subscription when active
+                if status == "active" and subscription.get("items"):
+                    items = subscription["items"].get("data", [])
+                    if items:
+                        price_id = items[0].get("price", {}).get("id")
+                        # Determine plan based on price ID
+                        resolved_basic = resolve_price_id(STRIPE_PRICE_ID_BASIC)
+                        resolved_pro = resolve_price_id(STRIPE_PRICE_ID_PRO) or resolve_price_id(STRIPE_PRICE_ID)
+                        
+                        if price_id == resolved_basic:
+                            company.subscription_plan = "basic"
+                            company.max_employees = 100
+                            print(f"✅ Plan synced: {company.name} -> Basic")
+                        elif price_id == resolved_pro:
+                            company.subscription_plan = "pro"
+                            company.max_employees = 1000
+                            print(f"✅ Plan synced: {company.name} -> Pro")
+                        else:
+                            print(f"⚠️ Unknown price ID: {price_id}")
+                
                 if status in ["canceled", "unpaid"]:
                     company.subscription_plan = "free"
                     company.max_employees = 5
