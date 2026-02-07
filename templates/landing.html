@@ -9,22 +9,132 @@
         content="inframe provides intelligent employee monitoring with AI-powered presence detection, smart screenshots, and productivity analytics. Privacy-first design.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- GSAP for buttery smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <!-- Lenis for smooth scrolling -->
+    <script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        * {
+            cursor: none;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
         }
 
+        /* Custom cursor */
+        .cursor {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(59, 130, 246, 0.8);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.1s ease, background 0.2s ease;
+            mix-blend-mode: difference;
+        }
+
+        .cursor-dot {
+            width: 6px;
+            height: 6px;
+            background: #3b82f6;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .cursor.hover {
+            transform: scale(2);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Smooth scroll */
+        html.lenis,
+        html.lenis body {
+            height: auto;
+        }
+
+        .lenis.lenis-smooth {
+            scroll-behavior: auto !important;
+        }
+
+        /* Animated gradient background */
         .gradient-bg {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            position: relative;
+        }
+
+        .gradient-bg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            animation: pulseGradient 4s ease-in-out infinite;
+        }
+
+        @keyframes pulseGradient {
+
+            0%,
+            100% {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
         }
 
         .gradient-text {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        /* Magnetic button effect */
+        .magnetic-btn {
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Card tilt effect */
+        .tilt-card {
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform-style: preserve-3d;
+        }
+
+        .tilt-card:hover {
+            transform: perspective(1000px) rotateX(5deg) rotateY(5deg);
         }
 
         .card-hover:hover {
@@ -32,7 +142,7 @@
             box-shadow: 0 25px 50px rgba(59, 130, 246, 0.15);
         }
 
-        /* Background Blobs */
+        /* Background Blobs with enhanced animation */
         .blob {
             position: absolute;
             border-radius: 50%;
@@ -301,27 +411,27 @@
 
         <div class="max-w-7xl mx-auto px-6 relative z-10">
             <div class="grid md:grid-cols-2 gap-12 items-center">
-                <div class="animate-slide-left">
-                    <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-6 animate-fade-in-up delay-100">
+                <div>
+                    <h1 class="hero-title text-5xl md:text-6xl font-extrabold leading-tight mb-6">
                         Smart Employee <span class="gradient-text">Monitoring</span> for Modern Teams
                     </h1>
-                    <p class="text-xl text-slate-400 mb-8 leading-relaxed animate-fade-in-up delay-200">
+                    <p class="hero-subtitle text-xl text-slate-400 mb-8 leading-relaxed">
                         Boost productivity with AI-powered presence detection, intelligent screenshots, and real-time
                         analytics.
                         <strong class="text-white">Starts at $5/user/month.</strong>
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4 animate-fade-in-up delay-300">
+                    <div class="hero-buttons flex flex-col sm:flex-row gap-4">
                         <a href="/login"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition shadow-lg shadow-blue-500/25 text-center transform hover:scale-105 pulse-glow shine">
+                            class="magnetic-btn bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition shadow-lg shadow-blue-500/25 text-center transform hover:scale-105 pulse-glow shine">
                             Start Free Trial <i class="fa-solid fa-arrow-right ml-2"></i>
                         </a>
                         <a href="#features"
-                            class="border border-slate-600 hover:border-blue-500 hover:bg-blue-500/10 text-white px-8 py-4 rounded-xl font-semibold text-lg transition text-center group">
+                            class="magnetic-btn border border-slate-600 hover:border-blue-500 hover:bg-blue-500/10 text-white px-8 py-4 rounded-xl font-semibold text-lg transition text-center group">
                             See Features <i
                                 class="fa-solid fa-chevron-down ml-2 group-hover:translate-y-1 transition-transform"></i>
                         </a>
                     </div>
-                    <div class="flex items-center gap-6 mt-8 text-slate-400 text-sm animate-fade-in-up delay-400">
+                    <div class="hero-subtitle flex items-center gap-6 mt-8 text-slate-400 text-sm">
                         <span class="flex items-center"><i class="fa-solid fa-check text-green-500 mr-2"></i>Affordable
                             pricing</span>
                         <span class="flex items-center"><i class="fa-solid fa-check text-green-500 mr-2"></i>14-day free
@@ -667,28 +777,194 @@
         </div>
     </footer>
 
-    <!-- Scroll Reveal Script -->
+    <!-- Custom Cursor -->
+    <div class="cursor"></div>
+    <div class="cursor-dot"></div>
+
+    <!-- Enhanced Animations Script -->
     <script>
-        // Intersection Observer for scroll reveal
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
+        // Initialize Lenis for smooth scrolling
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            smoothWheel: true,
+        });
+
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+
+        // GSAP ScrollTrigger setup
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Sync Lenis with GSAP ScrollTrigger
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add((time) => {
+            lenis.raf(time * 1000);
+        });
+        gsap.ticker.lagSmoothing(0);
+
+        // Custom cursor
+        const cursor = document.querySelector('.cursor');
+        const cursorDot = document.querySelector('.cursor-dot');
+        let mouseX = 0, mouseY = 0;
+        let cursorX = 0, cursorY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            // Instant dot follow
+            gsap.to(cursorDot, { x: mouseX - 3, y: mouseY - 3, duration: 0 });
+        });
+
+        // Smooth cursor follow
+        gsap.ticker.add(() => {
+            cursorX += (mouseX - cursorX) * 0.15;
+            cursorY += (mouseY - cursorY) * 0.15;
+            gsap.set(cursor, { x: cursorX - 10, y: cursorY - 10 });
+        });
+
+        // Cursor hover effect on interactive elements
+        document.querySelectorAll('a, button, .card-hover, .tilt-card').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+        });
+
+        // Hero animations
+        gsap.from('.hero-title', {
+            y: 100,
+            opacity: 0,
+            duration: 1.2,
+            ease: 'power4.out',
+            delay: 0.3
+        });
+
+        gsap.from('.hero-subtitle', {
+            y: 60,
+            opacity: 0,
+            duration: 1,
+            ease: 'power4.out',
+            delay: 0.5
+        });
+
+        gsap.from('.hero-buttons', {
+            y: 40,
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power3.out',
+            delay: 0.7
+        });
+
+        // Parallax blobs on mouse move
+        document.querySelectorAll('.blob').forEach((blob, i) => {
+            document.addEventListener('mousemove', (e) => {
+                const speed = (i + 1) * 0.02;
+                const x = (e.clientX - window.innerWidth / 2) * speed;
+                const y = (e.clientY - window.innerHeight / 2) * speed;
+                gsap.to(blob, { x: x, y: y, duration: 1, ease: 'power2.out' });
             });
-        }, { threshold: 0.1 });
+        });
 
-        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        // Scroll-triggered animations for sections
+        gsap.utils.toArray('.reveal').forEach((el, i) => {
+            gsap.from(el, {
+                scrollTrigger: {
+                    trigger: el,
+                    start: 'top 85%',
+                    toggleActions: 'play none none none'
+                },
+                y: 60,
+                opacity: 0,
+                duration: 0.8,
+                ease: 'power3.out',
+                delay: i * 0.1
+            });
+        });
 
-        // Smooth scroll for anchor links
+        // Feature cards stagger animation
+        ScrollTrigger.batch('.card-hover', {
+            start: 'top 85%',
+            onEnter: (elements) => {
+                gsap.from(elements, {
+                    y: 80,
+                    opacity: 0,
+                    duration: 0.8,
+                    stagger: 0.15,
+                    ease: 'power3.out'
+                });
+            },
+            once: true
+        });
+
+        // Number counter animation
+        gsap.utils.toArray('.gradient-text').forEach(el => {
+            const text = el.textContent;
+            if (text.match(/^\d/)) {
+                ScrollTrigger.create({
+                    trigger: el,
+                    start: 'top 85%',
+                    onEnter: () => {
+                        const num = parseInt(text);
+                        if (!isNaN(num)) {
+                            gsap.from(el, {
+                                textContent: 0,
+                                duration: 2,
+                                ease: 'power2.out',
+                                snap: { textContent: 1 },
+                                modifiers: {
+                                    textContent: value => Math.floor(value) + text.replace(/\d+/, '')
+                                }
+                            });
+                        }
+                    },
+                    once: true
+                });
+            }
+        });
+
+        // Magnetic button effect
+        document.querySelectorAll('.magnetic-btn').forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                gsap.to(btn, { x: x * 0.3, y: y * 0.3, duration: 0.3, ease: 'power2.out' });
+            });
+            btn.addEventListener('mouseleave', () => {
+                gsap.to(btn, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
+            });
+        });
+
+        // Dashboard preview float animation enhancement
+        gsap.to('.float-dashboard', {
+            y: -15,
+            rotation: 2,
+            duration: 3,
+            ease: 'sine.inOut',
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Smooth scroll for anchor links (using Lenis)
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                document.querySelector(this.getAttribute('href')).scrollIntoView({
-                    behavior: 'smooth'
-                });
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    lenis.scrollTo(target, { offset: -80 });
+                }
             });
         });
+
+        // Show default cursor on touch devices
+        if ('ontouchstart' in window) {
+            document.body.style.cursor = 'auto';
+            cursor.style.display = 'none';
+            cursorDot.style.display = 'none';
+        }
     </script>
 
 </body>
