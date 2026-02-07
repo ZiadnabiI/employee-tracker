@@ -122,7 +122,7 @@ class Screenshot(Base):
 class AuthToken(Base):
     __tablename__ = "auth_tokens"
     id = Column(Integer, primary_key=True, index=True)
-    token = Column(String(255), unique=True, index=True)  # Fixed length for efficiency
+    token = Column(String(255), unique=True, index=True)  # Maximum length 255 chars
     supervisor_id = Column(Integer, ForeignKey("supervisors.id"))
     company_id = Column(Integer, ForeignKey("companies.id"))
     is_super_admin = Column(Integer, default=0)
