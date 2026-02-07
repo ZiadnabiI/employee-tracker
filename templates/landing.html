@@ -20,25 +20,23 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        * {
-            cursor: none;
-        }
+        /* Remove cursor:none to keep default as fallback */
 
         body {
             font-family: 'Inter', sans-serif;
         }
 
-        /* Custom cursor */
+        /* Custom cursor - more visible */
         .cursor {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(59, 130, 246, 0.8);
+            width: 24px;
+            height: 24px;
+            border: 2px solid #3b82f6;
             border-radius: 50%;
             position: fixed;
             pointer-events: none;
-            z-index: 9999;
-            transition: transform 0.1s ease, background 0.2s ease;
-            mix-blend-mode: difference;
+            z-index: 99999;
+            transition: transform 0.15s ease, background 0.2s ease;
+            background: rgba(59, 130, 246, 0.1);
         }
 
         .cursor-dot {
@@ -332,11 +330,10 @@
             border-radius: calc(1rem - 2px);
         }
 
-        /* Scroll Reveal */
+        /* Scroll Reveal - visible by default, GSAP handles animation */
         .reveal {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.8s ease-out;
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .reveal.active {
