@@ -12,8 +12,8 @@
     <style type="text/tailwindcss">
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
+            background-color: #0f172a; /* slate-900 */
+            color: #f1f5f9; /* slate-100 */
         }
 
         ::-webkit-scrollbar {
@@ -22,16 +22,16 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #1e293b; /* slate-800 */
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: #475569; /* slate-600 */
             border-radius: 3px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            background: #64748b; /* slate-500 */
         }
 
         .sidebar-link {
@@ -51,11 +51,11 @@
         }
 
         .tab-btn {
-            @apply px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 transition-colors;
+            @apply px-4 py-2 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-white hover:border-slate-500 transition-colors;
         }
 
         .tab-btn.active {
-            @apply text-blue-600 border-blue-600;
+            @apply text-blue-400 border-blue-400;
         }
     </style>
 </head>
@@ -65,18 +65,20 @@
     <div id="app-layout" class="flex h-screen overflow-hidden">
 
         <!-- SIDEBAR (Simplified for Detail Page) -->
-        <aside class="w-64 bg-slate-900 text-white flex flex-col flex-shrink-0">
-            <div class="h-16 flex items-center px-6 border-b border-slate-800">
-                <img src="/static/LOGO.png" alt="InFrame" class="h-14" onerror="this.style.display='none'">
+        <aside class="w-64 bg-slate-950 text-white flex flex-col flex-shrink-0 border-r border-slate-800">
+            <div class="h-20 flex items-center px-6 border-b border-slate-800">
+                <img src="/static/LOGO.png" alt="InFrame" class="max-h-16 w-auto" onerror="this.style.display='none'">
             </div>
             <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-                <a href="/" class="sidebar-link">
+                <a href="/" class="sidebar-link hover:bg-slate-800">
                     <i class="fa-solid fa-arrow-left w-5 text-center mr-3"></i> Back to Dashboard
                 </a>
             </nav>
-            <div class="p-4 border-t border-slate-800 bg-slate-900">
+            <div class="p-4 border-t border-slate-800 bg-slate-950">
                 <div class="flex items-center">
-                    <div class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold">AD
+                    <div
+                        class="h-8 w-8 rounded-full bg-blue-900/50 text-blue-400 flex items-center justify-center text-xs font-bold border border-blue-800">
+                        AD
                     </div>
                     <div class="ml-3">
                         <p class="text-sm font-medium text-white">Admin</p>
@@ -86,18 +88,18 @@
         </aside>
 
         <!-- MAIN CONTENT -->
-        <main class="flex-1 flex flex-col bg-gray-50 min-w-0">
+        <main class="flex-1 flex flex-col bg-slate-900 min-w-0">
             <!-- Header -->
             <header
-                class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10">
+                class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shadow-sm z-10">
                 <div class="flex items-center">
                     <div
-                        class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-4 text-sm">
+                        class="h-10 w-10 rounded-full bg-blue-900/50 text-blue-400 flex items-center justify-center font-bold mr-4 text-sm border border-blue-800">
                         {{ name[:2] | upper }}
                     </div>
                     <div>
-                        <h2 class="text-xl font-bold text-gray-800">{{ name }}</h2>
-                        <p id="emp-dept" class="text-xs text-gray-500">Loading...</p>
+                        <h2 class="text-xl font-bold text-white">{{ name }}</h2>
+                        <p id="emp-dept" class="text-xs text-slate-400">Loading...</p>
                     </div>
                 </div>
                 <div id="emp-status-badge"></div>
@@ -108,22 +110,22 @@
 
                 <!-- KPI Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Present Today</p>
-                        <h3 class="text-2xl font-bold text-gray-800 mt-2" id="kpi-present">--</h3>
+                    <div class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Present Today</p>
+                        <h3 class="text-2xl font-bold text-white mt-2" id="kpi-present">--</h3>
                     </div>
-                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Break Time</p>
-                        <h3 class="text-2xl font-bold text-gray-800 mt-2" id="kpi-break">--</h3>
+                    <div class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Break Time</p>
+                        <h3 class="text-2xl font-bold text-white mt-2" id="kpi-break">--</h3>
                     </div>
-                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Away Time</p>
-                        <h3 class="text-2xl font-bold text-gray-800 mt-2" id="kpi-away">--</h3>
+                    <div class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-sm">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Away Time</p>
+                        <h3 class="text-2xl font-bold text-white mt-2" id="kpi-away">--</h3>
                     </div>
                 </div>
 
                 <!-- Tabs -->
-                <div class="mb-6 border-b border-gray-200">
+                <div class="mb-6 border-b border-slate-700">
                     <nav class="-mb-px flex space-x-8">
                         <button onclick="switchTab('activity')" id="tab-activity" class="tab-btn active">Activity
                             Log</button>
@@ -137,25 +139,25 @@
 
                 <!-- 1. Activity Log -->
                 <div id="view-activity" class="block">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                    <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 overflow-hidden">
+                        <table class="min-w-full divide-y divide-slate-700">
+                            <thead class="bg-slate-900">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Timestamp
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Timestamp
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Status
                                         Change</th>
                                 </tr>
                             </thead>
-                            <tbody id="logsTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                            <tbody id="logsTableBody" class="bg-slate-800 divide-y divide-slate-700"></tbody>
                         </table>
                     </div>
                 </div>
 
                 <!-- 2. App Usage -->
                 <div id="view-apps" class="hidden">
-                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm h-96">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4">Top Applications Used Today</h3>
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-sm h-96">
+                        <h3 class="text-lg font-bold text-white mb-4">Top Applications Used Today</h3>
                         <div class="relative h-full w-full pb-10">
                             <canvas id="empAppChart"></canvas>
                         </div>
@@ -165,15 +167,15 @@
                 <!-- 3. Screenshots -->
                 <div id="view-screenshots" class="hidden">
                     <div class="flex justify-between items-center mb-4">
-                        <p class="text-sm text-gray-500">Recent captures for {{ name }}</p>
+                        <p class="text-sm text-slate-400">Recent captures for {{ name }}</p>
                         <button onclick="requestScreenshot('{{ name }}')"
-                            class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-blue-700">
+                            class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-blue-700 shadow-sm transition-all">
                             <i class="fa-solid fa-camera mr-2"></i>Request New
                         </button>
                     </div>
                     <div id="screenshots-grid"
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        <p class="text-gray-400">Loading...</p>
+                        <p class="text-slate-500">Loading...</p>
                     </div>
                 </div>
 
@@ -210,13 +212,13 @@
 
                 const badge = document.getElementById('emp-status-badge');
                 if (['Present', 'WORK_START', 'BREAK_END'].includes(data.current_status)) {
-                    badge.innerHTML = '<span class="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-sm">Online</span>';
+                    badge.innerHTML = '<span class="bg-green-900/20 text-green-400 font-bold px-3 py-1 rounded-full text-sm border border-green-900/30">Online</span>';
                 } else if (data.current_status === 'Away') {
-                    badge.innerHTML = '<span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-sm">Away</span>';
+                    badge.innerHTML = '<span class="bg-red-900/20 text-red-400 font-bold px-3 py-1 rounded-full text-sm border border-red-900/30">Away</span>';
                 } else if (data.current_status === 'BREAK_START') {
-                    badge.innerHTML = '<span class="bg-yellow-100 text-yellow-700 font-bold px-3 py-1 rounded-full text-sm">On Break</span>';
+                    badge.innerHTML = '<span class="bg-yellow-900/20 text-yellow-400 font-bold px-3 py-1 rounded-full text-sm border border-yellow-900/30">On Break</span>';
                 } else {
-                    badge.innerHTML = '<span class="bg-gray-100 text-gray-700 font-bold px-3 py-1 rounded-full text-sm">Offline</span>';
+                    badge.innerHTML = '<span class="bg-slate-700 text-slate-400 font-bold px-3 py-1 rounded-full text-sm border border-slate-600">Offline</span>';
                 }
 
                 const tbody = document.getElementById('logsTableBody');
@@ -226,13 +228,13 @@
                         const time = new Date(log.timestamp + (log.timestamp.endsWith('Z') ? '' : 'Z')).toLocaleTimeString();
                         tbody.innerHTML += `
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${time}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">${log.status}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-300 font-mono">${time}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">${log.status}</td>
                             </tr>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-400">No activity today</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-slate-500">No activity today</td></tr>';
                 }
 
             } catch (e) { console.error(e); }
@@ -277,7 +279,7 @@
                 const screenshots = await res.json();
 
                 if (!screenshots.length) {
-                    grid.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">No screenshots found.</p>';
+                    grid.innerHTML = '<p class="col-span-full text-center text-slate-500 py-10">No screenshots found.</p>';
                     return;
                 }
 
@@ -285,12 +287,12 @@
                 screenshots.forEach(s => {
                     const time = new Date(s.timestamp).toLocaleString();
                     html += `
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md cursor-pointer" onclick="openScreenshotModal('${s.image_data}', '${time}')">
-                             <div class="aspect-video bg-gray-100 relative overflow-hidden">
-                                <img src="data:image/jpeg;base64,${s.image_data}" class="w-full h-full object-cover">
-                                ${s.manual_request ? '<span class="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">Requested</span>' : ''}
+                        <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 overflow-hidden hover:shadow-md cursor-pointer transition-all" onclick="openScreenshotModal('${s.image_data}', '${time}')">
+                             <div class="aspect-video bg-slate-900 relative overflow-hidden">
+                                <img src="data:image/jpeg;base64,${s.image_data}" class="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity">
+                                ${s.manual_request ? '<span class="absolute top-2 right-2 bg-blue-900/80 text-white text-xs px-2 py-1 rounded border border-blue-800">Requested</span>' : ''}
                             </div>
-                            <div class="p-3 text-xs text-gray-500">
+                            <div class="p-3 text-xs text-slate-400">
                                 <i class="fa-solid fa-clock mr-1"></i>${time}
                             </div>
                         </div>
@@ -306,13 +308,19 @@
 
         function openScreenshotModal(img, time) {
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4';
-            modal.onclick = () => modal.remove();
+            modal.className = 'fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm';
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
             modal.innerHTML = `
-                <div class="relative max-w-6xl max-h-full">
-                    <button class="absolute -top-10 right-0 text-white text-xl" onclick="this.parentElement.parentElement.remove()"><i class="fa-solid fa-xmark"></i> Close</button>
-                    <img src="data:image/jpeg;base64,${img}" class="max-w-full max-h-[85vh] rounded shadow-2xl object-contain">
-                    <p class="text-center text-white mt-4">${time}</p>
+                <div class="relative max-w-6xl max-h-full flex flex-col items-center">
+                    <button class="absolute -top-10 right-0 text-white text-xl hover:text-gray-300" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fa-solid fa-xmark"></i> Close
+                    </button>
+                    <img src="data:image/jpeg;base64,${img}" class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain border border-slate-700">
+                    <p class="text-center text-slate-300 mt-4 bg-black/50 px-4 py-1 rounded-full border border-slate-700">
+                        <i class="fa-solid fa-clock mr-2"></i>${time}
+                    </p>
                 </div>
             `;
             document.body.appendChild(modal);
