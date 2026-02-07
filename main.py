@@ -1879,6 +1879,7 @@ async def create_checkout_session(request: Request, db: Session = Depends(get_db
         payment_method_types=["card"],
         line_items=[{
             "price": price_id,
+            "quantity": 1,  # Required by Stripe
         }],
         mode="subscription",
         success_url=f"{base_url}/?payment=success&plan={plan}",

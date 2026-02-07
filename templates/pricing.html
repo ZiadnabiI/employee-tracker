@@ -41,11 +41,21 @@
                 <a href="/privacy" class="text-slate-300 hover:text-white transition">Privacy</a>
             </div>
             <div class="flex items-center space-x-4">
+                {% if show_signup == False %}
+                <!-- Logged in user - show dashboard link -->
+                <span class="text-slate-400 text-sm">{{ company_name }}</span>
+                <a href="/"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition">
+                    <i class="fa-solid fa-gauge-high mr-2"></i>Dashboard
+                </a>
+                {% else %}
+                <!-- Not logged in - show login/signup -->
                 <a href="/login" class="text-slate-300 hover:text-white transition">Login</a>
                 <a href="/login"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition">
                     Get Started
                 </a>
+                {% endif %}
             </div>
         </div>
     </nav>
