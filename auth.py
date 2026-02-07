@@ -54,6 +54,9 @@ def create_token(supervisor_id: int, company_id: int, is_super_admin: bool = Fal
         )
         session.add(db_token)
         session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
     
@@ -71,8 +74,12 @@ def verify_token(token: str) -> Optional[dict]:
         # Check if token expired
         if datetime.utcnow() > db_token.expires:
             # Token expired, remove it
-            session.delete(db_token)
-            session.commit()
+            try:
+                session.delete(db_token)
+                session.commit()
+            except Exception:
+                session.rollback()
+                # Still return None even if deletion failed
             return None
         
         # Return token data in the same format as before
@@ -93,6 +100,9 @@ def invalidate_token(token: str):
         if db_token:
             session.delete(db_token)
             session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
 
