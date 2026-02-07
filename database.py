@@ -32,7 +32,6 @@ class Company(Base):
     subscription_status = Column(String, default="active") # active, past_due, canceled
     subscription_end_date = Column(DateTime, nullable=True)
     stripe_customer_id = Column(String, nullable=True)
-    stripe_customer_id = Column(String, nullable=True)
     max_employees = Column(Integer, default=5)
     screenshot_frequency = Column(Integer, default=600) # Seconds between screenshots
     dlp_enabled = Column(Integer, default=0) # 0=Disabled, 1=Enabled (Manual DB toggle)
@@ -118,6 +117,17 @@ class Screenshot(Base):
     image_data = Column(String)  # Base64 encoded image
     manual_request = Column(Integer, default=0)  # 1 if manually requested by supervisor
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+# --- AuthToken Model (for persistent token storage) ---
+class AuthToken(Base):
+    __tablename__ = "auth_tokens"
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True)
+    supervisor_id = Column(Integer)
+    company_id = Column(Integer)
+    is_super_admin = Column(Integer, default=0)
+    expires = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 # Create tables
 Base.metadata.create_all(bind=engine)

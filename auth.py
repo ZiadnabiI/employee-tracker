@@ -3,59 +3,98 @@ Authentication module for Employee Tracker
 Handles JWT tokens and password hashing
 """
 import os
-import hashlib
+import bcrypt
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import HTTPException, status, Request, Depends
 from fastapi.responses import RedirectResponse
+from database import SessionLocal, AuthToken
 
 # --- Configuration ---
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required. Set it before starting the server.")
 TOKEN_EXPIRE_HOURS = 24
 
-# Simple in-memory token storage (for production, use Redis or database)
-active_tokens = {}
-
 def hash_password(password: str) -> str:
-    """Hash a password using SHA-256 with salt"""
-    salt = "employee_tracker_salt"  # In production, use unique salt per user
-    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+    """Hash a password using bcrypt with automatic salt generation
+    
+    Note: Existing SHA-256 hashed passwords in the database will no longer match.
+    Users with old password hashes may need to reset their passwords.
+    Consider implementing a migration strategy that checks both formats during transition.
+    """
+    # bcrypt requires bytes input
+    password_bytes = password.encode('utf-8')
+    # Generate salt and hash in one step
+    hashed = bcrypt.hashpw(password_bytes, bcrypt.gensalt())
+    # Return as string for database storage
+    return hashed.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return hash_password(plain_password) == hashed_password
+    """Verify a password against its bcrypt hash"""
+    password_bytes = plain_password.encode('utf-8')
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hashed_bytes)
 
 def create_token(supervisor_id: int, company_id: int, is_super_admin: bool = False) -> str:
-    """Create an authentication token"""
+    """Create an authentication token and store it in the database"""
     token = secrets.token_urlsafe(32)
     expires = datetime.utcnow() + timedelta(hours=TOKEN_EXPIRE_HOURS)
     
-    active_tokens[token] = {
-        "supervisor_id": supervisor_id,
-        "company_id": company_id,
-        "is_super_admin": is_super_admin,
-        "expires": expires
-    }
+    # Store token in database
+    session = SessionLocal()
+    try:
+        db_token = AuthToken(
+            token=token,
+            supervisor_id=supervisor_id,
+            company_id=company_id,
+            is_super_admin=1 if is_super_admin else 0,
+            expires=expires
+        )
+        session.add(db_token)
+        session.commit()
+    finally:
+        session.close()
+    
     return token
 
 def verify_token(token: str) -> Optional[dict]:
-    """Verify a token and return its data"""
-    if token not in active_tokens:
-        return None
-    
-    token_data = active_tokens[token]
-    if datetime.utcnow() > token_data["expires"]:
-        # Token expired, remove it
-        del active_tokens[token]
-        return None
-    
-    return token_data
+    """Verify a token by querying the database and return its data"""
+    session = SessionLocal()
+    try:
+        db_token = session.query(AuthToken).filter(AuthToken.token == token).first()
+        
+        if not db_token:
+            return None
+        
+        # Check if token expired
+        if datetime.utcnow() > db_token.expires:
+            # Token expired, remove it
+            session.delete(db_token)
+            session.commit()
+            return None
+        
+        # Return token data in the same format as before
+        return {
+            "supervisor_id": db_token.supervisor_id,
+            "company_id": db_token.company_id,
+            "is_super_admin": bool(db_token.is_super_admin),
+            "expires": db_token.expires
+        }
+    finally:
+        session.close()
 
 def invalidate_token(token: str):
-    """Remove a token (logout)"""
-    if token in active_tokens:
-        del active_tokens[token]
+    """Remove a token from database (logout)"""
+    session = SessionLocal()
+    try:
+        db_token = session.query(AuthToken).filter(AuthToken.token == token).first()
+        if db_token:
+            session.delete(db_token)
+            session.commit()
+    finally:
+        session.close()
 
 def get_token_from_cookies(request: Request) -> Optional[str]:
     """Extract token from cookies"""
