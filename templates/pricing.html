@@ -474,21 +474,31 @@
                 const response = await fetch('/api/stripe/create-checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plan: plan })
+                    body: JSON.stringify({ plan: plan }),
+                    credentials: 'include'  // Ensure cookies are sent
                 });
 
                 const data = await response.json();
 
+                if (!response.ok) {
+                    // Handle HTTP error responses (401, 500, etc.)
+                    const errorMsg = data.detail || `HTTP ${response.status}: ${response.statusText}`;
+                    alert('Checkout Error: ' + errorMsg);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+
                 if (data.checkout_url) {
                     window.location.href = data.checkout_url;
-                } else if (data.detail) {
-                    alert('Error: ' + data.detail);
+                } else {
+                    alert('Error: No checkout URL returned. Please try again.');
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 }
             } catch (error) {
                 console.error('Checkout error:', error);
-                alert('Failed to start checkout. Please try again.');
+                alert('Failed to start checkout: ' + error.message);
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
