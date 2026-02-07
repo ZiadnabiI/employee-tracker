@@ -373,7 +373,7 @@
     <nav class="fixed w-full z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800 animate-fade-in-up">
         <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
             <a href="/home" class="flex items-center gap-2 group">
-                <img src="/static/Logo.png" alt="inframe" class="h-8 transition-transform group-hover:scale-110"
+                <img src="/static/LOGO.jpeg" alt="inframe" class="h-8 transition-transform group-hover:scale-110"
                     onerror="this.style.display='none'">
                 <span class="text-2xl font-bold gradient-text">inframe</span>
             </a>
@@ -580,6 +580,127 @@
         </div>
     </section>
 
+    <!-- DLP Privacy Protection Visual -->
+    <section class="py-20 bg-slate-900">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-12">
+                <span class="text-blue-400 font-semibold tracking-wider uppercase">Privacy Protection</span>
+                <h2 class="text-4xl font-bold mt-2">Your Sensitive Data Stays <span class="gradient-text">Private</span>
+                </h2>
+                <p class="text-slate-400 mt-4 max-w-2xl mx-auto">Our DLP feature automatically detects and blurs
+                    sensitive content like banking sites, passwords, and personal information.</p>
+            </div>
+
+            <!-- Before/After Comparison Slider -->
+            <div class="max-w-4xl mx-auto">
+                <div class="relative rounded-2xl overflow-hidden border border-slate-700 shadow-2xl"
+                    id="comparison-container">
+                    <!-- Labels -->
+                    <div
+                        class="absolute top-4 left-4 z-20 bg-red-500/90 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        <i class="fa-solid fa-eye mr-1"></i> Without DLP
+                    </div>
+                    <div
+                        class="absolute top-4 right-4 z-20 bg-green-500/90 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        <i class="fa-solid fa-shield-halved mr-1"></i> With DLP
+                    </div>
+
+                    <!-- Comparison Container -->
+                    <div class="relative aspect-video bg-slate-800">
+                        <!-- "Before" Image (Full) - Mockup screenshot -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 p-4">
+                            <div class="h-full bg-white rounded-lg shadow-lg overflow-hidden">
+                                <div class="bg-slate-100 h-8 flex items-center px-3 gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                                    <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                    <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                                    <div class="flex-1 mx-4 bg-white rounded h-5 flex items-center px-2">
+                                        <i class="fa-solid fa-lock text-green-500 text-xs mr-2"></i>
+                                        <span class="text-xs text-gray-500">mybank.com/account</span>
+                                    </div>
+                                </div>
+                                <div class="p-6 text-gray-800">
+                                    <div class="flex items-center gap-4 mb-6">
+                                        <div
+                                            class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                            MB</div>
+                                        <div>
+                                            <div class="font-bold text-lg">MyBank Online</div>
+                                            <div class="text-sm text-gray-500">Welcome back, John</div>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 mb-6">
+                                        <div class="bg-gray-50 p-4 rounded-lg">
+                                            <div class="text-xs text-gray-500 mb-1">Checking Account</div>
+                                            <div class="text-2xl font-bold text-gray-800">$12,458.32</div>
+                                        </div>
+                                        <div class="bg-gray-50 p-4 rounded-lg">
+                                            <div class="text-xs text-gray-500 mb-1">Savings Account</div>
+                                            <div class="text-2xl font-bold text-gray-800">$45,892.15</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        <div class="font-semibold mb-2">Recent Transactions</div>
+                                        <div class="flex justify-between py-2 border-b">
+                                            <span>Amazon.com</span>
+                                            <span class="text-red-500">-$156.99</span>
+                                        </div>
+                                        <div class="flex justify-between py-2 border-b">
+                                            <span>Salary Deposit</span>
+                                            <span class="text-green-500">+$4,500.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- "After" Image (Blurred) - Clipped -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 p-4" id="after-image"
+                            style="clip-path: inset(0 0 0 50%);">
+                            <div class="h-full bg-white rounded-lg shadow-lg overflow-hidden">
+                                <div class="bg-slate-100 h-8 flex items-center px-3 gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                                    <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                                    <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                                    <div class="flex-1 mx-4 bg-white rounded h-5 flex items-center px-2">
+                                        <i class="fa-solid fa-lock text-green-500 text-xs mr-2"></i>
+                                        <span class="text-xs text-gray-500 blur-sm">mybank.com/account</span>
+                                    </div>
+                                </div>
+                                <div class="p-6 text-gray-800 relative">
+                                    <!-- Blur overlay -->
+                                    <div
+                                        class="absolute inset-0 backdrop-blur-xl bg-white/30 flex flex-col items-center justify-center">
+                                        <div class="bg-blue-600 text-white p-4 rounded-full mb-4">
+                                            <i class="fa-solid fa-shield-halved text-3xl"></i>
+                                        </div>
+                                        <div class="text-lg font-bold text-gray-800">Sensitive Content Protected</div>
+                                        <div class="text-sm text-gray-500 mt-1">Banking site detected - Auto-blurred by
+                                            DLP</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slider Handle -->
+                        <div class="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize z-30 flex items-center justify-center"
+                            id="slider-handle" style="left: 50%;">
+                            <div
+                                class="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-blue-500">
+                                <i class="fa-solid fa-arrows-left-right text-blue-500"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <p class="text-center text-slate-400 text-sm mt-4">
+                    <i class="fa-solid fa-hand-pointer mr-2"></i>Drag the slider to compare
+                </p>
+            </div>
+        </div>
+    </section>
+
     <!-- How It Works -->
     <section id="how-it-works" class="py-24 bg-slate-900">
         <div class="max-w-7xl mx-auto px-6">
@@ -621,20 +742,16 @@
     <!-- Stats Section -->
     <section class="py-16 bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-y border-slate-800">
         <div class="max-w-7xl mx-auto px-6">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div class="grid grid-cols-3 gap-8 text-center">
                 <div class="reveal">
                     <div class="text-4xl font-bold gradient-text">99.9%</div>
                     <div class="text-slate-400 text-sm mt-2">Uptime</div>
                 </div>
                 <div class="reveal" style="transition-delay: 0.1s;">
-                    <div class="text-4xl font-bold gradient-text">50K+</div>
-                    <div class="text-slate-400 text-sm mt-2">Employees Tracked</div>
-                </div>
-                <div class="reveal" style="transition-delay: 0.2s;">
                     <div class="text-4xl font-bold gradient-text">30%</div>
                     <div class="text-slate-400 text-sm mt-2">Productivity Boost</div>
                 </div>
-                <div class="reveal" style="transition-delay: 0.3s;">
+                <div class="reveal" style="transition-delay: 0.2s;">
                     <div class="text-4xl font-bold gradient-text">24/7</div>
                     <div class="text-slate-400 text-sm mt-2">Support</div>
                 </div>
@@ -739,7 +856,7 @@
             <div class="grid md:grid-cols-4 gap-8 mb-8">
                 <div>
                     <div class="flex items-center gap-2 mb-4">
-                        <img src="/static/Logo.png" alt="inframe" class="h-6" onerror="this.style.display='none'">
+                        <img src="/static/LOGO.jpeg" alt="inframe" class="h-6" onerror="this.style.display='none'">
                         <span class="text-xl font-bold gradient-text">inframe</span>
                     </div>
                     <p class="text-slate-400 text-sm">Smart employee monitoring for modern teams. Privacy-first by
@@ -896,32 +1013,6 @@
             once: true
         });
 
-        // Number counter animation
-        gsap.utils.toArray('.gradient-text').forEach(el => {
-            const text = el.textContent;
-            if (text.match(/^\d/)) {
-                ScrollTrigger.create({
-                    trigger: el,
-                    start: 'top 85%',
-                    onEnter: () => {
-                        const num = parseInt(text);
-                        if (!isNaN(num)) {
-                            gsap.from(el, {
-                                textContent: 0,
-                                duration: 2,
-                                ease: 'power2.out',
-                                snap: { textContent: 1 },
-                                modifiers: {
-                                    textContent: value => Math.floor(value) + text.replace(/\d+/, '')
-                                }
-                            });
-                        }
-                    },
-                    once: true
-                });
-            }
-        });
-
         // Magnetic button effect
         document.querySelectorAll('.magnetic-btn').forEach(btn => {
             btn.addEventListener('mousemove', (e) => {
@@ -961,6 +1052,59 @@
             document.body.style.cursor = 'auto';
             cursor.style.display = 'none';
             cursorDot.style.display = 'none';
+        }
+
+        // DLP Comparison Slider
+        const sliderHandle = document.getElementById('slider-handle');
+        const afterImage = document.getElementById('after-image');
+        const comparisonContainer = document.getElementById('comparison-container');
+
+        if (sliderHandle && afterImage && comparisonContainer) {
+            let isDragging = false;
+
+            const updateSlider = (clientX) => {
+                const rect = comparisonContainer.getBoundingClientRect();
+                let percentage = ((clientX - rect.left) / rect.width) * 100;
+                percentage = Math.max(5, Math.min(95, percentage));
+
+                sliderHandle.style.left = percentage + '%';
+                afterImage.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+            };
+
+            sliderHandle.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    updateSlider(e.clientX);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // Touch support
+            sliderHandle.addEventListener('touchstart', (e) => {
+                isDragging = true;
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches[0]) {
+                    updateSlider(e.touches[0].clientX);
+                }
+            });
+
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+
+            // Click to move slider
+            comparisonContainer.addEventListener('click', (e) => {
+                updateSlider(e.clientX);
+            });
         }
     </script>
 

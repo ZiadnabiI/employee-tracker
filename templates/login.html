@@ -152,7 +152,7 @@
         <!-- Logo -->
         <div class="text-center mb-8">
             <a href="/home" class="inline-flex items-center gap-2 group">
-                <img src="/static/Logo.png" alt="inframe" class="h-10 transition-transform group-hover:scale-110"
+                <img src="/static/LOGO.jpeg" alt="inframe" class="h-10 transition-transform group-hover:scale-110"
                     onerror="this.style.display='none'">
                 <span class="text-3xl font-bold gradient-text">inframe</span>
             </a>
@@ -273,58 +273,20 @@
                     </div>
                 </div>
 
-                <!-- Plan Selection -->
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Choose Your Plan</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- Basic Plan Option -->
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="plan" value="basic" class="peer sr-only" id="plan-basic">
-                            <div
-                                class="p-4 rounded-xl border border-slate-600 bg-slate-800 peer-checked:border-blue-500 peer-checked:bg-blue-900/20 transition-all text-center h-full">
-                                <div class="font-bold text-white mb-1">Basic</div>
-                                <div class="text-sm text-slate-400">$5/user</div>
-                                <div class="text-xs text-green-400 mt-1">Efficient Start</div>
-                            </div>
-                            <div class="absolute top-2 right-2 hidden peer-checked:block text-blue-500">
-                                <i class="fa-solid fa-check-circle"></i>
-                            </div>
-                        </label>
-
-                        <!-- Pro Plan Option -->
-                        <label class="cursor-pointer relative">
-                            <input type="radio" name="plan" value="pro" class="peer sr-only" id="plan-pro" checked>
-                            <div
-                                class="p-4 rounded-xl border border-slate-600 bg-slate-800 peer-checked:border-purple-500 peer-checked:bg-purple-900/20 transition-all text-center h-full">
-                                <div
-                                    class="text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-2 py-0.5 rounded-full inline-block mb-2 transform -translate-y-1">
-                                    RECOMMENDED</div>
-                                <div class="font-bold text-white mb-1">Pro</div>
-                                <div class="text-sm text-slate-400">$8.99/user</div>
-                                <div class="text-xs text-purple-400 mt-1">Full Features</div>
-                            </div>
-                            <div class="absolute top-2 right-2 hidden peer-checked:block text-purple-500">
-                                <i class="fa-solid fa-check-circle"></i>
-                            </div>
-                        </label>
-                    </div>
-                </div>
+                <!-- Hidden default plan (pricing handled separately) -->
+                <input type="hidden" name="plan" value="basic">
 
                 <button type="submit"
                     class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-semibold transition-all transform hover:scale-[1.02] shine">
                     <i class="fa-solid fa-rocket mr-2"></i>Create Account
                 </button>
 
-                <script>
-                    // Capture plan from URL and select appropriate radio button
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const plan = urlParams.get('plan');
-                    if (plan === 'basic') {
-                        document.getElementById('plan-basic').checked = true;
-                    } else {
-                        document.getElementById('plan-pro').checked = true;
-                    }
+                <p class="text-xs text-slate-500 text-center mt-4">
+                    You can choose your plan after signing up on our <a href="/pricing"
+                        class="text-blue-400 hover:underline">pricing page</a>.
+                </p>
 
+                <script>
                     // Activate signup tab if hash is #signup
                     if (window.location.hash === '#signup') {
                         switchTab('signup');
