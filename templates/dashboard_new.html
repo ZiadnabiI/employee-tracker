@@ -23,35 +23,48 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
+            background-color: #0f172a;
+            /* slate-900 */
+            color: #f1f5f9;
+            /* slate-100 */
         }
 
-        /* Custom Scrollbar for Enterprise feel */
+        /* Custom Scrollbar for Enterprise feel (Dark) */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #1e293b;
+            /* slate-800 */
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
+            background: #475569;
+            /* slate-600 */
+            border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            background: #64748b;
+            /* slate-500 */
         }
 
         /* Sidebar Styling */
+        .sidebar {
+            background-color: #020617;
+            /* slate-950 */
+            border-right: 1px solid #1e293b;
+            /* slate-800 */
+        }
+
         .sidebar-link {
             display: flex;
             align-items: center;
             padding: 12px 20px;
             color: #94a3b8;
+            /* slate-400 */
             transition: all 0.2s ease;
             font-size: 0.875rem;
             font-weight: 500;
@@ -60,16 +73,27 @@
 
         .sidebar-link:hover {
             background-color: #1e293b;
+            /* slate-800 */
             color: #f8fafc;
         }
 
         .sidebar-link.active {
             background-color: #1e293b;
+            /* slate-800 */
             color: #38bdf8;
             border-left-color: #38bdf8;
         }
 
-        /* Status Badge Utilities */
+        /* Card / Container Styling for Dark Mode */
+        .card-dark {
+            background-color: #1e293b;
+            /* slate-800 */
+            border: 1px solid #334155;
+            /* slate-700 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Status Badge Utilities - Dark Friendly */
         .badge {
             padding: 2px 8px;
             border-radius: 9999px;
@@ -78,23 +102,27 @@
         }
 
         .badge-green {
-            background-color: #dcfce7;
-            color: #166534;
+            background-color: rgba(22, 101, 52, 0.3);
+            color: #86efac;
+            border: 1px solid rgba(22, 101, 52, 0.5);
         }
 
         .badge-yellow {
-            background-color: #fef9c3;
-            color: #854d0e;
+            background-color: rgba(133, 77, 14, 0.3);
+            color: #fde047;
+            border: 1px solid rgba(133, 77, 14, 0.5);
         }
 
         .badge-red {
-            background-color: #fee2e2;
-            color: #991b1b;
+            background-color: rgba(153, 27, 27, 0.3);
+            color: #fca5a5;
+            border: 1px solid rgba(153, 27, 27, 0.5);
         }
 
         .badge-gray {
-            background-color: #f3f4f6;
-            color: #4b5563;
+            background-color: rgba(75, 85, 99, 0.3);
+            color: #d1d5db;
+            border: 1px solid rgba(75, 85, 99, 0.5);
         }
 
         /* Chart Containers */
@@ -148,7 +176,7 @@
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background-color: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(4px);
             z-index: 9999;
             display: flex;
@@ -449,10 +477,11 @@
     <div id="app-layout" class="flex h-screen overflow-hidden">
 
         <!-- SIDEBAR NAVIGATION -->
-        <aside class="w-64 bg-slate-900 text-white flex flex-col flex-shrink-0 transition-all duration-300">
+        <aside
+            class="w-64 bg-slate-950 text-white flex flex-col flex-shrink-0 transition-all duration-300 border-r border-slate-800">
             <!-- Brand -->
-            <div class="h-16 flex items-center px-6 border-b border-slate-800">
-                <img src="/static/LOGO.png" alt="InFrame" class="h-14" onerror="this.style.display='none'">
+            <div class="h-20 flex items-center justify-center px-4 border-b border-slate-800">
+                <img src="/static/LOGO.png" alt="InFrame" class="max-h-16 w-auto" onerror="this.style.display='none'">
             </div>
 
             <!-- Menu -->
@@ -504,21 +533,21 @@
         </aside>
 
         <!-- MAIN CONTENT AREA -->
-        <main class="flex-1 flex flex-col bg-gray-50 min-w-0">
+        <main class="flex-1 flex flex-col bg-slate-900 min-w-0">
             <!-- Top Header -->
             <header
-                class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10">
-                <h2 id="page-title" class="text-xl font-bold text-gray-800">Dashboard</h2>
+                class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shadow-sm z-10">
+                <h2 id="page-title" class="text-xl font-bold text-white">Dashboard</h2>
                 <div class="flex items-center space-x-4">
 
-                    <button class="p-2 text-gray-500 hover:text-blue-600 relative" onclick="location.reload()">
+                    <button class="p-2 text-slate-400 hover:text-blue-500 relative" onclick="location.reload()">
                         <i class="fa-solid fa-rotate-right text-lg"></i>
                     </button>
                 </div>
             </header>
 
             <!-- CONTENT VIEWS WRAPPER -->
-            <div class="flex-1 overflow-auto p-6 scroll-smooth">
+            <div class="flex-1 overflow-auto p-6 scroll-smooth bg-slate-900">
 
                 <!-- 1. DASHBOARD VIEW -->
                 <section id="view-dashboard" class="view-section active">
@@ -526,7 +555,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                         <!-- KPI 1: Present -->
                         <div onclick="openStatusModal('Present')"
-                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-green-200 transition-all group">
+                            class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-sm cursor-pointer hover:shadow-md hover:border-green-500/50 transition-all group">
                             <div class="flex justify-between items-start">
                                 <p
                                     class="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-green-600">
@@ -598,16 +627,16 @@
                     <!-- Charts Row -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <!-- App Usage Chart -->
-                        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                            <h3 class="text-lg font-bold text-gray-800 mb-4">📱 App Usage (Today)</h3>
+                        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-sm">
+                            <h3 class="text-lg font-bold text-white mb-4">📱 App Usage (Today)</h3>
                             <div class="chart-container">
                                 <canvas id="appUsageChart"></canvas>
                             </div>
                         </div>
 
                         <!-- Status Distribution -->
-                        <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                            <h3 class="text-lg font-bold text-gray-800 mb-4">📊 Status Distribution</h3>
+                        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-sm">
+                            <h3 class="text-lg font-bold text-white mb-4">📊 Status Distribution</h3>
                             <div class="chart-container">
                                 <canvas id="statusPieChart"></canvas>
                             </div>
@@ -615,10 +644,10 @@
                     </div>
 
                     <!-- Recent Activity -->
-                    <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4">📝 Recent Activity</h3>
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-sm">
+                        <h3 class="text-lg font-bold text-white mb-4">📝 Recent Activity</h3>
                         <div id="recent-activity" class="space-y-2 max-h-64 overflow-y-auto">
-                            <p class="text-gray-400 text-sm">Loading...</p>
+                            <p class="text-slate-400 text-sm">Loading...</p>
                         </div>
                     </div>
                 </section>
@@ -629,12 +658,13 @@
                         <div class="flex space-x-2">
                             <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm font-medium">Grid
                                 View</button>
-                            <button class="px-3 py-1 bg-white border border-gray-300 text-gray-600 rounded text-sm">List
+                            <button
+                                class="px-3 py-1 bg-slate-800 border border-slate-700 text-slate-300 rounded text-sm hover:text-white">List
                                 View</button>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-500">Auto-refresh in 30s</span>
-                            <button onclick="loadLiveMonitoring()" class="text-gray-400 hover:text-blue-600"><i
+                            <span class="text-sm text-slate-500">Auto-refresh in 30s</span>
+                            <button onclick="loadLiveMonitoring()" class="text-slate-400 hover:text-blue-500"><i
                                     class="fa-solid fa-rotate-right"></i></button>
                         </div>
                     </div>
@@ -647,31 +677,32 @@
                 <!-- 3. EMPLOYEES VIEW -->
                 <section id="view-employees" class="view-section">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-gray-800 text-lg">Employee Directory</h3>
+                        <h3 class="font-bold text-white text-lg">Employee Directory</h3>
                         <button id="add-employee-btn" onclick="openAddEmployeeModal()"
                             class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
                             <i class="fa-solid fa-plus mr-2"></i>Add Employee
                         </button>
                     </div>
 
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                    <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 overflow-hidden">
+                        <table class="min-w-full divide-y divide-slate-700">
+                            <thead class="bg-slate-900">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Name</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Department
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">
+                                        Department
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Status
                                     </th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Present
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Present
                                         Time</th>
-                                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions
+                                    <th class="px-6 py-3 text-right text-xs font-bold text-slate-400 uppercase">Actions
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody id="employeeTableBody" class="bg-white divide-y divide-gray-200">
+                            <tbody id="employeeTableBody" class="bg-slate-800 divide-y divide-slate-700">
                                 <tr>
-                                    <td colspan="5" class="text-center py-4 text-gray-400">Loading...</td>
+                                    <td colspan="5" class="text-center py-4 text-slate-400">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -681,31 +712,32 @@
                 <!-- 3.5 DEPARTMENTS VIEW -->
                 <section id="view-departments" class="view-section">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-gray-800 text-lg">Department Management</h3>
+                        <h3 class="font-bold text-white text-lg">Department Management</h3>
                         <div class="flex gap-2">
                             <!-- Simple Add Input for now, or modal? Keeping it simple consistent with settings style for now -->
                             <div class="flex">
                                 <input type="text" id="new-dept-name-main" placeholder="New Department Name"
-                                    class="border border-gray-300 rounded-l px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                                    class="border border-slate-600 bg-slate-700 text-white rounded-l px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder-slate-400">
                                 <button onclick="addDepartmentMain()"
                                     class="bg-blue-600 text-white px-4 py-2 rounded-r text-sm font-medium hover:bg-blue-700">Add</button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden max-w-4xl">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
+                    <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 overflow-hidden max-w-4xl">
+                        <table class="min-w-full divide-y divide-slate-700">
+                            <thead class="bg-slate-900">
                                 <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Department
+                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">
+                                        Department
                                         Name</th>
-                                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Actions
+                                    <th class="px-6 py-3 text-right text-xs font-bold text-slate-400 uppercase">Actions
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody id="departments-list-main" class="bg-white divide-y divide-gray-200">
+                            <tbody id="departments-list-main" class="bg-slate-800 divide-y divide-slate-700">
                                 <tr>
-                                    <td colspan="2" class="text-center py-4 text-gray-400">Loading...</td>
+                                    <td colspan="2" class="text-center py-4 text-slate-400">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -717,25 +749,26 @@
                 <section id="view-employee-performance" class="view-section">
                     <div class="flex justify-between items-center mb-8">
                         <div>
-                            <h3 class="font-bold text-gray-800 text-2xl">🏆 Top Performers</h3>
-                            <p class="text-sm text-gray-500">Employee performance rankings for the last 7 days</p>
+                            <h3 class="font-bold text-white text-2xl">🏆 Top Performers</h3>
+                            <p class="text-sm text-slate-400">Employee performance rankings for the last 7 days</p>
                         </div>
-                        <button onclick="loadLeaderboard()" class="text-blue-600 hover:text-blue-800 transition">
+                        <button onclick="loadLeaderboard()" class="text-blue-500 hover:text-blue-400 transition">
                             <i class="fa-solid fa-rotate-right mr-1"></i> Refresh
                         </button>
                     </div>
 
                     <!-- Podium Section (Top 3) -->
                     <div id="leaderboard-podium" class="flex justify-center items-end gap-4 mb-12 h-64">
-                        <div class="text-gray-400 text-sm">Loading Top Performers...</div>
+                        <div class="text-slate-400 text-sm">Loading Top Performers...</div>
                     </div>
 
                     <!-- The Rest of the Pack -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-4xl mx-auto">
-                        <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 font-bold text-gray-700">
+                    <div
+                        class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden max-w-4xl mx-auto">
+                        <div class="px-6 py-4 bg-slate-900 border-b border-slate-700 font-bold text-slate-300">
                             Honorable Mentions
                         </div>
-                        <div id="leaderboard-list" class="divide-y divide-gray-100">
+                        <div id="leaderboard-list" class="divide-y divide-slate-700">
                             <!-- Populated via JS -->
                         </div>
                     </div>
@@ -985,17 +1018,17 @@
                     <div class="flex flex-col md:flex-row gap-6 h-full">
                         <!-- Sidebar Controls -->
                         <div class="w-full md:w-80 flex-shrink-0 space-y-4">
-                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-                                <h3 class="font-bold text-gray-800 mb-4"><i class="fa-solid fa-filter mr-2"></i>Report
+                            <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-5">
+                                <h3 class="font-bold text-white mb-4"><i class="fa-solid fa-filter mr-2"></i>Report
                                     Filters</h3>
 
                                 <div class="space-y-4">
                                     <!-- Date Range -->
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date
+                                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Date
                                             Range</label>
                                         <select id="report-range" onchange="updateReportDates(this.value)"
-                                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            class="w-full border border-slate-600 bg-slate-700 text-white rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                             <option value="today">Today</option>
                                             <option value="week">Last 7 Days</option>
                                             <option value="month">Last 30 Days</option>
@@ -1004,25 +1037,25 @@
                                     </div>
 
                                     <div id="custom-date-start" class="hidden">
-                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start
+                                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Start
                                             Date</label>
                                         <input type="date" id="report-start"
-                                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                            class="w-full border border-slate-600 bg-slate-700 text-white rounded px-3 py-2 text-sm">
                                     </div>
 
                                     <div id="custom-date-end" class="hidden">
-                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End
+                                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">End
                                             Date</label>
                                         <input type="date" id="report-end"
-                                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                            class="w-full border border-slate-600 bg-slate-700 text-white rounded px-3 py-2 text-sm">
                                     </div>
 
                                     <!-- Filter Type -->
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Filter
+                                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Filter
                                             By</label>
                                         <select id="report-filter-type" onchange="updateReportFilters(this.value)"
-                                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            class="w-full border border-slate-600 bg-slate-700 text-white rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                             <option value="all">Entire Company</option>
                                             <option value="department">By Department</option>
                                             <option value="employee">Specific Employees</option>
@@ -1031,18 +1064,18 @@
 
                                     <!-- Multi-Select Dropdown -->
                                     <div id="report-filter-value-container" class="hidden relative">
-                                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1"
                                             id="report-filter-label">Select Value</label>
 
                                         <div class="relative">
                                             <button id="multi-select-btn" onclick="toggleMultiSelect()"
-                                                class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-left bg-white flex justify-between items-center h-10">
+                                                class="w-full border border-slate-600 rounded px-3 py-2 text-sm text-left bg-slate-700 text-white flex justify-between items-center h-10">
                                                 <span class="truncate" id="multi-select-text">Select options...</span>
-                                                <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                                                <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
                                             </button>
 
                                             <div id="multi-select-dropdown"
-                                                class="absolute z-50 w-full bg-white border border-gray-300 rounded shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
+                                                class="absolute z-50 w-full bg-slate-800 border border-slate-600 rounded shadow-lg mt-1 max-h-60 overflow-y-auto hidden">
                                                 <!-- Checkboxes populated via JS -->
                                             </div>
                                         </div>
@@ -1480,7 +1513,7 @@
         function renderRecentActivity(logs) {
             const container = document.getElementById('recent-activity');
             if (!logs || logs.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 text-sm">No recent activity</p>';
+                container.innerHTML = '<p class="text-slate-400 text-sm">No recent activity</p>';
                 return;
             }
 
@@ -1490,15 +1523,15 @@
                 const timeStr = log.timestamp.endsWith('Z') ? log.timestamp : log.timestamp + 'Z';
                 const time = new Date(timeStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 html += `
-                    <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded hover:bg-gray-100 transition">
+                    <div class="flex items-center justify-between py-2 px-3 bg-slate-900 rounded hover:bg-slate-700 transition">
                         <div class="flex items-center">
-                            <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3 text-xs">${log.employee_name.substring(0, 2).toUpperCase()}</div>
+                            <div class="h-8 w-8 rounded-full bg-blue-900/50 text-blue-400 flex items-center justify-center font-bold mr-3 text-xs">${log.employee_name.substring(0, 2).toUpperCase()}</div>
                             <div>
-                                <span class="text-sm font-medium text-gray-800">${log.employee_name}</span>
+                                <span class="text-sm font-medium text-white">${log.employee_name}</span>
                                 <span class="${statusClass} ml-2">${log.status}</span>
                             </div>
                         </div>
-                        <span class="text-xs text-gray-400">${time}</span>
+                        <span class="text-xs text-slate-400">${time}</span>
                     </div>
                 `;
             });
@@ -1515,38 +1548,38 @@
                 const statusBadge = getStatusBadge(emp.status);
                 const eyeIcon = ['Present', 'WORK_START', 'BREAK_END'].includes(emp.status)
                     ? '<div class="absolute top-2 right-2 bg-slate-900/80 text-white px-2 py-1 rounded text-xs"><i class="fa-solid fa-eye mr-1"></i> Detected</div>'
-                    : '<div class="absolute top-2 right-2 bg-red-100 text-red-700 px-2 py-1 rounded text-xs border border-red-200"><i class="fa-solid fa-eye-slash mr-1"></i> Away</div>';
+                    : '<div class="absolute top-2 right-2 bg-red-900/80 text-white px-2 py-1 rounded text-xs border border-red-800"><i class="fa-solid fa-eye-slash mr-1"></i> Away</div>';
 
                 // Image or Fallback Icon
                 let visualContent;
                 if (emp.last_screenshot) {
                     visualContent = `<img src="data:image/jpeg;base64,${emp.last_screenshot}" class="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity">`;
                 } else {
-                    visualContent = `<i class="fa-solid fa-user text-3xl text-gray-300"></i>`;
+                    visualContent = `<i class="fa-solid fa-user text-3xl text-slate-500"></i>`;
                 }
 
                 html += `
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer" onclick="window.location.href='/employee/${emp.employee_name}'">
-                        <div class="bg-gray-100 h-32 flex items-center justify-center relative overflow-hidden">
+                    <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 overflow-hidden hover:shadow-md transition cursor-pointer" onclick="window.location.href='/employee/${emp.employee_name}'">
+                        <div class="bg-slate-900 h-32 flex items-center justify-center relative overflow-hidden">
                             ${visualContent}
                             ${eyeIcon}
                         </div>
                         <div class="p-4">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <h4 class="font-bold text-gray-900 text-sm">${emp.employee_name}</h4>
-                                    <p class="text-xs text-gray-500">${emp.department || 'No department'}</p>
+                                    <h4 class="font-bold text-white text-sm">${emp.employee_name}</h4>
+                                    <p class="text-xs text-slate-400">${emp.department || 'No department'}</p>
                                 </div>
                                 ${statusBadge}
                             </div>
-                            <div class="mt-2 text-xs text-gray-500">
+                            <div class="mt-2 text-xs text-slate-500">
                                 <i class="fa-solid fa-clock mr-1"></i> ${emp.present_time || '0h 0m'} today
                             </div>
                         </div>
                     </div>
                 `;
             });
-            grid.innerHTML = html || '<p class="text-gray-400">No employees found</p>';
+            grid.innerHTML = html || '<p class="text-slate-400">No employees found</p>';
         }
 
         // --- Employees Table ---
@@ -1558,25 +1591,25 @@
             dashboardLogs.forEach(emp => {
                 const statusBadge = getStatusBadge(emp.status);
                 html += `
-                    <tr class="hover:bg-gray-50">
+                    <tr class="hover:bg-slate-700/50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap flex items-center">
-                            <div class="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3 text-xs">${emp.employee_name.substring(0, 2).toUpperCase()}</div>
-                            <span class="text-sm font-medium text-gray-900">${emp.employee_name}</span>
+                            <div class="h-8 w-8 rounded-full bg-blue-900/50 text-blue-400 flex items-center justify-center font-bold mr-3 text-xs">${emp.employee_name.substring(0, 2).toUpperCase()}</div>
+                            <span class="text-sm font-medium text-white">${emp.employee_name}</span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${emp.department || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">${emp.department || '-'}</td>
                         <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${emp.present_time || '0h 0m'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">${emp.present_time || '0h 0m'}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             ${CURRENT_USER_ROLE === 'admin' ?
-                        `<button onclick="openEditEmployeeModal(${emp.id}, '${emp.employee_name}', '${emp.department || 'Other'}')" class="text-gray-600 hover:text-blue-600 mr-3" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
-                         <button onclick="deleteEmployee(${emp.id}, '${emp.employee_name}')" class="text-red-400 hover:text-red-600 mr-3" title="Delete"><i class="fa-solid fa-trash"></i></button>`
+                        `<button onclick="openEditEmployeeModal(${emp.id}, '${emp.employee_name}', '${emp.department || 'Other'}')" class="text-slate-400 hover:text-blue-400 mr-3" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                         <button onclick="deleteEmployee(${emp.id}, '${emp.employee_name}')" class="text-slate-400 hover:text-red-400 mr-3" title="Delete"><i class="fa-solid fa-trash"></i></button>`
                         : ''}
-                            <a href="/employee/${emp.employee_name}" class="text-blue-600 hover:text-blue-900"><i class="fa-solid fa-chart-line mr-1"></i> View</a>
+                            <a href="/employee/${emp.employee_name}" class="text-blue-400 hover:text-blue-300"><i class="fa-solid fa-chart-line mr-1"></i> View</a>
                         </td>
                     </tr>
                 `;
             });
-            tbody.innerHTML = html || '<tr><td colspan="5" class="text-center py-4 text-gray-400">No employees</td></tr>';
+            tbody.innerHTML = html || '<tr><td colspan="5" class="text-center py-4 text-slate-400">No employees</td></tr>';
         }
 
         // --- Status Modal ---
@@ -1605,24 +1638,24 @@
             });
 
             if (filtered.length === 0) {
-                container.innerHTML = '<div class="p-8 text-center text-gray-500">No employees in this status.</div>';
+                container.innerHTML = '<div class="p-8 text-center text-slate-500">No employees in this status.</div>';
             } else {
                 filtered.forEach(emp => {
                     const statusBadge = getStatusBadge(emp.status);
                     const item = document.createElement('div');
-                    item.className = 'flex items-center justify-between p-3 mb-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow cursor-pointer';
+                    item.className = 'flex items-center justify-between p-3 mb-2 bg-slate-800 border border-slate-700 rounded-lg hover:shadow-sm transition-shadow cursor-pointer';
                     item.onclick = () => window.location.href = `/employee/${emp.employee_name}`;
                     item.innerHTML = `
                         <div class="flex items-center">
-                            <div class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold mr-3 text-xs">${emp.employee_name.substring(0, 2).toUpperCase()}</div>
+                            <div class="h-10 w-10 rounded-full bg-blue-900/50 text-blue-400 flex items-center justify-center font-bold mr-3 text-xs">${emp.employee_name.substring(0, 2).toUpperCase()}</div>
                             <div>
-                                <h4 class="text-sm font-bold text-gray-800">${emp.employee_name}</h4>
-                                <p class="text-xs text-gray-500">${emp.department || 'No department'}</p>
+                                <h4 class="text-sm font-bold text-white">${emp.employee_name}</h4>
+                                <p class="text-xs text-slate-400">${emp.department || 'No department'}</p>
                             </div>
                         </div>
                         <div class="text-right">
                             ${statusBadge}
-                            <p class="text-xs text-gray-400 mt-1">${emp.present_time || '0h 0m'}</p>
+                            <p class="text-xs text-slate-500 mt-1">${emp.present_time || '0h 0m'}</p>
                         </div>
                     `;
                     container.appendChild(item);
@@ -1760,15 +1793,17 @@
         function openScreenshotModal(imageData, time) {
             // Create a simple fullscreen modal for the image
             const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4';
-            modal.onclick = () => modal.remove();
+            modal.className = 'fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm';
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
             modal.innerHTML = `
-                <div class="max-w-6xl max-h-full relative">
+                <div class="max-w-6xl max-h-full relative flex flex-col items-center">
                     <button class="absolute -top-10 right-0 text-white text-xl hover:text-gray-300" onclick="this.parentElement.parentElement.remove()">
                         <i class="fa-solid fa-xmark"></i> Close
                     </button>
-                    <img src="data:image/jpeg;base64,${imageData}" alt="Screenshot" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
-                    <p class="text-center text-white text-sm mt-3">${time}</p>
+                    <img src="data:image/jpeg;base64,${imageData}" alt="Screenshot" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border border-gray-800">
+                    <p class="text-center text-gray-300 text-sm mt-3 bg-black/50 px-4 py-1 rounded-full border border-gray-700"><i class="fa-solid fa-clock mr-2"></i>${time}</p>
                 </div>
             `;
             document.body.appendChild(modal);
@@ -1916,27 +1951,27 @@
         function showInviteSuccess(link, name) {
             const modalHtml = `
                 <div id="invite-success-modal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('invite-success-modal').remove()"></div>
-                    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10 animate-fade-in-up">
+                    <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" onclick="document.getElementById('invite-success-modal').remove()"></div>
+                    <div class="bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden relative z-10 animate-fade-in-up border border-slate-700">
                         <div class="p-6 text-center">
-                            <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <div class="w-16 h-16 bg-green-900/30 text-green-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-800">
                                 <i class="fa-solid fa-envelope-circle-check text-3xl"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-gray-800 mb-2">Invitation Created!</h3>
-                            <p class="text-gray-600 mb-6">An invitation has been generated for <strong>${name}</strong>.</p>
+                            <h3 class="text-xl font-bold text-white mb-2">Invitation Created!</h3>
+                            <p class="text-slate-400 mb-6">An invitation has been generated for <strong>${name}</strong>.</p>
                             
-                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-left mb-6">
-                                <label class="text-xs font-bold uppercase text-gray-400 block mb-2">Invitation Link</label>
+                            <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 text-left mb-6">
+                                <label class="text-xs font-bold uppercase text-slate-500 block mb-2">Invitation Link</label>
                                 <div class="flex gap-2">
-                                    <input type="text" value="${link}" readonly class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono">
-                                    <button onclick="navigator.clipboard.writeText('${link}'); this.innerHTML='<i class=\'fa-solid fa-check\'></i>'" class="px-3 py-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors">
+                                    <input type="text" value="${link}" readonly class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm text-slate-300 focus:outline-none font-mono">
+                                    <button onclick="navigator.clipboard.writeText('${link}'); this.innerHTML='<i class=\'fa-solid fa-check\'></i>'" class="px-3 py-2 bg-blue-900/30 text-blue-400 rounded hover:bg-blue-900/50 transition-colors border border-blue-800">
                                         <i class="fa-regular fa-copy"></i>
                                     </button>
                                 </div>
-                                <p class="text-xs text-gray-400 mt-2"><i class="fa-solid fa-circle-info mr-1"></i>Share this link with the employee to activate their account.</p>
+                                <p class="text-xs text-slate-500 mt-2"><i class="fa-solid fa-circle-info mr-1"></i>Share this link with the employee to activate their account.</p>
                             </div>
                             
-                            <button onclick="document.getElementById('invite-success-modal').remove()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                            <button onclick="document.getElementById('invite-success-modal').remove()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg shadow-blue-900/20">
                                 Done
                             </button>
                         </div>
@@ -2070,31 +2105,31 @@
                     tbody.innerHTML = '';
 
                     if (supervisors.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-xs text-gray-400">No supervisors found.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-xs text-slate-500">No supervisors found.</td></tr>';
                         return;
                     }
 
                     supervisors.forEach(sup => {
                         const roleBadge = sup.role === 'admin'
-                            ? '<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold border border-purple-200">Admin</span>'
-                            : '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold border border-gray-200">Viewer</span>';
+                            ? '<span class="bg-purple-900/30 text-purple-400 px-2 py-0.5 rounded text-xs font-bold border border-purple-800">Admin</span>'
+                            : '<span class="bg-slate-700 text-slate-400 px-2 py-0.5 rounded text-xs font-bold border border-slate-600">Viewer</span>';
 
                         tbody.innerHTML += `
                             <tr>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
+                                        <div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 font-bold text-xs">
                                             ${sup.name.charAt(0).toUpperCase()}
                                         </div>
                                         <div class="ml-3">
-                                            <div class="text-sm font-medium text-gray-900">${sup.name}</div>
-                                            <div class="text-xs text-gray-500">${sup.email}</div>
+                                            <div class="text-sm font-medium text-white">${sup.name}</div>
+                                            <div class="text-xs text-slate-500">${sup.email}</div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${roleBadge}</td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-400">${roleBadge}</td>
                                 <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                                    <span class="text-gray-300 text-xs italic">Active</span>
+                                    <span class="text-slate-600 text-xs italic">Active</span>
                                 </td>
                             </tr>
                         `;

@@ -139,6 +139,11 @@ async def privacy_page(request: Request):
 # ===============================
 # AUTHENTICATION ROUTES
 # ===============================
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """Serve landing page by default"""
+    return templates.TemplateResponse("landing.html", {"request": request})
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """Render login page"""
