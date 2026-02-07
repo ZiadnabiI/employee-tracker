@@ -1508,6 +1508,40 @@ async def update_settings(settings: SettingsUpdate, request: Request, db: Sessio
     
     raise HTTPException(status_code=404, detail="Company not found")
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@app.post("/api/change-password")
+async def change_password(data: ChangePasswordRequest, request: Request, db: Session = Depends(get_db)):
+    """Change the current user's password"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    supervisor = db.query(Supervisor).filter(Supervisor.id == token_data["supervisor_id"]).first()
+    
+    if not supervisor:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify current password
+    if not supervisor.password_hash:
+        raise HTTPException(status_code=400, detail="No password set. Please contact admin.")
+    
+    if not verify_password(data.current_password, supervisor.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Validate new password
+    if len(data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    
+    # Hash and save new password
+    supervisor.password_hash = hash_password(data.new_password)
+    db.commit()
+    
+    return {"status": "ok", "message": "Password updated successfully"}
+
 # ===============================
 # INVITATION & APP AUTH SYSTEM
 # ===============================

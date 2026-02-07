@@ -904,6 +904,43 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Change Password Card -->
+                    <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6 max-w-3xl mt-6">
+                        <h4 class="text-lg font-bold text-gray-800 mb-4">
+                            <i class="fa-solid fa-key mr-2"></i>Change Password
+                        </h4>
+                        <p class="text-sm text-gray-500 mb-4">Update your account password.</p>
+
+                        <div class="space-y-4 max-w-md">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Current
+                                    Password</label>
+                                <input type="password" id="current-password"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="Enter current password">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">New Password</label>
+                                <input type="password" id="new-password"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="Enter new password (min 8 characters)">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Confirm New
+                                    Password</label>
+                                <input type="password" id="confirm-password"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="Confirm new password">
+                            </div>
+                            <div id="password-error" class="hidden text-red-500 text-sm"></div>
+                            <div id="password-success" class="hidden text-green-500 text-sm"></div>
+                            <button onclick="changePassword()"
+                                class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 shadow-sm transition-all">
+                                <i class="fa-solid fa-lock mr-2"></i>Update Password
+                            </button>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- 6. SCREENSHOTS VIEW -->
@@ -2997,6 +3034,66 @@
         // if (!localStorage.getItem('inframe_tour_completed')) {
         //     setTimeout(() => startTour(), 2000);
         // }
+
+        // Change Password function
+        async function changePassword() {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const errorEl = document.getElementById('password-error');
+            const successEl = document.getElementById('password-success');
+
+            // Clear previous messages
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                errorEl.textContent = 'Please fill in all fields.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                errorEl.textContent = 'New password must be at least 8 characters.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                errorEl.textContent = 'New passwords do not match.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successEl.textContent = 'Password updated successfully!';
+                    successEl.classList.remove('hidden');
+                    // Clear form
+                    document.getElementById('current-password').value = '';
+                    document.getElementById('new-password').value = '';
+                    document.getElementById('confirm-password').value = '';
+                } else {
+                    errorEl.textContent = data.detail || 'Failed to update password.';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (e) {
+                errorEl.textContent = 'Error: ' + e.message;
+                errorEl.classList.remove('hidden');
+            }
+        }
     </script>
 </body>
 
