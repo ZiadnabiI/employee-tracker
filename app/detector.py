@@ -35,7 +35,7 @@ except:
 # CONFIGURATION
 # =============================================================================
 
-SERVER_URL = os.getenv("SERVER_URL", "https://employee-tracker-up30.onrender.com")
+SERVER_URL = os.getenv("SERVER_URL", "https://inframe.azurewebsites.net")
 CONFIDENCE_THRESHOLD = 0.6 
 AWAY_LIMIT = 10
 PRESENT_LIMIT = 3

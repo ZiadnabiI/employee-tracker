@@ -20,7 +20,9 @@ stripe.api_key = STRIPE_SECRET_KEY
 
 
 from pydantic import BaseModel
+import base64
 from database import SessionLocal, engine, Company, Supervisor, Employee, EmployeeLog, AppLog, Screenshot, Department, Base, engine
+from blob_storage import upload_screenshot as blob_upload_screenshot, delete_screenshot as blob_delete_screenshot
 from auth import (
     hash_password, verify_password, create_token, verify_token, 
     invalidate_token, get_token_from_cookies, get_current_supervisor, require_auth
@@ -576,7 +578,7 @@ async def get_dashboard_stats(request: Request, db: Session = Depends(get_db)):
             "status": status,
             "timestamp": last_log.timestamp if last_log else datetime.datetime.utcnow(),
             "present_time": f"{int(user_present//3600)}h {int((user_present%3600)//60)}m",
-            "last_screenshot": latest_screenshot.image_data if latest_screenshot else None
+            "last_screenshot": latest_screenshot.blob_url if latest_screenshot else None
         })
 
     return {
@@ -1409,27 +1411,45 @@ class ScreenshotUpload(BaseModel):
 
 @app.post("/api/screenshot")
 async def upload_screenshot(data: ScreenshotUpload, db: Session = Depends(get_db)):
-    """Receive screenshot from detector app"""
+    """Receive screenshot from detector app, uploads to Azure Blob Storage"""
     # Verify activation key
     employee = db.query(Employee).filter(Employee.activation_key == data.activation_key).first()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     
-    # Save screenshot (store only last 50 per employee to save space)
+    # Decode base64 to bytes and upload to Azure Blob Storage
+    try:
+        image_bytes = base64.b64decode(data.screenshot_data)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid base64 image data")
+    
+    blob_url = blob_upload_screenshot(
+        employee_name=employee.name,
+        company_id=employee.company_id or 0,
+        image_bytes=image_bytes,
+        manual=data.manual_request
+    )
+    
+    if not blob_url:
+        raise HTTPException(status_code=500, detail="Failed to upload screenshot to storage")
+    
+    # Clean up old screenshots (keep last 50 per employee)
     old_screenshots = db.query(Screenshot).filter(
         Screenshot.employee_name == employee.name
     ).order_by(Screenshot.timestamp.asc()).all()
     
-    # Delete oldest if more than 50
     if len(old_screenshots) >= 50:
         for old in old_screenshots[:-49]:
+            # Delete blob from Azure
+            if old.blob_url:
+                blob_delete_screenshot(old.blob_url)
             db.delete(old)
     
-    # Create new screenshot
+    # Create new screenshot record with blob URL
     new_screenshot = Screenshot(
         employee_name=employee.name,
         company_id=employee.company_id,
-        image_data=data.screenshot_data,
+        blob_url=blob_url,
         manual_request=1 if data.manual_request else 0
     )
     db.add(new_screenshot)
@@ -1452,7 +1472,7 @@ async def get_employee_screenshots(employee_name: str, request: Request, limit: 
     return [{
         "id": s.id,
         "timestamp": s.timestamp.isoformat() if s.timestamp else None,
-        "image_data": s.image_data,
+        "blob_url": s.blob_url,
         "manual_request": bool(s.manual_request)
     } for s in screenshots]
 

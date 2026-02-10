@@ -114,7 +114,7 @@ class Screenshot(Base):
     id = Column(Integer, primary_key=True, index=True)
     employee_name = Column(String, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
-    image_data = Column(String)  # Base64 encoded image
+    blob_url = Column(String)  # Azure Blob Storage URL
     manual_request = Column(Integer, default=0)  # 1 if manually requested by supervisor
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 

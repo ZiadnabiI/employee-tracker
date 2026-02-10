@@ -287,10 +287,12 @@
 <body class="bg-slate-900 text-white antialiased">
 
     <!-- Navigation -->
-    <nav class="fixed w-full z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800 animate-fade-in-up">
+    <nav
+        class="fixed w-full z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800 animate-fade-in-up transition-all duration-300">
         <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="/home" class="flex items-center gap-2 group">
-                <img src="/static/LOGO.png" alt="inframe" class="h-28 transition-transform group-hover:scale-105"
+            <a href="/home" class="flex items-center gap-2 group relative z-10">
+                <img src="/static/LOGO.png" alt="inframe"
+                    class="h-12 scale-150 origin-left transition-transform group-hover:scale-[1.6]"
                     onerror="this.style.display='none'">
             </a>
             <div class="hidden md:flex items-center space-x-8">

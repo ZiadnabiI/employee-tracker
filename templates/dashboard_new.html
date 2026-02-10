@@ -480,8 +480,11 @@
         <aside
             class="w-64 bg-slate-950 text-white flex flex-col flex-shrink-0 transition-all duration-300 border-r border-slate-800">
             <!-- Brand -->
-            <div class="h-28 flex items-center justify-center px-4 border-b border-slate-800">
-                <img src="/static/LOGO.png" alt="InFrame" class="max-h-24 w-auto" onerror="this.style.display='none'">
+            <!-- Brand -->
+            <div class="h-16 flex items-center justify-center px-4 border-b border-slate-800 overflow-visible">
+                <img src="/static/LOGO.png" alt="InFrame"
+                    class="max-h-12 w-auto scale-125 transition-transform hover:scale-[1.35]"
+                    onerror="this.style.display='none'">
             </div>
 
             <!-- Menu -->
@@ -1553,7 +1556,7 @@
                 // Image or Fallback Icon
                 let visualContent;
                 if (emp.last_screenshot) {
-                    visualContent = `<img src="data:image/jpeg;base64,${emp.last_screenshot}" class="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity">`;
+                    visualContent = `<img src="${emp.last_screenshot}" class="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity">`;
                 } else {
                     visualContent = `<i class="fa-solid fa-user text-3xl text-slate-500"></i>`;
                 }
@@ -1758,9 +1761,9 @@
                 screenshots.forEach((s, idx) => {
                     const time = s.timestamp ? new Date(s.timestamp).toLocaleString() : 'Unknown time';
                     html += `
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer" onclick="openScreenshotModal('${s.image_data}', '${time}')">
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition cursor-pointer" onclick="openScreenshotModal('${s.blob_url}', '${time}')">
                             <div class="aspect-video bg-gray-100 relative overflow-hidden">
-                                <img src="data:image/jpeg;base64,${s.image_data}" alt="Screenshot" class="w-full h-full object-cover" loading="lazy">
+                                <img src="${s.blob_url}" alt="Screenshot" class="w-full h-full object-cover" loading="lazy">
                                 ${s.manual_request ? '<span class="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">Requested</span>' : ''}
                             </div>
                             <div class="p-3">
@@ -1802,7 +1805,7 @@
                     <button class="absolute -top-10 right-0 text-white text-xl hover:text-gray-300" onclick="this.parentElement.parentElement.remove()">
                         <i class="fa-solid fa-xmark"></i> Close
                     </button>
-                    <img src="data:image/jpeg;base64,${imageData}" alt="Screenshot" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border border-gray-800">
+                    <img src="${imageData}" alt="Screenshot" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl border border-gray-800">
                     <p class="text-center text-gray-300 text-sm mt-3 bg-black/50 px-4 py-1 rounded-full border border-gray-700"><i class="fa-solid fa-clock mr-2"></i>${time}</p>
                 </div>
             `;
