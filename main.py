@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 import stripe
 import os
 
@@ -1678,8 +1679,10 @@ async def register_employee(data: EmployeeRegister, db: Session = Depends(get_db
     if existing and existing.id != employee.id:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    employee.password_hash = hash_password(data.password)
-    employee.email = data.email
+    # Strip whitespace from password to ensure consistency with desktop app
+    # Robust handling: strip padding spaces + lowercase email
+    employee.password_hash = hash_password(data.password.strip())
+    employee.email = data.email.lower().strip()
     employee.is_registered = 1
     employee.invite_token = None # Invalidate token
     db.commit()
@@ -1689,12 +1692,24 @@ async def register_employee(data: EmployeeRegister, db: Session = Depends(get_db
 @app.post("/api/app-login")
 async def app_login(data: AppLogin, db: Session = Depends(get_db)):
     """Authenticate desktop app"""
-    employee = db.query(Employee).filter(Employee.email == data.email).first()
+    # Robust handling
+    email_clean = data.email.lower().strip()
+    pwd_clean = data.password.strip()
     
-    if not employee or not employee.password_hash:
+    print(f"Login attempt for: {email_clean}")
+    
+    employee = db.query(Employee).filter(func.lower(Employee.email) == email_clean).first()
+    
+    if not employee:
+        print(f"❌ Login failed: User not found ({email_clean})")
         raise HTTPException(status_code=401, detail="Invalid credentials")
         
-    if not verify_password(data.password, employee.password_hash):
+    if not employee.password_hash:
+        print(f"❌ Login failed: No password set for ({email_clean})")
+        raise HTTPException(status_code=401, detail="Account not activated")
+        
+    if not verify_password(pwd_clean, employee.password_hash):
+        print(f"❌ Login failed: Password mismatch for ({email_clean})")
         raise HTTPException(status_code=401, detail="Invalid credentials")
         
     # Return activation key for internal use
