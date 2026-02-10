@@ -1708,9 +1708,13 @@ async def app_login(data: AppLogin, db: Session = Depends(get_db)):
         print(f"❌ Login failed: No password set for ({email_clean})")
         raise HTTPException(status_code=401, detail="Account not activated")
         
-    if not verify_password(pwd_clean, employee.password_hash):
-        print(f"❌ Login failed: Password mismatch for ({email_clean})")
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    try:
+        if not verify_password(pwd_clean, employee.password_hash):
+            print(f"❌ Login failed: Password mismatch for ({email_clean})")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    except Exception as e:
+        print(f"❌ Login failed: Hash verification error (legacy?): {e}")
+        raise HTTPException(status_code=401, detail="Login failed - contact admin")
         
     # Return activation key for internal use
     return {
