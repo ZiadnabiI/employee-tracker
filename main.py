@@ -138,13 +138,6 @@ async def privacy_page(request: Request):
     """Public privacy policy page"""
     return templates.TemplateResponse("privacy.html", {"request": request})
 
-# ===============================
-# AUTHENTICATION ROUTES
-# ===============================
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    """Serve landing page by default"""
-    return templates.TemplateResponse("landing.html", {"request": request})
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -152,7 +145,7 @@ async def login_page(request: Request):
     # Check if already logged in
     token = get_token_from_cookies(request)
     if token and verify_token(token):
-        return RedirectResponse(url="/dashboard", status_code=302)
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
 @app.post("/login")
@@ -174,7 +167,7 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     )
     
     # Set cookie and redirect
-    response = RedirectResponse(url="/dashboard", status_code=302)
+    response = RedirectResponse(url="/", status_code=302)
     response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
     return response
 
