@@ -8,6 +8,18 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 950: '#020617' }
+                    }
+                }
+            }
+        }
+    </script>
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -424,7 +436,8 @@
     </style>
 </head>
 
-<body class="h-screen overflow-hidden flex flex-col">
+<body
+    class="h-screen overflow-hidden flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
 
     <!-- PROFESSIONAL SUCCESS MODAL -->
     <div id="success-modal" class="modal-overlay">
@@ -478,7 +491,7 @@
 
         <!-- SIDEBAR NAVIGATION -->
         <aside
-            class="w-64 bg-slate-950 text-white flex flex-col flex-shrink-0 transition-all duration-300 border-r border-slate-800">
+            class="w-64 bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col flex-shrink-0 transition-all duration-300 border-r border-slate-200 dark:border-slate-800">
             <!-- Brand -->
             <!-- Brand -->
             <div class="h-16 flex items-center justify-center px-4 border-b border-slate-800 overflow-visible">
@@ -536,21 +549,28 @@
         </aside>
 
         <!-- MAIN CONTENT AREA -->
-        <main class="flex-1 flex flex-col bg-slate-900 min-w-0">
+        <main class="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 min-w-0 transition-colors duration-300">
             <!-- Top Header -->
             <header
-                class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shadow-sm z-10">
-                <h2 id="page-title" class="text-xl font-bold text-white">Dashboard</h2>
+                class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shadow-sm z-10 transition-colors duration-300">
+                <h2 id="page-title" class="text-xl font-bold text-slate-800 dark:text-white">Dashboard</h2>
                 <div class="flex items-center space-x-4">
+                    <button id="theme-toggle" class="p-2 text-slate-400 hover:text-yellow-400 transition-colors"
+                        onclick="toggleTheme()" title="Toggle Theme">
+                        <i class="fa-solid fa-sun hidden dark:block text-lg"></i>
+                        <i class="fa-solid fa-moon block dark:hidden text-lg"></i>
+                    </button>
 
-                    <button class="p-2 text-slate-400 hover:text-blue-500 relative" onclick="location.reload()">
+                    <button class="p-2 text-slate-400 hover:text-blue-500 relative" onclick="location.reload()"
+                        title="Refresh">
                         <i class="fa-solid fa-rotate-right text-lg"></i>
                     </button>
                 </div>
             </header>
 
             <!-- CONTENT VIEWS WRAPPER -->
-            <div class="flex-1 overflow-auto p-6 scroll-smooth bg-slate-900">
+            <div
+                class="flex-1 overflow-auto p-6 scroll-smooth bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
 
                 <!-- 1. DASHBOARD VIEW -->
                 <section id="view-dashboard" class="view-section active">
@@ -558,7 +578,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                         <!-- KPI 1: Present -->
                         <div onclick="openStatusModal('Present')"
-                            class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-sm cursor-pointer hover:shadow-md hover:border-green-500/50 transition-all group">
+                            class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm cursor-pointer hover:shadow-md hover:border-green-500/50 transition-all group">
                             <div class="flex justify-between items-start">
                                 <p
                                     class="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-green-600">
@@ -566,7 +586,7 @@
                                 <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-green-400"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-present">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-present">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                                     <i class="fa-solid fa-check"></i>
@@ -576,7 +596,7 @@
 
                         <!-- KPI 2: On Break -->
                         <div onclick="openStatusModal('Break')"
-                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-yellow-200 transition-all group">
+                            class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer hover:shadow-md hover:border-yellow-200 transition-all group">
                             <div class="flex justify-between items-start">
                                 <p
                                     class="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-yellow-600">
@@ -584,7 +604,7 @@
                                 <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-yellow-400"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-break">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-break">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
                                     <i class="fa-solid fa-coffee"></i>
@@ -594,7 +614,7 @@
 
                         <!-- KPI 3: Away -->
                         <div onclick="openStatusModal('Away')"
-                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-red-200 transition-all group">
+                            class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer hover:shadow-md hover:border-red-200 transition-all group">
                             <div class="flex justify-between items-start">
                                 <p
                                     class="text-xs font-bold text-gray-500 uppercase tracking-wider group-hover:text-red-600">
@@ -602,7 +622,7 @@
                                 <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-red-400"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-away">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-away">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
                                     <i class="fa-solid fa-clock-rotate-left"></i>
@@ -612,13 +632,13 @@
 
                         <!-- KPI 4: Offline -->
                         <div onclick="openStatusModal('Offline')"
-                            class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
+                            class="bg-white dark:bg-slate-800 p-5 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm cursor-pointer hover:shadow-md hover:border-gray-300 transition-all group">
                             <div class="flex justify-between items-start">
                                 <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Offline</p>
                                 <i class="fa-solid fa-expand text-gray-300 text-xs"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800" id="kpi-offline">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-offline">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
                                     <i class="fa-solid fa-power-off"></i>
@@ -630,16 +650,18 @@
                     <!-- Charts Row -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <!-- App Usage Chart -->
-                        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-sm">
-                            <h3 class="text-lg font-bold text-white mb-4">📱 App Usage (Today)</h3>
+                        <div
+                            class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">📱 App Usage (Today)</h3>
                             <div class="chart-container">
                                 <canvas id="appUsageChart"></canvas>
                             </div>
                         </div>
 
                         <!-- Status Distribution -->
-                        <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-sm">
-                            <h3 class="text-lg font-bold text-white mb-4">📊 Status Distribution</h3>
+                        <div
+                            class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">📊 Status Distribution</h3>
                             <div class="chart-container">
                                 <canvas id="statusPieChart"></canvas>
                             </div>
@@ -647,8 +669,9 @@
                     </div>
 
                     <!-- Recent Activity -->
-                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-sm">
-                        <h3 class="text-lg font-bold text-white mb-4">📝 Recent Activity</h3>
+                    <div
+                        class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">📝 Recent Activity</h3>
                         <div id="recent-activity" class="space-y-2 max-h-64 overflow-y-auto">
                             <p class="text-slate-400 text-sm">Loading...</p>
                         </div>
@@ -680,16 +703,17 @@
                 <!-- 3. EMPLOYEES VIEW -->
                 <section id="view-employees" class="view-section">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-white text-lg">Employee Directory</h3>
+                        <h3 class="font-bold text-gray-800 dark:text-white text-lg">Employee Directory</h3>
                         <button id="add-employee-btn" onclick="openAddEmployeeModal()"
                             class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
                             <i class="fa-solid fa-plus mr-2"></i>Add Employee
                         </button>
                     </div>
 
-                    <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 overflow-hidden">
+                    <div
+                        class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                         <table class="min-w-full divide-y divide-slate-700">
-                            <thead class="bg-slate-900">
+                            <thead class="bg-gray-50 dark:bg-slate-900">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Name</th>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">
@@ -703,7 +727,8 @@
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody id="employeeTableBody" class="bg-slate-800 divide-y divide-slate-700">
+                            <tbody id="employeeTableBody"
+                                class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
                                 <tr>
                                     <td colspan="5" class="text-center py-4 text-slate-400">Loading...</td>
                                 </tr>
@@ -715,21 +740,22 @@
                 <!-- 3.5 DEPARTMENTS VIEW -->
                 <section id="view-departments" class="view-section">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-white text-lg">Department Management</h3>
+                        <h3 class="font-bold text-gray-800 dark:text-white text-lg">Department Management</h3>
                         <div class="flex gap-2">
                             <!-- Simple Add Input for now, or modal? Keeping it simple consistent with settings style for now -->
                             <div class="flex">
                                 <input type="text" id="new-dept-name-main" placeholder="New Department Name"
-                                    class="border border-slate-600 bg-slate-700 text-white rounded-l px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder-slate-400">
+                                    class="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-l px-3 py-2 text-sm focus:outline-none focus:border-blue-500 placeholder-slate-400">
                                 <button onclick="addDepartmentMain()"
                                     class="bg-blue-600 text-white px-4 py-2 rounded-r text-sm font-medium hover:bg-blue-700">Add</button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 overflow-hidden max-w-4xl">
+                    <div
+                        class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden max-w-4xl">
                         <table class="min-w-full divide-y divide-slate-700">
-                            <thead class="bg-slate-900">
+                            <thead class="bg-gray-50 dark:bg-slate-900">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">
                                         Department
@@ -738,7 +764,8 @@
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody id="departments-list-main" class="bg-slate-800 divide-y divide-slate-700">
+                            <tbody id="departments-list-main"
+                                class="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
                                 <tr>
                                     <td colspan="2" class="text-center py-4 text-slate-400">Loading...</td>
                                 </tr>
@@ -752,7 +779,7 @@
                 <section id="view-employee-performance" class="view-section">
                     <div class="flex justify-between items-center mb-8">
                         <div>
-                            <h3 class="font-bold text-white text-2xl">🏆 Top Performers</h3>
+                            <h3 class="font-bold text-gray-800 dark:text-white text-2xl">🏆 Top Performers</h3>
                             <p class="text-sm text-slate-400">Employee performance rankings for the last 7 days</p>
                         </div>
                         <button onclick="loadLeaderboard()" class="text-blue-500 hover:text-blue-400 transition">
@@ -768,7 +795,8 @@
                     <!-- The Rest of the Pack -->
                     <div
                         class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden max-w-4xl mx-auto">
-                        <div class="px-6 py-4 bg-slate-900 border-b border-slate-700 font-bold text-slate-300">
+                        <div
+                            class="px-6 py-4 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 font-bold text-gray-700 dark:text-slate-300">
                             Honorable Mentions
                         </div>
                         <div id="leaderboard-list" class="divide-y divide-slate-700">
@@ -781,11 +809,11 @@
                 <section id="view-settings" class="view-section">
                     <!-- Subscription Status Card -->
                     <div id="subscription-card"
-                        class="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 mb-6 max-w-3xl">
+                        class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-900 border border-blue-200 dark:border-slate-700 rounded-xl p-6 mb-6 max-w-3xl">
                         <div class="flex justify-between items-center">
                             <div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-800">Current Plan:</h4>
+                                    <h4 class="font-bold text-gray-800 dark:text-white">Current Plan:</h4>
                                     <span id="current-plan" class="text-blue-600 font-bold uppercase">Loading...</span>
                                     <span id="plan-badge"
                                         class="hidden bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">PRO</span>
@@ -827,13 +855,15 @@
                         </div>
                     </div>
 
-                    <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6 max-w-3xl">
-                        <h4 class="text-lg font-bold text-gray-800 mb-4">Monitoring Configuration</h4>
+                    <div
+                        class="bg-white dark:bg-slate-800 shadow-sm border border-gray-200 dark:border-slate-700 rounded-lg p-6 max-w-3xl">
+                        <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Monitoring Configuration</h4>
 
-                        <div class="flex items-center justify-between py-4 border-b border-gray-100">
+                        <div
+                            class="flex items-center justify-between py-4 border-b border-gray-100 dark:border-slate-700">
                             <div>
-                                <h5 class="font-bold text-gray-700">Camera Presence Detection</h5>
-                                <p class="text-xs text-gray-500 max-w-md mt-1">
+                                <h5 class="font-bold text-gray-700 dark:text-gray-200">Camera Presence Detection</h5>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 max-w-md mt-1">
                                     Uses local AI to detect if the employee is in front of the screen.
                                     <span class="text-blue-600 font-bold">No video is recorded or transmitted.</span>
                                     (Privacy Safe)
@@ -848,11 +878,13 @@
                         </div>
 
                         <!-- Data Loss Prevention (DLP) -->
-                        <div class="flex items-center justify-between py-4 border-b border-gray-100">
+                        <div
+                            class="flex items-center justify-between py-4 border-b border-gray-100 dark:border-slate-700">
                             <div>
-                                <h5 class="font-bold text-gray-700"><i class="fa-solid fa-user-secret mr-2"></i>Data
+                                <h5 class="font-bold text-gray-700 dark:text-gray-200"><i
+                                        class="fa-solid fa-user-secret mr-2"></i>Data
                                     Loss Prevention (DLP)</h5>
-                                <p class="text-xs text-gray-500 max-w-md mt-1">
+                                <p class="text-xs text-gray-500 dark:text-gray-400 max-w-md mt-1">
                                     Automatically detect sensitive windows (e.g. Banking, Email, Passwords) and
                                     <span class="text-red-500 font-bold">blur the screenshot</span> to protect privacy.
                                 </p>
@@ -865,11 +897,12 @@
                             </label>
                         </div>
 
-                        <div class="py-6 border-b border-gray-100">
+                        <div class="py-6 border-b border-gray-100 dark:border-slate-700">
                             <div class="flex justify-between items-center mb-4">
                                 <div>
-                                    <h5 class="font-bold text-gray-700">Screenshot Frequency</h5>
-                                    <p class="text-xs text-gray-500">How often to capture screenshots from employee
+                                    <h5 class="font-bold text-gray-700 dark:text-gray-200">Screenshot Frequency</h5>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">How often to capture screenshots
+                                        from employee
                                         devices.</p>
                                 </div>
                                 <span id="freq-display"
@@ -892,9 +925,11 @@
                         <div class="py-6">
                             <div class="flex justify-between items-center mb-4">
                                 <div>
-                                    <h5 class="font-bold text-gray-700"><i class="fa-solid fa-users-gear mr-2"></i>Team
+                                    <h5 class="font-bold text-gray-700 dark:text-gray-200"><i
+                                            class="fa-solid fa-users-gear mr-2"></i>Team
                                         Management</h5>
-                                    <p class="text-xs text-gray-500">Manage supervisors who can access this dashboard.
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">Manage supervisors who can
+                                        access this dashboard.
                                     </p>
                                 </div>
                                 <button id="add-supervisor-btn" onclick="openAddSupervisorModal()"
@@ -903,20 +938,23 @@
                                 </button>
                             </div>
 
-                            <div class="bg-gray-50 rounded-lg border border-gray-100 overflow-hidden">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-100">
+                            <div
+                                class="bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                                    <thead class="bg-gray-100 dark:bg-slate-800">
                                         <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                            <th
+                                                class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">
                                                 Name</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                            <th
+                                                class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">
                                                 Role</th>
                                             <th
-                                                class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                                class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase">
                                                 Action</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="supervisors-list" class="divide-y divide-gray-200">
+                                    <tbody id="supervisors-list" class="divide-y divide-gray-200 dark:divide-slate-700">
                                         <tr>
                                             <td colspan="3" class="px-4 py-4 text-center text-xs text-gray-400">
                                                 Loading...</td>
@@ -935,19 +973,21 @@
                     </div>
 
                     <!-- Change Password Card -->
-                    <div class="bg-white shadow-sm border border-gray-200 rounded-lg p-6 max-w-3xl mt-6">
-                        <h4 class="text-lg font-bold text-gray-800 mb-4">
+                    <div
+                        class="bg-white dark:bg-slate-800 shadow-sm border border-gray-200 dark:border-slate-700 rounded-lg p-6 max-w-3xl mt-6">
+                        <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-4">
                             <i class="fa-solid fa-key mr-2"></i>Change Password
                         </h4>
-                        <p class="text-sm text-gray-500 mb-4">Update your account password.</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Update your account password.</p>
 
                         <div class="space-y-4 max-w-md">
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Current
+                                <label
+                                    class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Current
                                     Password</label>
                                 <div class="relative">
                                     <input type="password" id="current-password"
-                                        class="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Enter current password">
                                     <button type="button" onclick="togglePasswordVisibility('current-password', this)"
                                         class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600">
@@ -956,10 +996,12 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">New Password</label>
+                                <label
+                                    class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">New
+                                    Password</label>
                                 <div class="relative">
                                     <input type="password" id="new-password"
-                                        class="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Enter new password (min 8 characters)">
                                     <button type="button" onclick="togglePasswordVisibility('new-password', this)"
                                         class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600">
@@ -968,11 +1010,13 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Confirm New
+                                <label
+                                    class="block text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-1">Confirm
+                                    New
                                     Password</label>
                                 <div class="relative">
                                     <input type="password" id="confirm-password"
-                                        class="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Confirm new password">
                                     <button type="button" onclick="togglePasswordVisibility('confirm-password', this)"
                                         class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600">
@@ -994,11 +1038,13 @@
                 <section id="view-screenshots" class="view-section">
                     <div class="flex justify-between items-center mb-6">
                         <div>
-                            <h3 class="font-bold text-gray-800 text-lg">Screenshot Gallery</h3>
-                            <p class="text-sm text-gray-500">Recent screen captures from employees</p>
+                            <h3 class="font-bold text-gray-800 dark:text-white text-lg">Screenshot Gallery</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Recent screen captures from employees
+                            </p>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <select id="screenshotFilter" class="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                            <select id="screenshotFilter"
+                                class="border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm"
                                 onchange="loadScreenshots()">
                                 <option value="">All Employees</option>
                             </select>
@@ -1021,8 +1067,10 @@
                     <div class="flex flex-col md:flex-row gap-6 h-full">
                         <!-- Sidebar Controls -->
                         <div class="w-full md:w-80 flex-shrink-0 space-y-4">
-                            <div class="bg-slate-800 rounded-lg shadow-sm border border-slate-700 p-5">
-                                <h3 class="font-bold text-white mb-4"><i class="fa-solid fa-filter mr-2"></i>Report
+                            <div
+                                class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-5">
+                                <h3 class="font-bold text-gray-800 dark:text-white mb-4"><i
+                                        class="fa-solid fa-filter mr-2"></i>Report
                                     Filters</h3>
 
                                 <div class="space-y-4">
@@ -1031,7 +1079,7 @@
                                         <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Date
                                             Range</label>
                                         <select id="report-range" onchange="updateReportDates(this.value)"
-                                            class="w-full border border-slate-600 bg-slate-700 text-white rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                             <option value="today">Today</option>
                                             <option value="week">Last 7 Days</option>
                                             <option value="month">Last 30 Days</option>
@@ -1058,7 +1106,7 @@
                                         <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Filter
                                             By</label>
                                         <select id="report-filter-type" onchange="updateReportFilters(this.value)"
-                                            class="w-full border border-slate-600 bg-slate-700 text-white rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                            class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                                             <option value="all">Entire Company</option>
                                             <option value="department">By Department</option>
                                             <option value="employee">Specific Employees</option>
@@ -1096,7 +1144,7 @@
                         <div class="flex-1 min-w-0" id="report-results-area">
                             <!-- Placeholder State -->
                             <div id="report-placeholder"
-                                class="h-full flex flex-col items-center justify-center text-gray-400 bg-white rounded-lg border border-gray-200 border-dashed p-10 min-h-[400px]">
+                                class="h-full flex flex-col items-center justify-center text-gray-400 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 border-dashed p-10 min-h-[400px]">
                                 <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                                     <i class="fa-solid fa-chart-pie text-3xl text-gray-300"></i>
                                 </div>
@@ -3157,6 +3205,24 @@
                 input.type = 'password';
                 icon.classList.remove('fa-eye-slash');
                 icon.classList.add('fa-eye');
+            }
+        }
+    </script>
+    <script>
+        // Check local storage or system preference
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
             }
         }
     </script>
