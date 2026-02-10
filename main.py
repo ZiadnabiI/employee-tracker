@@ -175,7 +175,7 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     
     # Set cookie and redirect
     response = RedirectResponse(url="/", status_code=302)
-    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+    response.set_cookie(key="auth_token", value=token, httponly=True, secure=True, samesite="lax", max_age=86400)
     return response
 
 @app.get("/logout")
@@ -252,7 +252,7 @@ async def register_company(
 
     # Redirect to dashboard
     response = RedirectResponse(url="/?welcome=true", status_code=302)
-    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+    response.set_cookie(key="auth_token", value=token, httponly=True, secure=True, samesite="lax", max_age=86400)
     return response
 
 # ===============================
@@ -347,7 +347,7 @@ async def delete_department(dept_id: int, request: Request, db: Session = Depend
                     company_id=new_company.id,
                     is_super_admin=False
                 )
-                response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+                response.set_cookie(key="auth_token", value=token, httponly=True, secure=True, samesite="lax", max_age=86400)
                 return response
         except Exception as e:
             print(f"Stripe error during registration: {e}")
@@ -359,7 +359,7 @@ async def delete_department(dept_id: int, request: Request, db: Session = Depend
         is_super_admin=False
     )
     response = RedirectResponse(url="/choose-plan", status_code=302)
-    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+    response.set_cookie(key="auth_token", value=token, httponly=True, secure=True, samesite="lax", max_age=86400)
     return response
 
 # ===============================

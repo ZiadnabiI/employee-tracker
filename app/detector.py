@@ -35,7 +35,7 @@ except:
 # CONFIGURATION
 # =============================================================================
 
-SERVER_URL = os.getenv("SERVER_URL", "https://inframe.azurewebsites.net")
+SERVER_URL = os.getenv("SERVER_URL", "https://inframe-dab3gthvbkgpe2dp.italynorth-01.azurewebsites.net")
 CONFIDENCE_THRESHOLD = 0.6 
 AWAY_LIMIT = 10
 PRESENT_LIMIT = 3
