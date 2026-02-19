@@ -249,6 +249,9 @@ class App(DraggableWindow):
         self.monitoring_active = False
         self.in_break_mode = False
         self.employee_name = "Employee"
+        self.warning_snoozed_until = 0
+        self.consecutive_away = 0
+        self.consecutive_present = 0
         
         # Stats
         self.present_seconds = 0
@@ -539,8 +542,9 @@ class App(DraggableWindow):
         model = YOLO("yolo11n.pt")
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         
-        consecutive_away = 0
-        consecutive_present = 0
+        self.consecutive_away = 0
+        self.consecutive_present = 0
+        consecutive_cam_errors = 0
         
         while self.is_running:
             try:
@@ -549,34 +553,48 @@ class App(DraggableWindow):
                     continue
                     
                 ret, frame = cap.read()
-                if not ret:
-                    time.sleep(1)
-                    continue
-                    
-                results = model(frame, verbose=False)
                 person = False
-                for r in results:
-                    for box in r.boxes:
-                        if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
-                            person = True; break
-                    if person: break
+                
+                if ret:
+                    consecutive_cam_errors = 0
+                    results = model(frame, verbose=False)
+                    for r in results:
+                        for box in r.boxes:
+                            if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
+                                person = True; break
+                        if person: break
+                else:
+                    consecutive_cam_errors += 1
+                    # Try to restart the camera if it fails
+                    if cap:
+                        cap.release()
+                    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+                    
+                    if consecutive_cam_errors >= 5:
+                        self.after(0, self.show_cam_error)
+                        time.sleep(5)  # Pause longer before retrying to prevent spamming
+                        continue
                 
                 if person:
-                    consecutive_present += 1
-                    consecutive_away = 0
-                    if consecutive_present >= PRESENT_LIMIT and self.current_status != "Present":
+                    self.consecutive_present += 1
+                    self.consecutive_away = 0
+                    if self.consecutive_present >= PRESENT_LIMIT and self.current_status != "Present":
                         self.current_status = "Present"
                         self.send_log("Present")
                         self.after(0, lambda: self.update_status("Active", Theme.SUCCESS))
                         self.after(0, self.hide_warning)
                 else:
-                    consecutive_present = 0
-                    consecutive_away += 1
-                    if consecutive_away >= AWAY_LIMIT and self.current_status != "Away":
-                        self.current_status = "Away"
-                        self.send_log("Away")
-                        self.after(0, lambda: self.update_status("Away Detected", Theme.DANGER))
-                        self.after(0, self.show_warning)
+                    self.consecutive_present = 0
+                    self.consecutive_away += 1
+                    
+                    if self.consecutive_away >= AWAY_LIMIT:
+                        if self.current_status != "Away":
+                            self.current_status = "Away"
+                            self.send_log("Away")
+                            self.after(0, lambda: self.update_status("Away Detected", Theme.DANGER))
+                        
+                        if time.time() > self.warning_snoozed_until:
+                            self.after(0, self.show_warning)
             except: pass
             time.sleep(1)
         if cap: cap.release()
@@ -702,15 +720,66 @@ class App(DraggableWindow):
         self.win_warn = tk.Toplevel(self)
         self.win_warn.overrideredirect(True)
         self.win_warn.attributes('-topmost', True)
+        self.win_warn.attributes('-alpha', 0.95)
         self.win_warn.configure(bg=Theme.DANGER)
-        w, h = 600, 300
+        w, h = 500, 260
         x = (self.winfo_screenwidth()-w)//2
         y = (self.winfo_screenheight()-h)//2
         self.win_warn.geometry(f"{w}x{h}+{x}+{y}")
-        tk.Label(self.win_warn, text="⚠️ YOU ARE AWAY", font=("Segoe UI", 30, "bold"), bg=Theme.DANGER, fg="white").pack(expand=True)
+        
+        # Inner Frame with Border
+        frame = tk.Frame(self.win_warn, bg=Theme.DANGER, highlightbackground="white", highlightthickness=2)
+        frame.pack(fill="both", expand=True, padx=4, pady=4)
+        
+        tk.Label(frame, text="⚠️", font=("Segoe UI", 48), bg=Theme.DANGER, fg="white").pack(pady=(15, 0))
+        tk.Label(frame, text="YOU ARE AWAY", font=("Segoe UI", 24, "bold"), bg=Theme.DANGER, fg="white").pack()
+        tk.Label(frame, text="Presence not detected. Activity logging paused.", font=("Segoe UI", 11), bg=Theme.DANGER, fg="white").pack(pady=(5, 15))
+        
+        # Manual Bypass Button
+        ModernButton(frame, text="I'm Here (Dismiss)", font=("Segoe UI", 11, "bold"), bg="#ffffff", fg=Theme.DANGER, hover_bg="#f8fafc", command=self.manual_presence, height=2, width=20).pack(pady=(0, 20))
+        
+    def show_cam_error(self):
+        if hasattr(self, 'win_cam_error') and self.win_cam_error.winfo_exists(): return
+        if hasattr(self, 'win_warn') and self.win_warn.winfo_exists(): self.hide_warning()
+        
+        self.win_cam_error = tk.Toplevel(self)
+        self.win_cam_error.overrideredirect(True)
+        self.win_cam_error.attributes('-topmost', True)
+        self.win_cam_error.attributes('-alpha', 0.95)
+        self.win_cam_error.configure(bg=Theme.WARNING)
+        w, h = 500, 280
+        x = (self.winfo_screenwidth()-w)//2
+        y = (self.winfo_screenheight()-h)//2
+        self.win_cam_error.geometry(f"{w}x{h}+{x}+{y}")
+        
+        frame = tk.Frame(self.win_cam_error, bg=Theme.WARNING, highlightbackground="black", highlightthickness=2)
+        frame.pack(fill="both", expand=True, padx=4, pady=4)
+        
+        tk.Label(frame, text="📷", font=("Segoe UI", 40), bg=Theme.WARNING, fg="black").pack(pady=(10, 0))
+        tk.Label(frame, text="CAMERA ERROR", font=("Segoe UI", 20, "bold"), bg=Theme.WARNING, fg="black").pack()
+        
+        msg = "Unable to access the camera.\n\n1. Ensure another app is NOT using the camera.\n" \
+              "2. Check Privacy Settings:\n   Settings > Privacy & security > Camera\n" \
+              "   Turn on 'Let desktop apps access your camera'."
+        
+        tk.Label(frame, text=msg, font=("Segoe UI", 10), bg=Theme.WARNING, fg="black", justify="left").pack(pady=10)
+        
+        ModernButton(frame, text="I Fixed It (Retry)", font=("Segoe UI", 11, "bold"), bg="black", fg="white", hover_bg="#333", command=self.hide_cam_error, height=2, width=20).pack(pady=(0, 15))
+        
+    def manual_presence(self):
+        self.warning_snoozed_until = time.time() + 300 # Snooze for 5 minutes
+        self.consecutive_away = 0
+        if self.current_status != "Present":
+            self.current_status = "Present"
+            self.send_log("Present")
+            self.update_status("Active (Manual)", Theme.SUCCESS)
+        self.hide_warning()
     
     def hide_warning(self):
         if hasattr(self, 'win_warn') and self.win_warn: self.win_warn.destroy()
+
+    def hide_cam_error(self):
+        if hasattr(self, 'win_cam_error') and self.win_cam_error: self.win_cam_error.destroy()
 
     def on_close(self):
         if messagebox.askokcancel("Quit", "End Shift and Close?"):

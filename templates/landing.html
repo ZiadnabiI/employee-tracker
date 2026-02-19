@@ -306,15 +306,39 @@
                 <a href="/privacy"
                     class="text-slate-300 hover:text-white transition relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-blue-500 after:transition-all hover:after:w-full">Privacy</a>
             </div>
-            <div class="flex items-center space-x-4">
-                <a href="/login" class="text-slate-300 hover:text-white transition">Login</a>
+            <div class="flex items-center space-x-3 md:space-x-4">
+                <a href="/login" class="hidden md:block text-slate-300 hover:text-white transition">Login</a>
                 <a href="/login?plan=basic#signup"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition shine">
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-5 py-2 rounded-lg text-sm md:text-base font-medium transition shine">
                     Get Started Free
                 </a>
+                <button onclick="toggleMobileMenu()"
+                    class="md:hidden text-slate-300 hover:text-white focus:outline-none ml-2">
+                    <i class="fa-solid fa-bars text-2xl"></i>
+                </button>
             </div>
         </div>
+        <!-- Mobile Dropdown Menu -->
+        <div id="mobile-menu"
+            class="hidden md:hidden bg-slate-900 border-t border-slate-800 absolute w-full top-full left-0 shadow-lg flex flex-col py-2">
+            <a href="#features" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Features</a>
+            <a href="#how-it-works" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">How It Works</a>
+            <a href="/pricing" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Pricing</a>
+            <a href="/privacy" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Privacy</a>
+            <a href="/login" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition border-t border-slate-800 mt-2">Login</a>
+        </div>
     </nav>
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+    </script>
 
     <!-- Hero Section -->
     <section class="gradient-bg relative overflow-hidden pt-32 pb-20 min-h-screen flex items-center">

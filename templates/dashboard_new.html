@@ -452,6 +452,20 @@
                 box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
             }
         }
+    
+        .dark .modal-content {
+            background: #1e293b;
+        }
+        .dark .tour-tooltip {
+            background: #1e293b;
+        }
+        .dark .tour-tooltip::before {
+            background: #1e293b;
+        }
+        .dark .gate-card {
+            background: #1e293b;
+        }
+
     </style>
 </head>
 
@@ -464,15 +478,15 @@
             <div class="success-checkmark">
                 <i class="fa-solid fa-check"></i>
             </div>
-            <h2 class="text-2xl font-bold text-gray-900 mb-2" id="modal-title">Payment Successful!</h2>
-            <p class="text-gray-600 mb-6" id="modal-message">Your plan has been upgraded. Welcome to Pro!</p>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2" id="modal-title">Payment Successful!</h2>
+            <p class="text-gray-600 dark:text-gray-400 dark:text-gray-400 mb-6" id="modal-message">Your plan has been upgraded. Welcome to Pro!</p>
             <div class="flex gap-3 justify-center">
                 <button onclick="closeSuccessModal()"
                     class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all">
                     <i class="fa-solid fa-rocket mr-2"></i>Start Tour
                 </button>
                 <button onclick="closeSuccessModal(true)"
-                    class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all">
+                    class="px-6 py-3 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-all">
                     Skip
                 </button>
             </div>
@@ -486,14 +500,14 @@
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold"
                     id="tour-step-num">1</div>
-                <h3 class="font-bold text-lg text-gray-900" id="tour-title">Welcome to InFrame!</h3>
+                <h3 class="font-bold text-lg text-gray-900 dark:text-white" id="tour-title">Welcome to InFrame!</h3>
             </div>
-            <p class="text-gray-600 mb-4" id="tour-description">Let's take a quick tour of your new dashboard.</p>
+            <p class="text-gray-600 dark:text-gray-400 dark:text-gray-400 mb-4" id="tour-description">Let's take a quick tour of your new dashboard.</p>
             <div class="flex items-center justify-between">
                 <div class="tour-progress" id="tour-progress"></div>
                 <div class="flex gap-2">
                     <button onclick="prevTourStep()" id="tour-prev"
-                        class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 hidden">
+                        class="px-4 py-2 border border-gray-300 text-gray-600 dark:text-gray-400 rounded-lg text-sm hover:bg-gray-50 hidden">
                         <i class="fa-solid fa-arrow-left mr-1"></i>Back
                     </button>
                     <button onclick="nextTourStep()" id="tour-next"
@@ -509,8 +523,11 @@
     <div id="app-layout" class="flex h-screen overflow-hidden">
 
         <!-- SIDEBAR NAVIGATION -->
-        <aside
-            class="w-64 bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col flex-shrink-0 transition-all duration-300 border-r border-slate-200 dark:border-slate-800">
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden md:hidden"></div>
+
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-950 text-slate-900 dark:text-white flex flex-col flex-shrink-0 transition-transform duration-300 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full md:relative md:translate-x-0">
             <!-- Brand -->
             <!-- Brand -->
             <div class="h-16 flex items-center justify-center px-4 border-b border-slate-800 overflow-visible">
@@ -572,7 +589,12 @@
             <!-- Top Header -->
             <header
                 class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shadow-sm z-10 transition-colors duration-300">
-                <h2 id="page-title" class="text-xl font-bold text-slate-800 dark:text-white">Dashboard</h2>
+                <div class="flex items-center gap-4">
+                    <button class="md:hidden text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white" onclick="toggleSidebar()">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="page-title" class="text-xl font-bold text-slate-800 dark:text-white">Dashboard</h2>
+                </div>
                 <div class="flex items-center space-x-4">
                     <button id="theme-toggle" class="p-2 text-slate-400 hover:text-yellow-400 transition-colors"
                         onclick="toggleTheme()" title="Toggle Theme">
@@ -605,7 +627,7 @@
                                 <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-green-400"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-present">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-gray-100 dark:text-white" id="kpi-present">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                                     <i class="fa-solid fa-check"></i>
@@ -623,7 +645,7 @@
                                 <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-yellow-400"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-break">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-gray-100 dark:text-white" id="kpi-break">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600">
                                     <i class="fa-solid fa-coffee"></i>
@@ -641,7 +663,7 @@
                                 <i class="fa-solid fa-expand text-gray-300 text-xs group-hover:text-red-400"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-away">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-gray-100 dark:text-white" id="kpi-away">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
                                     <i class="fa-solid fa-clock-rotate-left"></i>
@@ -657,7 +679,7 @@
                                 <i class="fa-solid fa-expand text-gray-300 text-xs"></i>
                             </div>
                             <div class="flex items-center justify-between mt-2">
-                                <h3 class="text-3xl font-bold text-gray-800 dark:text-white" id="kpi-offline">0</h3>
+                                <h3 class="text-3xl font-bold text-gray-800 dark:text-gray-100 dark:text-white" id="kpi-offline">0</h3>
                                 <div
                                     class="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
                                     <i class="fa-solid fa-power-off"></i>
@@ -671,7 +693,7 @@
                         <!-- App Usage Chart -->
                         <div
                             class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">📱 App Usage (Today)</h3>
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 dark:text-white mb-4">📱 App Usage (Today)</h3>
                             <div class="chart-container">
                                 <canvas id="appUsageChart"></canvas>
                             </div>
@@ -680,7 +702,7 @@
                         <!-- Status Distribution -->
                         <div
                             class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">📊 Status Distribution</h3>
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 dark:text-white mb-4">📊 Status Distribution</h3>
                             <div class="chart-container">
                                 <canvas id="statusPieChart"></canvas>
                             </div>
@@ -690,7 +712,7 @@
                     <!-- Recent Activity -->
                     <div
                         class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-4">📝 Recent Activity</h3>
+                        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 dark:text-white mb-4">📝 Recent Activity</h3>
                         <div id="recent-activity" class="space-y-2 max-h-64 overflow-y-auto">
                             <p class="text-slate-400 text-sm">Loading...</p>
                         </div>
@@ -722,7 +744,7 @@
                 <!-- 3. EMPLOYEES VIEW -->
                 <section id="view-employees" class="view-section">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-gray-800 dark:text-white text-lg">Employee Directory</h3>
+                        <h3 class="font-bold text-gray-800 dark:text-gray-100 dark:text-white text-lg">Employee Directory</h3>
                         <button id="add-employee-btn" onclick="openAddEmployeeModal()"
                             class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">
                             <i class="fa-solid fa-plus mr-2"></i>Add Employee
@@ -759,7 +781,7 @@
                 <!-- 3.5 DEPARTMENTS VIEW -->
                 <section id="view-departments" class="view-section">
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-gray-800 dark:text-white text-lg">Department Management</h3>
+                        <h3 class="font-bold text-gray-800 dark:text-gray-100 dark:text-white text-lg">Department Management</h3>
                         <div class="flex gap-2">
                             <!-- Simple Add Input for now, or modal? Keeping it simple consistent with settings style for now -->
                             <div class="flex">
@@ -798,7 +820,7 @@
                 <section id="view-employee-performance" class="view-section">
                     <div class="flex justify-between items-center mb-8">
                         <div>
-                            <h3 class="font-bold text-gray-800 dark:text-white text-2xl">🏆 Top Performers</h3>
+                            <h3 class="font-bold text-gray-800 dark:text-gray-100 dark:text-white text-2xl">🏆 Top Performers</h3>
                             <p class="text-sm text-slate-400">Employee performance rankings for the last 7 days</p>
                         </div>
                         <button onclick="loadLeaderboard()" class="text-blue-500 hover:text-blue-400 transition">
@@ -815,7 +837,7 @@
                     <div
                         class="bg-slate-800 rounded-xl shadow-sm border border-slate-700 overflow-hidden max-w-4xl mx-auto">
                         <div
-                            class="px-6 py-4 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 font-bold text-gray-700 dark:text-slate-300">
+                            class="px-6 py-4 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 font-bold text-gray-700 dark:text-gray-300 dark:text-slate-300">
                             Honorable Mentions
                         </div>
                         <div id="leaderboard-list" class="divide-y divide-slate-700">
@@ -832,7 +854,7 @@
                         <div class="flex justify-between items-center">
                             <div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-800 dark:text-white">Current Plan:</h4>
+                                    <h4 class="font-bold text-gray-800 dark:text-gray-100 dark:text-white">Current Plan:</h4>
                                     <span id="current-plan" class="text-blue-600 font-bold uppercase">Loading...</span>
                                     <span id="plan-badge"
                                         class="hidden bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">PRO</span>
@@ -854,7 +876,7 @@
                                     <i class="fa-solid fa-rocket mr-1"></i>Pro $8.99/user
                                 </button>
                                 <button onclick="manageSubscription()" id="manage-btn"
-                                    class="hidden border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-all text-sm">
+                                    class="hidden border border-gray-300 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg font-medium hover:bg-gray-50 transition-all text-sm">
                                     <i class="fa-solid fa-gear mr-2"></i>Manage
                                 </button>
                                 <button onclick="downgradeToPlan('basic')" id="downgrade-basic-btn"
@@ -864,7 +886,7 @@
                             </div>
                         </div>
                         <div id="subscription-features" class="mt-4 pt-4 border-t border-blue-200 hidden">
-                            <div class="flex flex-wrap gap-4 text-xs text-gray-600">
+                            <div class="flex flex-wrap gap-4 text-xs text-gray-600 dark:text-gray-400">
                                 <span><i class="fa-solid fa-check text-green-500 mr-1"></i>Unlimited Employees</span>
                                 <span><i class="fa-solid fa-check text-green-500 mr-1"></i>Smart Screenshots</span>
                                 <span><i class="fa-solid fa-check text-green-500 mr-1"></i>DLP (Privacy Blur)</span>
@@ -876,12 +898,12 @@
 
                     <div
                         class="bg-white dark:bg-slate-800 shadow-sm border border-gray-200 dark:border-slate-700 rounded-lg p-6 max-w-3xl">
-                        <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-4">Monitoring Configuration</h4>
+                        <h4 class="text-lg font-bold text-gray-800 dark:text-gray-100 dark:text-white mb-4">Monitoring Configuration</h4>
 
                         <div
                             class="flex items-center justify-between py-4 border-b border-gray-100 dark:border-slate-700">
                             <div>
-                                <h5 class="font-bold text-gray-700 dark:text-gray-200">Camera Presence Detection</h5>
+                                <h5 class="font-bold text-gray-700 dark:text-gray-300 dark:text-gray-200">Camera Presence Detection</h5>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 max-w-md mt-1">
                                     Uses local AI to detect if the employee is in front of the screen.
                                     <span class="text-blue-600 font-bold">No video is recorded or transmitted.</span>
@@ -900,7 +922,7 @@
                         <div
                             class="flex items-center justify-between py-4 border-b border-gray-100 dark:border-slate-700">
                             <div>
-                                <h5 class="font-bold text-gray-700 dark:text-gray-200"><i
+                                <h5 class="font-bold text-gray-700 dark:text-gray-300 dark:text-gray-200"><i
                                         class="fa-solid fa-user-secret mr-2"></i>Data
                                     Loss Prevention (DLP)</h5>
                                 <p class="text-xs text-gray-500 dark:text-gray-400 max-w-md mt-1">
@@ -919,7 +941,7 @@
                         <div class="py-6 border-b border-gray-100 dark:border-slate-700">
                             <div class="flex justify-between items-center mb-4">
                                 <div>
-                                    <h5 class="font-bold text-gray-700 dark:text-gray-200">Screenshot Frequency</h5>
+                                    <h5 class="font-bold text-gray-700 dark:text-gray-300 dark:text-gray-200">Screenshot Frequency</h5>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">How often to capture screenshots
                                         from employee
                                         devices.</p>
@@ -944,7 +966,7 @@
                         <div class="py-6">
                             <div class="flex justify-between items-center mb-4">
                                 <div>
-                                    <h5 class="font-bold text-gray-700 dark:text-gray-200"><i
+                                    <h5 class="font-bold text-gray-700 dark:text-gray-300 dark:text-gray-200"><i
                                             class="fa-solid fa-users-gear mr-2"></i>Team
                                         Management</h5>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">Manage supervisors who can
@@ -994,7 +1016,7 @@
                     <!-- Change Password Card -->
                     <div
                         class="bg-white dark:bg-slate-800 shadow-sm border border-gray-200 dark:border-slate-700 rounded-lg p-6 max-w-3xl mt-6">
-                        <h4 class="text-lg font-bold text-gray-800 dark:text-white mb-4">
+                        <h4 class="text-lg font-bold text-gray-800 dark:text-gray-100 dark:text-white mb-4">
                             <i class="fa-solid fa-key mr-2"></i>Change Password
                         </h4>
                         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Update your account password.</p>
@@ -1009,7 +1031,7 @@
                                         class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Enter current password">
                                     <button type="button" onclick="togglePasswordVisibility('current-password', this)"
-                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600">
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-400">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
                                 </div>
@@ -1023,7 +1045,7 @@
                                         class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Enter new password (min 8 characters)">
                                     <button type="button" onclick="togglePasswordVisibility('new-password', this)"
-                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600">
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-400">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
                                 </div>
@@ -1038,7 +1060,7 @@
                                         class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                         placeholder="Confirm new password">
                                     <button type="button" onclick="togglePasswordVisibility('confirm-password', this)"
-                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600">
+                                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-400">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
                                 </div>
@@ -1057,7 +1079,7 @@
                 <section id="view-screenshots" class="view-section">
                     <div class="flex justify-between items-center mb-6">
                         <div>
-                            <h3 class="font-bold text-gray-800 dark:text-white text-lg">Screenshot Gallery</h3>
+                            <h3 class="font-bold text-gray-800 dark:text-gray-100 dark:text-white text-lg">Screenshot Gallery</h3>
                             <p class="text-sm text-gray-500 dark:text-gray-400">Recent screen captures from employees
                             </p>
                         </div>
@@ -1088,7 +1110,7 @@
                         <div class="w-full md:w-80 flex-shrink-0 space-y-4">
                             <div
                                 class="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-5">
-                                <h3 class="font-bold text-gray-800 dark:text-white mb-4"><i
+                                <h3 class="font-bold text-gray-800 dark:text-gray-100 dark:text-white mb-4"><i
                                         class="fa-solid fa-filter mr-2"></i>Report
                                     Filters</h3>
 
@@ -1177,7 +1199,7 @@
                                 <div
                                     class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex justify-between items-center">
                                     <div>
-                                        <h2 class="text-lg font-bold text-gray-800" id="report-title">Company Report
+                                        <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100" id="report-title">Company Report
                                         </h2>
                                         <p class="text-xs text-gray-500" id="report-period">Aug 10 - Aug 17 (7 Days)</p>
                                     </div>
@@ -1196,13 +1218,13 @@
                                 <!-- Visual Summary (Charts) -->
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                                        <h4 class="text-sm font-bold text-gray-700 mb-4">Performance Scores</h4>
+                                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">Performance Scores</h4>
                                         <div class="h-48 relative">
                                             <canvas id="reportScoreChart"></canvas>
                                         </div>
                                     </div>
                                     <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                                        <h4 class="text-sm font-bold text-gray-700 mb-4">Time Distribution (Hours)</h4>
+                                        <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">Time Distribution (Hours)</h4>
                                         <div class="h-48 relative">
                                             <canvas id="reportTimeChart"></canvas>
                                         </div>
@@ -1212,7 +1234,7 @@
                                 <!-- Detailed Table -->
                                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                                     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                                        <h4 class="font-bold text-gray-700 text-sm">Detailed Breakdown</h4>
+                                        <h4 class="font-bold text-gray-700 dark:text-gray-300 text-sm">Detailed Breakdown</h4>
                                     </div>
                                     <div class="overflow-x-auto">
                                         <table class="min-w-full divide-y divide-gray-200">
@@ -1256,11 +1278,11 @@
         <div class="fixed inset-0 z-10 overflow-y-auto">
             <div class="flex min-h-full items-center justify-center p-4">
                 <div id="modal-panel"
-                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg modal-enter">
+                    class="relative transform overflow-hidden rounded-xl bg-white dark:bg-slate-800 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg modal-enter">
                     <div
-                        class="bg-white px-4 pb-4 pt-5 sm:p-6 border-b border-gray-100 flex justify-between items-center">
+                        class="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 border-b border-gray-100 flex justify-between items-center">
                         <div>
-                            <h3 class="text-lg font-bold leading-6 text-gray-900 flex items-center">
+                            <h3 class="text-lg font-bold leading-6 text-gray-900 dark:text-white flex items-center">
                                 <span id="modal-status-icon" class="mr-2"></span>
                                 <span id="modal-title">Employees</span>
                             </h3>
@@ -1269,10 +1291,10 @@
                             <i class="fa-solid fa-xmark text-xl"></i>
                         </button>
                     </div>
-                    <div class="px-4 py-2 bg-gray-50 max-h-96 overflow-y-auto" id="modal-list-container"></div>
-                    <div class="bg-white px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-gray-100">
+                    <div class="px-4 py-2 bg-gray-50 dark:bg-slate-900 max-h-96 overflow-y-auto" id="modal-list-container"></div>
+                    <div class="bg-white dark:bg-slate-800 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-gray-100">
                         <button type="button"
-                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
                             onclick="closeStatusModal()">Close</button>
                     </div>
                 </div>
@@ -1286,29 +1308,29 @@
         <div class="fixed inset-0 z-10 overflow-y-auto">
             <div class="flex min-h-full items-center justify-center p-4">
                 <div
-                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl w-full max-w-md">
-                    <div class="bg-white px-6 pt-5 pb-4 border-b border-gray-100">
-                        <h3 class="text-lg font-bold text-gray-900"><i
+                    class="relative transform overflow-hidden rounded-xl bg-white dark:bg-slate-800 text-left shadow-2xl w-full max-w-md">
+                    <div class="bg-white dark:bg-slate-800 px-6 pt-5 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i
                                 class="fa-solid fa-user-plus mr-2 text-blue-600"></i>Add New Employee</h3>
                     </div>
                     <form id="addEmployeeForm" onsubmit="submitAddEmployee(event)" class="px-6 py-4 space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Employee Name *</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Name *</label>
                             <input type="text" id="newEmpName" required placeholder="John Doe"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
                             <select id="newEmpDept"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <!-- Options populated by JS -->
                             </select>
                         </div>
                         <div id="addEmpResult" class="hidden p-3 rounded-md text-sm"></div>
                     </form>
-                    <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100">
+                    <div class="bg-gray-50 dark:bg-slate-900 px-6 py-4 px-6 flex justify-end space-x-3 border-t border-gray-100">
                         <button type="button" onclick="closeAddEmployeeModal()"
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-50">Cancel</button>
                         <button type="submit" form="addEmployeeForm" id="addEmpBtn"
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
                             <i class="fa-solid fa-paper-plane mr-2"></i>Send Invitation
@@ -1327,30 +1349,30 @@
         <div class="fixed inset-0 z-10 overflow-y-auto">
             <div class="flex min-h-full items-center justify-center p-4">
                 <div
-                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl w-full max-w-md">
-                    <div class="bg-white px-6 pt-5 pb-4 border-b border-gray-100">
-                        <h3 class="text-lg font-bold text-gray-900"><i
+                    class="relative transform overflow-hidden rounded-xl bg-white dark:bg-slate-800 text-left shadow-2xl w-full max-w-md">
+                    <div class="bg-white dark:bg-slate-800 px-6 pt-5 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i
                                 class="fa-solid fa-user-pen mr-2 text-blue-600"></i>Edit Employee</h3>
                     </div>
                     <form id="editEmployeeForm" onsubmit="submitEditEmployee(event)" class="px-6 py-4 space-y-4">
                         <input type="hidden" id="editEmpId">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Employee Name</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Name</label>
                             <input type="text" id="editEmpName" required
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
                             <select id="editEmpDept"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <!-- Options populated by JS -->
                             </select>
                         </div>
                         <div id="editEmpResult" class="hidden p-3 rounded-md text-sm"></div>
                     </form>
-                    <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100">
+                    <div class="bg-gray-50 dark:bg-slate-900 px-6 py-4 px-6 flex justify-end space-x-3 border-t border-gray-100">
                         <button type="button" onclick="closeEditEmployeeModal()"
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-50">Cancel</button>
                         <button type="submit" form="editEmployeeForm" id="editEmpBtn"
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
                             <i class="fa-solid fa-save mr-2"></i>Save Changes
@@ -1367,40 +1389,40 @@
         <div class="fixed inset-0 z-10 overflow-y-auto">
             <div class="flex min-h-full items-center justify-center p-4">
                 <div
-                    class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-2xl w-full max-w-md">
-                    <div class="bg-white px-6 pt-5 pb-4 border-b border-gray-100">
-                        <h3 class="text-lg font-bold text-gray-900"><i
+                    class="relative transform overflow-hidden rounded-xl bg-white dark:bg-slate-800 text-left shadow-2xl w-full max-w-md">
+                    <div class="bg-white dark:bg-slate-800 px-6 pt-5 pb-4 border-b border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white"><i
                                 class="fa-solid fa-user-shield mr-2 text-blue-600"></i>Add Supervisor</h3>
                     </div>
                     <form id="addSupervisorForm" onsubmit="submitAddSupervisor(event)" class="px-6 py-4 space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
                             <input type="text" id="newSupName" required placeholder="Admin Name"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
                             <input type="email" id="newSupEmail" required placeholder="admin@company.com"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
                             <input type="password" id="newSupPass" required
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
                             <select id="newSupRole"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                                class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                                 <option value="admin">Admin (Full Access)</option>
                                 <option value="viewer">Viewer (Read Only)</option>
                             </select>
                         </div>
                         <div id="addSupResult" class="hidden p-3 rounded-md text-sm"></div>
                     </form>
-                    <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-100">
+                    <div class="bg-gray-50 dark:bg-slate-900 px-6 py-4 px-6 flex justify-end space-x-3 border-t border-gray-100">
                         <button type="button" onclick="closeAddSupervisorModal()"
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-50">Cancel</button>
                         <button type="submit" form="addSupervisorForm" id="addSupBtn"
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
                             <i class="fa-solid fa-plus mr-2"></i>Create Account
@@ -2237,16 +2259,16 @@
             if (checkboxes.length === 0) {
                 textSpan.innerText = "Select options...";
                 textSpan.classList.add('text-gray-400');
-                textSpan.classList.remove('text-gray-800');
+                textSpan.classList.remove('text-gray-800 dark:text-gray-100');
             } else if (checkboxes.length <= 2) {
                 const values = Array.from(checkboxes).map(cb => cb.value).join(', ');
                 textSpan.innerText = values;
                 textSpan.classList.remove('text-gray-400');
-                textSpan.classList.add('text-gray-800');
+                textSpan.classList.add('text-gray-800 dark:text-gray-100');
             } else {
                 textSpan.innerText = `${checkboxes.length} selected`;
                 textSpan.classList.remove('text-gray-400');
-                textSpan.classList.add('text-gray-800');
+                textSpan.classList.add('text-gray-800 dark:text-gray-100');
             }
         }
 
@@ -2296,7 +2318,7 @@
             selectAllDiv.innerHTML = `
                 <label class="inline-flex items-center cursor-pointer w-full">
                     <input type="checkbox" class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" onchange="toggleSelectAll(this)">
-                    <span class="ml-2 text-sm font-bold text-gray-700">Select All</span>
+                    <span class="ml-2 text-sm font-bold text-gray-700 dark:text-gray-300">Select All</span>
                 </label>
             `;
             dropdown.appendChild(selectAllDiv);
@@ -2307,7 +2329,7 @@
                 div.innerHTML = `
                     <label class="inline-flex items-center cursor-pointer w-full">
                         <input type="checkbox" value="${opt}" class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300" onchange="updateMultiSelectDisplay()">
-                        <span class="ml-2 text-sm text-gray-700">${opt}</span>
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">${opt}</span>
                     </label>
                 `;
                 dropdown.appendChild(div);
@@ -2414,7 +2436,7 @@
                     const scoreColor = s.score >= 75 ? 'text-green-600' : (s.score >= 40 ? 'text-yellow-600' : 'text-red-600');
                     tbody.innerHTML += `
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${row.name}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${scoreColor}">${s.score}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${s.present_hours}h</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${s.away_hours}h</td>
@@ -2561,7 +2583,7 @@
                                 </div>
                             </div>
                             <div class="text-center mb-2">
-                                <div class="font-bold text-gray-800 text-sm truncate w-full px-1">${emp.employee_name}</div>
+                                <div class="font-bold text-gray-800 dark:text-gray-100 text-sm truncate w-full px-1">${emp.employee_name}</div>
                                 <div class="text-xs text-green-600 font-bold">${emp.score}%</div>
                             </div>
                             <div class="w-full ${height} ${color} rounded-t-lg shadow-lg opacity-90 flex items-end justify-center pb-2 text-white/50">
@@ -2592,12 +2614,12 @@
                                         #${rank}
                                     </div>
                                     <div>
-                                        <div class="font-bold text-gray-800 text-sm">${emp.employee_name}</div>
+                                        <div class="font-bold text-gray-800 dark:text-gray-100 text-sm">${emp.employee_name}</div>
                                         <div class="text-xs text-gray-500">${emp.department}</div>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <div class="font-bold text-gray-800 ${emp.score >= 75 ? 'text-green-600' : (emp.score >= 40 ? 'text-yellow-600' : 'text-red-600')}">
+                                    <div class="font-bold text-gray-800 dark:text-gray-100 ${emp.score >= 75 ? 'text-green-600' : (emp.score >= 40 ? 'text-yellow-600' : 'text-red-600')}">
                                         ${emp.score}
                                     </div>
                                     <div class="text-xs text-gray-400">${emp.grade}</div>
@@ -3029,7 +3051,7 @@
                     depts.forEach(d => {
                         const row = `
                             <tr>
-                                <td class="px-4 py-2 text-sm text-gray-700 font-medium">${d.name}</td>
+                                <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 font-medium">${d.name}</td>
                                 <td class="px-4 py-2 text-right">
                                     <button onclick="deleteDepartment(${d.id})" class="text-red-500 hover:text-red-700 text-xs bg-red-50 px-2 py-1 rounded">
                                         <i class="fa-solid fa-trash mr-1"></i>Delete
@@ -3048,7 +3070,7 @@
                     depts.forEach(d => {
                         mainList.innerHTML += `
                             <tr>
-                                <td class="px-6 py-4 text-sm text-gray-900 font-medium">${d.name}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">${d.name}</td>
                                 <td class="px-6 py-4 text-right">
                                     <button onclick="deleteDepartment(${d.id})" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-all text-xs font-semibold">
                                         <i class="fa-solid fa-trash mr-1"></i>Delete
@@ -3282,7 +3304,25 @@
 
         // Initialize Charts with correct theme
         window.addEventListener('load', updateChartTheme);
-    </script>
+    
+// UI Toggle JS
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar.classList.toggle('-translate-x-full');
+    overlay.classList.toggle('hidden');
+}
+
+// Ensure clickingnav items closes sidebar on mobile
+document.querySelectorAll('.sidebar-link').forEach(link => {
+    link.addEventListener('click', () => {
+        if (window.innerWidth < 768) {
+            toggleSidebar();
+        }
+    });
+});
+
+</script>
 </body>
 
 </html>

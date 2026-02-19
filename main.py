@@ -16,6 +16,7 @@ import os
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PRICE_ID_BASIC = os.getenv("STRIPE_PRICE_ID_BASIC")
 STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO")
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")
 
 stripe.api_key = STRIPE_SECRET_KEY
 
@@ -319,7 +320,10 @@ async def delete_department(dept_id: int, request: Request, db: Session = Depend
             db.commit()
             
             # Select price based on plan
-            price_id = resolve_price_id(STRIPE_PRICE_ID_BASIC) if plan == "basic" else resolve_price_id(STRIPE_PRICE_ID_PRO)
+            if plan == "basic":
+                price_id = resolve_price_id(STRIPE_PRICE_ID_BASIC)
+            else:
+                price_id = resolve_price_id(STRIPE_PRICE_ID_PRO) or resolve_price_id(STRIPE_PRICE_ID)
             
             if price_id:
                 # Create checkout session

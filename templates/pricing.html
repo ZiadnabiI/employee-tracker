@@ -42,25 +42,58 @@
                 <a href="/pricing" class="text-white font-medium">Pricing</a>
                 <a href="/privacy" class="text-slate-300 hover:text-white transition">Privacy</a>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-3 md:space-x-4">
                 {% if show_signup == False %}
                 <!-- Logged in user - show dashboard link -->
-                <span class="text-slate-400 text-sm">{{ company_name }}</span>
+                <span class="hidden md:inline text-slate-400 text-sm">{{ company_name }}</span>
                 <a href="/"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition">
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-5 py-2 rounded-lg text-sm md:text-base font-medium transition">
                     <i class="fa-solid fa-gauge-high mr-2"></i>Dashboard
                 </a>
                 {% else %}
                 <!-- Not logged in - show login/signup -->
-                <a href="/login" class="text-slate-300 hover:text-white transition">Login</a>
+                <a href="/login" class="hidden md:block text-slate-300 hover:text-white transition">Login</a>
                 <a href="/login"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium transition">
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-5 py-2 rounded-lg text-sm md:text-base font-medium transition">
                     Get Started
                 </a>
                 {% endif %}
+                <button onclick="toggleMobileMenu()"
+                    class="md:hidden text-slate-300 hover:text-white focus:outline-none ml-2">
+                    <i class="fa-solid fa-bars text-2xl"></i>
+                </button>
             </div>
         </div>
+        <!-- Mobile Dropdown Menu -->
+        <div id="mobile-menu"
+            class="hidden md:hidden bg-slate-900 border-t border-slate-800 absolute w-full top-full left-0 shadow-lg flex flex-col py-2">
+            <a href="/#features" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Features</a>
+            <a href="/#how-it-works" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">How It Works</a>
+            <a href="/pricing" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Pricing</a>
+            <a href="/privacy" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Privacy</a>
+            {% if show_signup == False %}
+            <a href="/" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition border-t border-slate-800 mt-2">Dashboard</a>
+            <a href="/logout" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Logout</a>
+            {% else %}
+            <a href="/login" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition border-t border-slate-800 mt-2">Login</a>
+            <a href="/login" onclick="toggleMobileMenu()"
+                class="text-slate-300 hover:bg-slate-800 hover:text-white px-6 py-3 transition">Get Started</a>
+            {% endif %}
+        </div>
     </nav>
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+    </script>
 
     <!-- Pricing Header -->
     <section class="pt-32 pb-16 bg-slate-950">

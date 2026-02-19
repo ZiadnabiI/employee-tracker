@@ -64,8 +64,13 @@
 
     <div id="app-layout" class="flex h-screen overflow-hidden">
 
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebar-overlay" onclick="toggleSidebar()"
+            class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden md:hidden"></div>
+
         <!-- SIDEBAR (Simplified for Detail Page) -->
-        <aside class="w-64 bg-slate-950 text-white flex flex-col flex-shrink-0 border-r border-slate-800">
+        <aside id="sidebar"
+            class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 text-white flex flex-col flex-shrink-0 border-r border-slate-800 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300">
             <div class="h-16 flex items-center px-6 border-b border-slate-800 overflow-visible">
                 <img src="/static/LOGO.png" alt="InFrame"
                     class="max-h-12 w-auto scale-125 transition-transform hover:scale-[1.35]"
@@ -95,6 +100,9 @@
             <header
                 class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 shadow-sm z-10">
                 <div class="flex items-center">
+                    <button class="md:hidden text-slate-400 hover:text-white mr-4" onclick="toggleSidebar()">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
                     <div
                         class="h-10 w-10 rounded-full bg-blue-900/50 text-blue-400 flex items-center justify-center font-bold mr-4 text-sm border border-blue-800">
                         {{ name[:2] | upper }}
@@ -334,6 +342,14 @@
                 if (response.ok) alert('✅ Screenshot request sent');
                 else alert('❌ Failed');
             } catch (e) { alert('❌ Error'); }
+        }
+
+        // UI Toggle JS
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
         }
 
         // Init
