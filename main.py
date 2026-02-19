@@ -238,15 +238,55 @@ async def register_company(
     db.commit()
     db.refresh(new_supervisor)
 
-    # Create token for immediate login
+    # Create Stripe customer immediately
+    if stripe.api_key:
+        try:
+            customer = stripe.Customer.create(
+                email=email,
+                name=company_name,
+                metadata={"company_id": str(new_company.id)}
+            )
+            new_company.stripe_customer_id = customer.id
+            db.commit()
+            
+            # Select price based on plan
+            if plan == "basic":
+                price_id = resolve_price_id(STRIPE_PRICE_ID_BASIC)
+            else:
+                price_id = resolve_price_id(STRIPE_PRICE_ID_PRO) or resolve_price_id(STRIPE_PRICE_ID)
+            
+            if price_id:
+                # Create checkout session
+                base_url = str(request.base_url).rstrip('/')
+                session = stripe.checkout.Session.create(
+                    customer=customer.id,
+                    payment_method_types=["card"],
+                    line_items=[{"price": price_id}],
+                    mode="subscription",
+                    success_url=f"{base_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}",
+                    cancel_url=f"{base_url}/payment-cancelled",
+                    metadata={"plan": plan, "company_id": str(new_company.id)}
+                )
+                
+                # Set auth cookie and redirect to Stripe
+                response = RedirectResponse(url=session.url, status_code=302)
+                token = create_token(
+                    supervisor_id=new_supervisor.id,
+                    company_id=new_company.id,
+                    is_super_admin=False
+                )
+                response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+                return response
+        except Exception as e:
+            print(f"Stripe error during registration: {e}")
+    
+    # Fallback: redirect to choose plan page if Stripe not configured
     token = create_token(
         supervisor_id=new_supervisor.id,
         company_id=new_company.id,
         is_super_admin=False
     )
-
-    # Redirect to dashboard
-    response = RedirectResponse(url="/?welcome=true", status_code=302)
+    response = RedirectResponse(url="/choose-plan", status_code=302)
     response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
     return response
 
@@ -308,57 +348,7 @@ async def delete_department(dept_id: int, request: Request, db: Session = Depend
     return {"status": "ok"}
 
     
-    # Create Stripe customer immediately
-    if stripe.api_key:
-        try:
-            customer = stripe.Customer.create(
-                email=email,
-                name=company_name,
-                metadata={"company_id": str(new_company.id)}
-            )
-            new_company.stripe_customer_id = customer.id
-            db.commit()
-            
-            # Select price based on plan
-            if plan == "basic":
-                price_id = resolve_price_id(STRIPE_PRICE_ID_BASIC)
-            else:
-                price_id = resolve_price_id(STRIPE_PRICE_ID_PRO) or resolve_price_id(STRIPE_PRICE_ID)
-            
-            if price_id:
-                # Create checkout session
-                base_url = str(request.base_url).rstrip('/')
-                session = stripe.checkout.Session.create(
-                    customer=customer.id,
-                    payment_method_types=["card"],
-                    line_items=[{"price": price_id}],
-                    mode="subscription",
-                    success_url=f"{base_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}",
-                    cancel_url=f"{base_url}/payment-cancelled",
-                    metadata={"plan": plan, "company_id": str(new_company.id)}
-                )
-                
-                # Set auth cookie and redirect to Stripe
-                response = RedirectResponse(url=session.url, status_code=302)
-                token = create_token(
-                    supervisor_id=new_supervisor.id,
-                    company_id=new_company.id,
-                    is_super_admin=False
-                )
-                response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
-                return response
-        except Exception as e:
-            print(f"Stripe error during registration: {e}")
-    
-    # Fallback: redirect to choose plan page if Stripe not configured
-    token = create_token(
-        supervisor_id=new_supervisor.id,
-        company_id=new_company.id,
-        is_super_admin=False
-    )
-    response = RedirectResponse(url="/choose-plan", status_code=302)
-    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
-    return response
+
 
 # ===============================
 # PAYMENT FLOW PAGES

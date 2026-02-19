@@ -290,6 +290,13 @@
                     if (window.location.hash === '#signup') {
                         switchTab('signup');
                     }
+
+                    // Parse plan from URL
+                    const params = new URLSearchParams(window.location.search);
+                    const plan = params.get('plan');
+                    if (plan) {
+                        document.querySelector('input[name="plan"]').value = plan;
+                    }
                 </script>
 
                 <p class="text-xs text-slate-500 text-center">
