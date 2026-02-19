@@ -33,8 +33,9 @@ class Company(Base):
     subscription_end_date = Column(DateTime, nullable=True)
     stripe_customer_id = Column(String, nullable=True)
     max_employees = Column(Integer, default=5)
-    screenshot_frequency = Column(Integer, default=600) # Seconds between screenshots
-    dlp_enabled = Column(Integer, default=0) # 0=Disabled, 1=Enabled (Manual DB toggle)
+    screenshot_frequency = Column(Integer, default=600)  # Seconds between automated screenshots
+    dlp_enabled = Column(Integer, default=0) # Data loss prevention (0 or 1)
+    slack_webhook_url = Column(String, nullable=True) # Slack Integration Webhook
     
     # Relationships
     employees = relationship("Employee", back_populates="company")

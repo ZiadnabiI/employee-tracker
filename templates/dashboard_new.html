@@ -969,6 +969,24 @@
                             </label>
                         </div>
 
+                        <!-- Slack Integration -->
+                        <div class="flex flex-col py-4 border-b border-gray-100 dark:border-slate-700">
+                            <div class="mb-3">
+                                <h5 class="font-bold text-gray-700 dark:text-gray-300 dark:text-gray-200"><img
+                                        src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg"
+                                        class="inline w-4 h-4 mr-2 -mt-1" alt="Slack">Slack / Teams Integration</h5>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 max-w-md mt-1">
+                                    Enter a Slack Webhook URL to receive instant alerts when an employee goes
+                                    "Away/Missing" for too long.
+                                </p>
+                            </div>
+                            <div class="relative w-full max-w-md">
+                                <input type="text" id="slack-webhook-url"
+                                    class="w-full border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="https://hooks.slack.com/services/...">
+                            </div>
+                        </div>
+
                         <div class="py-6 border-b border-gray-100 dark:border-slate-700">
                             <div class="flex justify-between items-center mb-4">
                                 <div>
@@ -2140,6 +2158,9 @@
                     if (data.dlp_enabled !== undefined) {
                         document.getElementById('dlp-setting-toggle').checked = (data.dlp_enabled === 1);
                     }
+                    if (data.slack_webhook_url !== undefined) {
+                        document.getElementById('slack-webhook-url').value = data.slack_webhook_url || "";
+                    }
                 }
             } catch (e) {
                 console.error("Error loading settings:", e);
@@ -2156,6 +2177,7 @@
             const freqMins = document.getElementById('freq-slider').value;
             const freqSeconds = freqMins * 60;
             const dlpEnabled = document.getElementById('dlp-setting-toggle').checked ? 1 : 0;
+            const slackUrl = document.getElementById('slack-webhook-url').value.trim();
 
             try {
                 const response = await fetch('/api/settings', {
@@ -2163,7 +2185,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         screenshot_frequency: freqSeconds,
-                        dlp_enabled: dlpEnabled
+                        dlp_enabled: dlpEnabled,
+                        slack_webhook_url: slackUrl
                     })
                 });
 

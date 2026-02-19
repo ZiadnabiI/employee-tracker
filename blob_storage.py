@@ -7,6 +7,7 @@ import os
 import datetime
 import uuid
 from azure.storage.blob import BlobServiceClient, ContentSettings
+from typing import Optional
 
 # Azure Storage Configuration
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
@@ -47,7 +48,7 @@ def _get_container_client():
         return None
 
 
-def upload_screenshot(employee_name: str, company_id: int, image_bytes: bytes, manual: bool = False) -> str | None:
+def upload_screenshot(employee_name: str, company_id: int, image_bytes: bytes, manual: bool = False) -> Optional[str]:
     """
     Upload a screenshot image to Azure Blob Storage.
 

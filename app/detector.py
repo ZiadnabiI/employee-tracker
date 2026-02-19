@@ -663,50 +663,94 @@ class App(DraggableWindow):
         except Exception as e: print(e)
 
     def apply_dlp(self, img):
-        # Keywords to trigger DLP
-        keywords = ["password", "bank", "credit", "inbox", "login", "sign in", "facebook", "twitter", "instagram", "gmail"]
+        # Professional DLP Keyword List
+        keywords = ["password", "bank", "credit", "inbox", "login", "sign in", "facebook", 
+                    "twitter", "instagram", "gmail", "stripe", "paypal", "confidential", 
+                    "finance", "accounting", "hr", "payroll", "messages", "whatsapp"]
         
+        # Get actual screen DPI vs logical DPI to fix scaling issues
+        try:
+            hdc = ctypes.windll.user32.GetDC(0)
+            dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88) # LOGPIXELSX
+            ctypes.windll.user32.ReleaseDC(0, hdc)
+            scale_factor = dpi / 96.0
+        except:
+            scale_factor = 1.0
+
         def handler(hwnd, _):
             if win32gui.IsWindowVisible(hwnd):
                 title = win32gui.GetWindowText(hwnd).lower()
                 if any(k in title for k in keywords):
                     try:
-                        # Get Window Coordinates
+                        # Get exact Window Coordinates
                         msg = win32gui.GetWindowRect(hwnd)
-                        x1, y1, x2, y2 = msg
                         
-                        # Ensure coordinates are improved for High DPI if needed, 
-                        # but for now rely on PIL's coordinate system matching screen.
-                        # Crop the sensitive area
+                        # Scale coordinates if user has 125% or 150% display scaling
+                        x1 = int(msg[0] * scale_factor)
+                        y1 = int(msg[1] * scale_factor)
+                        x2 = int(msg[2] * scale_factor)
+                        y2 = int(msg[3] * scale_factor)
+                        
                         box = (x1, y1, x2, y2)
                         
-                        # Validate box is within image
+                        # Validate box bounds against image size
+                        img_w, img_h = img.size
+                        x1 = max(0, x1)
+                        y1 = max(0, y1)
+                        x2 = min(img_w, x2)
+                        y2 = min(img_h, y2)
+                        
                         if x1 >= 0 and y1 >= 0 and x2 > x1 and y2 > y1:
-                            # 1. Pixelate/Blur Effect
+                            box = (x1, y1, x2, y2)
+                            
+                            # 1. Pixelate/Blur Effect - Aggressive 30px radius for security
                             region = img.crop(box)
-                            # Apply heavy blur
-                            blurred = region.filter(ImageFilter.GaussianBlur(radius=15))
+                            blurred = region.filter(ImageFilter.GaussianBlur(radius=30))
+                            
+                            # 2. Add Dark Overlay for better text contrast
+                            overlay = Image.new('RGBA', blurred.size, (0, 0, 0, 128))
+                            blurred = blurred.convert('RGBA')
+                            blurred = Image.alpha_composite(blurred, overlay)
+                            blurred = blurred.convert('RGB')
+                            
                             img.paste(blurred, box)
                             
-                            # 2. Add "Sensitive Data" Watermark
+                            # 3. Add "Sensitive Data" Watermark
                             draw = ImageDraw.Draw(img)
-                            # Draw a semi-transparent overlay or text
-                            # Since standard PIL doesn't support alpha on RGB direct draw easily without converting,
-                            # we'll just draw text
                             
                             # Calculate center
                             cx, cy = x1 + (x2-x1)//2, y1 + (y2-y1)//2
-                            text = "🔒 SENSITIVE DATA HIDDEN"
+                            text = "🔒 SENSITIVE DATA BLURRED BY DLP"
                             
-                            # Use default font if custom not loaded
-                            font = ImageFont.load_default()
+                            # Default font is small, try to use a larger built-in font if possible, else scale via math
+                            try:
+                                font = ImageFont.truetype("arial.ttf", 24)
+                            except:
+                                font = ImageFont.load_default()
                             
-                            # Draw text with shadow for visibility
-                            draw.text((cx-2, cy-2), text, fill="black", font=font)
-                            draw.text((cx, cy), text, fill="white", font=font)
+                            # Get text bounding box to center it perfectly
+                            try:
+                                bbox = draw.textbbox((0, 0), text, font=font)
+                                tw = bbox[2] - bbox[0]
+                                th = bbox[3] - bbox[1]
+                            except:
+                                tw, th = 200, 20 # Fallback sizes
+                                
+                            tx = cx - (tw//2)
+                            ty = cy - (th//2)
+                            
+                            # Draw Red pill background for the text
+                            padding = 10
+                            draw.rectangle(
+                                [tx - padding, ty - padding, tx + tw + padding, ty + th + padding],
+                                fill=(220, 38, 38) # Red-600
+                            )
+                            
+                            # Draw Text
+                            draw.text((tx, ty), text, fill="white", font=font)
                             
                     except Exception as e:
-                        pass
+                        print(f"DLP Error on window: {e}")
         
         win32gui.EnumWindows(handler, None)
 

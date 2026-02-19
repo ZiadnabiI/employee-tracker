@@ -17,9 +17,21 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PRICE_ID_BASIC = os.getenv("STRIPE_PRICE_ID_BASIC")
 STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 stripe.api_key = STRIPE_SECRET_KEY
 
+# Email Configuration
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "reports@inframe.ai")
+CRON_SECRET = os.getenv("CRON_SECRET", "secret-cron-key-12345")
 
 from pydantic import BaseModel
 import base64
@@ -94,6 +106,7 @@ class LoginRequest(BaseModel):
 class SettingsUpdate(BaseModel):
     screenshot_frequency: int
     dlp_enabled: int
+    slack_webhook_url: Optional[str] = None
 
 class EmployeeInvite(BaseModel):
     name: str
@@ -825,21 +838,48 @@ async def log_activity(log: ActivityLog, db: Session = Depends(get_db)):
 
     # Slack notification
     IMPORTANT_STATUSES = ["WORK_START", "BREAK_START", "BREAK_END", "Away"]
-    SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+    
+    # Get the company's webhook URL
+    company_webhook_url = employee.company.slack_webhook_url if employee.company else None
+    
+    # Fallback to general env variable only if company webhook is not set
+    SLACK_WEBHOOK_URL = company_webhook_url or os.getenv("SLACK_WEBHOOK_URL")
 
     if log.status in IMPORTANT_STATUSES and SLACK_WEBHOOK_URL:
-        try:
-            import requests
-            slack_msg = {"text": f"📢 *{employee.name}* status update: *{log.status}*"}
-            if log.status == "Away":
-                slack_msg["text"] = f"⚠️ *{employee.name}* is marked as **Away/Missing**!"
-            elif log.status == "BREAK_START":
-                slack_msg["text"] = f"☕ *{employee.name}* is taking a break."
-            elif log.status == "WORK_START":
-                slack_msg["text"] = f"🟢 *{employee.name}* has started work."
-            requests.post(SLACK_WEBHOOK_URL, json=slack_msg, timeout=2)
-        except Exception as e:
-            print(f"Slack Error: {e}")
+        # Check if we already notified recently to prevent spam
+        # Especially if they get logged "Away" multiple times in an hour
+        recent_log_cutoff = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
+        recent_similar_logs = db.query(EmployeeLog).filter(
+            EmployeeLog.employee_name == employee.name,
+            EmployeeLog.status == log.status,
+            EmployeeLog.timestamp >= recent_log_cutoff
+        ).count()
+        
+        # We just added the current log, so count > 1 means we sent one recently
+        if recent_similar_logs <= 1:
+            try:
+                import requests
+                slack_msg = {"text": f"📢 *{employee.name}* status update: *{log.status}*"}
+                if log.status == "Away":
+                    slack_msg["text"] = f"⚠️ *{employee.name}* is marked as **Away/Missing**! (No face detected)"
+                elif log.status == "BREAK_START":
+                    slack_msg["text"] = f"☕ *{employee.name}* is taking a break."
+                elif log.status == "WORK_START":
+                    slack_msg["text"] = f"🟢 *{employee.name}* has started work."
+                
+                # Send the request silently in the background
+                def send_slack():
+                    try:
+                        resp = requests.post(SLACK_WEBHOOK_URL, json=slack_msg, timeout=3)
+                        print(f"Slack response: {resp.status_code}")
+                    except BaseException as be:
+                        print(f"Slack Error BG: {be}")
+                        
+                import threading
+                threading.Thread(target=send_slack, daemon=True).start()
+                
+            except Exception as e:
+                print(f"Slack Init Error: {e}")
 
     return {"status": "ACTIVE"}
 
@@ -1494,7 +1534,8 @@ async def get_settings(request: Request, db: Session = Depends(get_db)):
     
     return {
         "screenshot_frequency": company.screenshot_frequency if company else 600,
-        "dlp_enabled": company.dlp_enabled if company else 0
+        "dlp_enabled": company.dlp_enabled if company else 0,
+        "slack_webhook_url": company.slack_webhook_url if company else ""
     }
 
 @app.post("/api/settings")
@@ -1516,6 +1557,7 @@ async def update_settings(settings: SettingsUpdate, request: Request, db: Sessio
     if company:
         company.screenshot_frequency = settings.screenshot_frequency
         company.dlp_enabled = settings.dlp_enabled
+        company.slack_webhook_url = settings.slack_webhook_url
         db.commit()
         return {"status": "ok"}
     
@@ -2214,6 +2256,141 @@ async def change_subscription_plan(data: ChangePlanRequest, request: Request, db
     except stripe.error.StripeError as e:
         print(f"❌ Stripe error changing plan: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+# ===============================
+# AUTOMATED EMAIL REPORTS
+# ===============================
+
+def send_email_report(to_email: str, subject: str, html_content: str):
+    """Send an HTML email using SMTP"""
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        print(f"⚠️  Skipping email to {to_email} (SMTP not configured)")
+        return
+        
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = FROM_EMAIL
+        msg["To"] = to_email
+        
+        part = MIMEText(html_content, "html")
+        msg.attach(part)
+        
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.sendmail(FROM_EMAIL, to_email, msg.as_string())
+        server.quit()
+        print(f"✅ Sent weekly report to {to_email}")
+    except Exception as e:
+        print(f"❌ Failed to send email to {to_email}: {e}")
+
+@app.post("/api/cron/weekly-reports")
+async def trigger_weekly_reports(request: Request, db: Session = Depends(get_db)):
+    """
+    Trigger weekly email reports for all active companies.
+    Requires Authentication: Bearer <CRON_SECRET>
+    """
+    auth_header = request.headers.get("Authorization")
+    expected_header = f"Bearer {CRON_SECRET}"
+    
+    if not auth_header or auth_header != expected_header:
+        raise HTTPException(status_code=401, detail="Unauthorized cron trigger")
+    
+    # Get all active companies (might want to limit to PRO users in production)
+    companies = db.query(Company).all()
+    
+    sent_count = 0
+    for company in companies:
+        # Get all admins for this company who should receive the report
+        admins = db.query(Supervisor).filter(
+            Supervisor.company_id == company.id,
+            Supervisor.role == 'admin'
+        ).all()
+        
+        if not admins:
+            continue
+            
+        # Get employees
+        employees = db.query(Employee).filter(Employee.company_id == company.id).all()
+        if not employees:
+            continue
+            
+        # Generate stats for the last 7 days
+        # Reuse existing calculate_employee_score calculation logic
+        from main import calculate_employee_score
+        
+        report_data = []
+        for emp in employees:
+            stats = calculate_employee_score(emp.name, db, days=7)
+            report_data.append({
+                "name": emp.name,
+                "score": stats["score"],
+                "grade": stats["grade"],
+                "present_hours": stats["present_hours"],
+                "away_hours": stats["away_hours"]
+            })
+            
+        # Sort by score descending
+        report_data.sort(key=lambda x: x["score"], reverse=True)
+        
+        # Build HTML Email
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h2 style="color: #2563eb; margin-bottom: 5px;">InFrame Employee Tracker</h2>
+                <h3 style="color: #4b5563; margin-top: 0;">Weekly Performance Report</h3>
+                <p style="color: #6b7280; font-size: 14px;">Summary for {company.name} over the last 7 days</p>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <thead>
+                    <tr style="background-color: #f3f4f6; text-align: left;">
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e7eb;">Employee</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e7eb;">Score</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e7eb;">Present</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #e5e7eb;">Away</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        
+        for row in report_data:
+            score_color = "#16a34a" if row["score"] >= 75 else ("#ca8a04" if row["score"] >= 40 else "#dc2626")
+            html += f"""
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; font-weight: bold;">{row["name"]}</td>
+                        <td style="padding: 12px; color: {score_color}; font-weight: bold;">{row["score"]}</td>
+                        <td style="padding: 12px; color: #4b5563;">{row["present_hours"]}h</td>
+                        <td style="padding: 12px; color: #4b5563;">{row["away_hours"]}h</td>
+                    </tr>
+            """
+            
+        html += """
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 40px; text-align: center; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <a href="https://your-domain.com/" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Full Dashboard</a>
+                <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">This is an automated report generated by InFrame.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Dispatch emails
+        for admin in admins:
+            if admin.email:
+                send_email_report(
+                    to_email=admin.email,
+                    subject=f"📊 Weekly Performance Report - {company.name}",
+                    html_content=html
+                )
+                sent_count += 1
+                
+    return {"status": "success", "emails_sent": sent_count}
+
 
 if __name__ == "__main__":
     import uvicorn
