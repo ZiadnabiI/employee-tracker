@@ -1,0 +1,8 @@
+Company: OK
+Supervisor ERROR: no such column: supervisors.role
+Employee ERROR: no such column: employees.company_id
+EmployeeLog: OK
+AppLog: OK
+Screenshot ERROR: no such column: screenshots.blob_url
+Department: OK
+AuthToken: OK

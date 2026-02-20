@@ -1,0 +1,8 @@
+Table 'companies': OK
+Table 'departments': OK
+Table 'supervisors' missing columns: role
+Table 'employees' missing columns: pending_screenshot, last_heartbeat, company_id
+Table 'logs': OK
+Table 'app_logs': OK
+Table 'screenshots' missing columns: blob_url
+Table 'auth_tokens': OK
