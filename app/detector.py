@@ -779,8 +779,12 @@ class App(DraggableWindow):
         tk.Label(frame, text="YOU ARE AWAY", font=("Segoe UI", 24, "bold"), bg=Theme.DANGER, fg="white").pack()
         tk.Label(frame, text="Presence not detected. Activity logging paused.", font=("Segoe UI", 11), bg=Theme.DANGER, fg="white").pack(pady=(5, 15))
         
-        # Manual Bypass Button
-        ModernButton(frame, text="I'm Here (Dismiss)", font=("Segoe UI", 11, "bold"), bg="#ffffff", fg=Theme.DANGER, hover_bg="#f8fafc", command=self.manual_presence, height=2, width=20).pack(pady=(0, 20))
+        # Manual Bypass & Break Buttons
+        btn_frame = tk.Frame(frame, bg=Theme.DANGER)
+        btn_frame.pack(pady=(0, 20))
+        
+        ModernButton(btn_frame, text="I'm Here (Dismiss)", font=("Segoe UI", 11, "bold"), bg="#ffffff", fg=Theme.DANGER, hover_bg="#f8fafc", command=self.manual_presence, height=2, width=15).pack(side="left", padx=5)
+        ModernButton(btn_frame, text="Go on Break", font=("Segoe UI", 11, "bold"), bg=Theme.WARNING, fg="#ffffff", hover_bg="#ca8a04", command=self.warning_go_on_break, height=2, width=15).pack(side="left", padx=5)
         
     def show_cam_error(self):
         if hasattr(self, 'win_cam_error') and self.win_cam_error.winfo_exists(): return
@@ -818,6 +822,11 @@ class App(DraggableWindow):
             self.send_log("Present")
             self.update_status("Active (Manual)", Theme.SUCCESS)
         self.hide_warning()
+        
+    def warning_go_on_break(self):
+        self.hide_warning()
+        if not self.in_break_mode:
+            self.toggle_break()
     
     def hide_warning(self):
         if hasattr(self, 'win_warn') and self.win_warn: self.win_warn.destroy()
