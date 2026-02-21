@@ -1,13 +1,11 @@
 """
-Employee Presence Monitor - Premium Edition
-===========================================
-Modern, dark-themed attendance tracking application.
-Features:
-- Custom UI (Borderless Window, Custom Titlebar)
-- Separate Login Flow
-- Advanced Monitoring (YOLO, DLP, App Tracking)
+Employee Presence Monitor — Premium Edition
+=============================================
+Built with CustomTkinter for a truly modern, professional look.
+Design matches the InFrame web dashboard (dark slate theme).
 """
 
+import customtkinter as ctk
 import cv2
 import time
 import requests
@@ -20,231 +18,104 @@ import uuid
 import win32gui
 import win32process
 import psutil
-from PIL import ImageGrab, ImageFilter, ImageDraw, ImageFont, ImageTk
+from PIL import Image, ImageGrab, ImageFilter, ImageDraw, ImageFont, ImageTk
 import io
 import base64
 import ctypes
 
-# Enable High DPI Support
+# High DPI
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 except:
     pass
+
+# ── CustomTkinter global config ──
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
 SERVER_URL = os.getenv("SERVER_URL", "https://inframe-dab3gthvbkgpe2dp.italynorth-01.azurewebsites.net")
-CONFIDENCE_THRESHOLD = 0.6 
+CONFIDENCE_THRESHOLD = 0.6
 AWAY_LIMIT = 10
 PRESENT_LIMIT = 3
 REGISTRY_PATH = r"SOFTWARE\EmployeeTracker"
 
 # =============================================================================
-# THEME & STYLES
+# DESIGN TOKENS (matching web dashboard)
 # =============================================================================
 
-# =============================================================================
-# THEME & STYLES (Light Mode)
-# =============================================================================
-
-class Theme:
-    # Colors (Light Mode Palette - Clean & Corporate)
-    BG_MAIN = "#ffffff"      # White
-    BG_SIDEBAR = "#f1f5f9"   # Slate-100
-    BG_CARD = "#f8fafc"      # Slate-50
-    BG_INPUT = "#e2e8f0"     # Slate-200
-    
-    PRIMARY = "#000000"      # Black (High Contrast)
-    PRIMARY_HOVER = "#333333"
-    
-    DANGER = "#ef4444"       # Red-500
-    DANGER_HOVER = "#dc2626"
-    
-    SUCCESS = "#22c55e"      # Green-500
-    WARNING = "#eab308"      # Yellow-500
-    
-    TEXT_MAIN = "#0f172a"    # Slate-900
-    TEXT_MUTED = "#64748b"   # Slate-500
-    
-    TITLE_BAR = "#ffffff"    # White
-
-    # Fonts
-    FONT_TITLE = ("Segoe UI", 12, "bold")
-    FONT_HEADER = ("Segoe UI", 24, "bold")
-    FONT_BODY = ("Segoe UI", 10)
-    FONT_BODY_BOLD = ("Segoe UI", 10, "bold")
-    FONT_SMALL = ("Segoe UI", 9)
-    FONT_MONO = ("Consolas", 12)
+COLORS = {
+    "bg_deep":    "#020617",  # slate-950
+    "bg_main":    "#0f172a",  # slate-900
+    "bg_card":    "#1e293b",  # slate-800
+    "bg_input":   "#334155",  # slate-700
+    "border":     "#334155",  # slate-700
+    "text_white": "#f8fafc",  # slate-50
+    "text":       "#e2e8f0",  # slate-200
+    "text_muted": "#94a3b8",  # slate-400
+    "text_dim":   "#64748b",  # slate-500
+    "accent":     "#3b82f6",  # blue-500
+    "accent_h":   "#2563eb",  # blue-600
+    "green":      "#22c55e",
+    "yellow":     "#eab308",
+    "red":        "#ef4444",
+}
 
 LOGO_PATH = r"C:/Users/ziadn/.gemini/antigravity/brain/6c4d7325-991d-4d51-b241-7470af94e1b0/uploaded_media_1770146996132.jpg"
-
 
 # =============================================================================
 # REGISTRY HELPERS
 # =============================================================================
 
-def get_registry_value(key_name, default=None):
+def get_reg(key, default=None):
     try:
         import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH) as reg:
-            value, _ = winreg.QueryValueEx(reg, key_name)
-            return value
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH) as r:
+            v, _ = winreg.QueryValueEx(r, key)
+            return v
     except:
         return default
 
-def set_registry_value(key_name, value):
+def set_reg(key, value):
     try:
         import winreg
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH) as reg:
-            winreg.SetValueEx(reg, key_name, 0, winreg.REG_SZ, str(value))
-        return True
-    except Exception as e:
-        print(f"Registry error: {e}")
-        return False
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, REGISTRY_PATH) as r:
+            winreg.SetValueEx(r, key, 0, winreg.REG_SZ, str(value))
+    except:
+        pass
 
-def get_hardware_id():
-    hw_id = get_registry_value("hardware_id")
-    if not hw_id:
-        hw_id = f"HW-{uuid.uuid4().hex[:8].upper()}"
-        set_registry_value("hardware_id", hw_id)
-    return hw_id
+def get_hw_id():
+    hw = get_reg("hardware_id")
+    if not hw:
+        hw = f"HW-{uuid.uuid4().hex[:8].upper()}"
+        set_reg("hardware_id", hw)
+    return hw
+
 
 # =============================================================================
-# CUSTOM UI COMPONENTS
+# MAIN APPLICATION
 # =============================================================================
 
-class ModernButton(tk.Button):
-    def __init__(self, parent, text, command, bg=Theme.PRIMARY, hover_bg=Theme.PRIMARY_HOVER, fg="#ffffff", **kwargs):
-        super().__init__(
-            parent, text=text, command=command, bg=bg, fg=fg, 
-            activebackground=hover_bg, activeforeground=fg,
-            relief="flat", borderwidth=0, cursor="hand2", **kwargs
-        )
-        self.bg = bg
-        self.hover_bg = hover_bg
-        self.bind("<Enter>", self.on_enter)
-        self.bind("<Leave>", self.on_leave)
-
-    def on_enter(self, e):
-        self['background'] = self.hover_bg
-
-    def on_leave(self, e):
-        self['background'] = self.bg
-    
-    def config(self, cnf=None, **kw):
-        # Accept custom 'hover_bg' and ensure underlying tk options are kept in sync
-        hover = None
-        if cnf and isinstance(cnf, dict):
-            hover = cnf.pop('hover_bg', None)
-        hover = kw.pop('hover_bg', hover)
-        if hover is not None:
-            self.hover_bg = hover
-            kw['activebackground'] = hover
-
-        # Handle bg/background provided either via dict or kwargs
-        bg_val = None
-        if cnf and isinstance(cnf, dict):
-            bg_val = cnf.pop('bg', None) or cnf.pop('background', None)
-        bg_val = kw.get('bg') or kw.get('background') or bg_val
-        if bg_val is not None:
-            self.bg = bg_val
-            kw['background'] = bg_val
-
-        return super().config(cnf or {}, **kw)
-
-    configure = config
-
-class DraggableWindow(tk.Tk):
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.overrideredirect(True) # Remove standard window chrome
-        self.geometry("400x650")
-        self.configure(bg=Theme.BG_MAIN)
-        self.title_bar = None
-        self.after(10, self.set_app_window)
-        
-    def set_app_window(self):
-        GWL_EXSTYLE = -20
-        WS_EX_APPWINDOW = 0x00040000
-        WS_EX_TOOLWINDOW = 0x00000080
-        
-        try:
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            style = style & ~WS_EX_TOOLWINDOW
-            style = style | WS_EX_APPWINDOW
-            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
-            # Toggle visibility to apply changes
-            self.withdraw()
-            self.after(10, self.deiconify)
-        except Exception as e:
-            print(e)
-        
-    def add_custom_title_bar(self, title_text="Employee App"):
-        # Title Bar Frame
-        self.title_bar = tk.Frame(self, bg=Theme.TITLE_BAR, height=35)
-        self.title_bar.pack(fill="x", side="top")
-        self.title_bar.pack_propagate(False)
-        
-        # Dragging Logic
-        self.title_bar.bind("<Button-1>", self.start_move)
-        self.title_bar.bind("<B1-Motion>", self.do_move)
-        
-        # Icon/Title
-        title = tk.Label(self.title_bar, text=title_text, bg=Theme.TITLE_BAR, fg=Theme.TEXT_MUTED, font=("Segoe UI", 10))
-        title.pack(side="left", padx=10)
-        
-        # Window Controls
-        close_btn = tk.Button(
-            self.title_bar, text="✕", bg=Theme.TITLE_BAR, fg=Theme.TEXT_MUTED, 
-            activebackground="#ef4444", activeforeground="white",
-            relief="flat", bd=0, width=4, command=self.on_close
-        )
-        close_btn.pack(side="right", fill="y")
-        
-        min_btn = tk.Button(
-            self.title_bar, text="─", bg=Theme.TITLE_BAR, fg=Theme.TEXT_MUTED, 
-            activebackground=Theme.BG_CARD, activeforeground="white",
-            relief="flat", bd=0, width=4, command=self.minimize_window
-        )
-        min_btn.pack(side="right", fill="y")
+        self.title("INFRAME | Employee Monitor")
+        self.geometry("440x600")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_deep"])
 
-    def minimize_window(self):
-        try:
-            hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
-            ctypes.windll.user32.ShowWindow(hwnd, 6) # SW_MINIMIZE = 6
-        except:
-            self.iconify()
+        # Center on screen
+        self.update_idletasks()
+        x = (self.winfo_screenwidth() - 440) // 2
+        y = (self.winfo_screenheight() - 600) // 2
+        self.geometry(f"440x600+{x}+{y}")
 
-    def start_move(self, event):
-        self.x = event.x
-        self.y = event.y
-
-    def do_move(self, event):
-        deltax = event.x - self.x
-        deltay = event.y - self.y
-        x = self.winfo_x() + deltax
-        y = self.winfo_y() + deltay
-        self.geometry(f"+{x}+{y}")
-        
-    def on_close(self):
-        self.destroy()
-
-# =============================================================================
-# MAIN LOGIC
-# =============================================================================
-
-class App(DraggableWindow):
-    def __init__(self):
-        super().__init__()
-        self.add_custom_title_bar("INFRAME | Employee Monitor")
-        self.center_on_screen()
-        
-        # App State
+        # ── State ──
         self.activation_key = None
-        self.hardware_id = get_hardware_id()
+        self.hardware_id = get_hw_id()
         self.is_running = True
         self.monitoring_active = False
         self.in_break_mode = False
@@ -252,263 +123,474 @@ class App(DraggableWindow):
         self.warning_snoozed_until = 0
         self.consecutive_away = 0
         self.consecutive_present = 0
-        
-        # Stats
+        self._latest_frame = None
+
         self.present_seconds = 0
         self.away_seconds = 0
         self.break_seconds = 0
         self.current_status = "Offline"
-        
-        # Settings
+
         self.screenshot_frequency = 600
         self.dlp_enabled = False
-        self.logo_img = None # Keep reference
-        
-        # Initialize UI Container
-        self.container = tk.Frame(self, bg=Theme.BG_MAIN)
+
+        # ── Container ──
+        self.container = ctk.CTkFrame(self, fg_color=COLORS["bg_deep"])
         self.container.pack(fill="both", expand=True)
-        
-        # Check Session
-        self.check_existing_session()
 
-    def center_on_screen(self):
-        self.update_idletasks()
-        width = 450  # Wider to let counters breathe
-        height = 680
-        x = (self.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.winfo_screenheight() // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
+        self._check_session()
 
-    def load_logo(self, size=(100, 100)):
-        try:
-            if os.path.exists(LOGO_PATH):
-                img = Image.open(LOGO_PATH)
-                img = img.resize(size, Image.Resampling.LANCZOS)
-                return ImageTk.PhotoImage(img)
-        except Exception as e:
-            print(f"Logo error: {e}")
-        return None
+    # ─────────────────────────────────────────────────────────────────────
+    #  SESSION
+    # ─────────────────────────────────────────────────────────────────────
 
-    def check_existing_session(self):
-        key = get_registry_value("activation_key")
-        name = get_registry_value("employee_name")
-        
+    def _check_session(self):
+        key = get_reg("activation_key")
+        name = get_reg("employee_name")
         if key:
             self.activation_key = key
-            if name: self.employee_name = name
-            self.verify_session_async() 
-            self.show_main_ui()
+            if name:
+                self.employee_name = name
+            self._show_login(verifying=True)
+            self._verify()
         else:
-            self.show_login_ui()
+            self._show_login()
 
-    def verify_session_async(self):
-        def verify():
+    def _verify(self):
+        def work():
             try:
-                resp = requests.post(f"{SERVER_URL}/verify-checkin", json={"activation_key": self.activation_key}, timeout=5)
-                if resp.status_code != 200:
-                    set_registry_value("activation_key", "")
-                    self.show_login_ui()
+                r = requests.post(f"{SERVER_URL}/verify-checkin",
+                                  json={"activation_key": self.activation_key}, timeout=5)
+                if r.status_code == 200:
+                    self.after(0, self._show_dashboard)
+                else:
+                    set_reg("activation_key", "")
+                    self.activation_key = None
+                    self.after(0, self._show_login)
             except:
-                pass
-        Thread(target=verify, daemon=True).start()
+                if self.activation_key:
+                    self.after(0, self._show_dashboard)
+        Thread(target=work, daemon=True).start()
 
-    # -------------------------------------------------------------------------
-    # UI: LOGIN SCREEN
-    # -------------------------------------------------------------------------
-    def show_login_ui(self):
-        for widget in self.container.winfo_children():
-            widget.destroy()
-            
-        # Black Banner for Logo
-        banner = tk.Frame(self.container, bg="black", height=140)
-        banner.pack(fill="x", side="top")
-        banner.pack_propagate(False) # Force height
-        
-        # Center Content Wrapper for Logo
-        center_frame = tk.Frame(banner, bg="black")
-        center_frame.place(relx=0.5, rely=0.5, anchor="center")
+    # ─────────────────────────────────────────────────────────────────────
+    #  LOGIN SCREEN
+    # ─────────────────────────────────────────────────────────────────────
+
+    def _show_login(self, verifying=False):
+        self._clear()
+
+        # ── Logo banner ──
+        banner = ctk.CTkFrame(self.container, fg_color=COLORS["bg_main"], height=120,
+                              corner_radius=0)
+        banner.pack(fill="x")
+        banner.pack_propagate(False)
 
         try:
-            from PIL import Image, ImageTk
             if os.path.exists(LOGO_PATH):
                 img = Image.open(LOGO_PATH)
-                img.thumbnail((200, 90))
-                self.login_logo = ImageTk.PhotoImage(img)
-                tk.Label(center_frame, image=self.login_logo, bg="black", bd=0).pack()
+                img.thumbnail((180, 70))
+                self._logo_img = ctk.CTkImage(light_image=img, dark_image=img,
+                                               size=img.size)
+                ctk.CTkLabel(banner, image=self._logo_img, text="").place(
+                    relx=0.5, rely=0.5, anchor="center")
             else:
-                tk.Label(center_frame, text="INFRAME", font=("Segoe UI", 32, "bold"), bg="black", fg="white").pack()
+                raise FileNotFoundError
         except:
-             tk.Label(center_frame, text="INFRAME", font=("Segoe UI", 32, "bold"), bg="black", fg="white").pack()
-        
-        # Form Container
-        form_frame = tk.Frame(self.container, bg=Theme.BG_MAIN)
-        form_frame.pack(fill="both", expand=True, padx=40, pady=20)
-        
-        tk.Label(form_frame, text="Sign In", font=Theme.FONT_HEADER, bg=Theme.BG_MAIN, fg=Theme.TEXT_MAIN).pack(pady=(10, 5))
-        tk.Label(form_frame, text="Enter your credentials to continue", font=Theme.FONT_BODY, bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED).pack(pady=(0, 30))
-        
-        # Form Elements
-        tk.Label(form_frame, text="Email Address", bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED, font=Theme.FONT_SMALL).pack(anchor="w")
-        self.entry_email = tk.Entry(form_frame, font=Theme.FONT_BODY, bg=Theme.BG_INPUT, fg=Theme.TEXT_MAIN, relief="flat", insertbackground=Theme.PRIMARY)
-        self.entry_email.pack(fill="x", pady=(5, 15), ipady=8)
-        
-        tk.Label(form_frame, text="Password", bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED, font=Theme.FONT_SMALL).pack(anchor="w")
-        self.entry_pass = tk.Entry(form_frame, font=Theme.FONT_BODY, bg=Theme.BG_INPUT, fg=Theme.TEXT_MAIN, relief="flat", show="•", insertbackground=Theme.PRIMARY)
-        self.entry_pass.pack(fill="x", pady=(5, 25), ipady=8)
-        
-        # Login Button
-        self.btn_login = ModernButton(form_frame, text="Sign In", command=self.perform_login, font=Theme.FONT_BODY_BOLD, height=2)
-        self.btn_login.pack(fill="x")
-        
-        # Status
-        self.lbl_login_status = tk.Label(form_frame, text="", bg=Theme.BG_MAIN, fg=Theme.DANGER, font=Theme.FONT_SMALL)
-        self.lbl_login_status.pack(pady=10)
+            ctk.CTkLabel(banner, text="INFRAME",
+                         font=ctk.CTkFont("Segoe UI", 28, "bold"),
+                         text_color=COLORS["text_white"]).place(
+                relx=0.5, rely=0.5, anchor="center")
 
-    def perform_login(self):
+        # ── Form ──
+        form = ctk.CTkFrame(self.container, fg_color=COLORS["bg_deep"], corner_radius=0)
+        form.pack(fill="both", expand=True, padx=36, pady=(28, 20))
+
+        ctk.CTkLabel(form, text="Sign In",
+                     font=ctk.CTkFont("Segoe UI", 24, "bold"),
+                     text_color=COLORS["text_white"]).pack(anchor="w")
+        ctk.CTkLabel(form, text="Enter your credentials to continue",
+                     font=ctk.CTkFont("Segoe UI", 12),
+                     text_color=COLORS["text_muted"]).pack(anchor="w", pady=(2, 24))
+
+        # Email
+        ctk.CTkLabel(form, text="EMAIL",
+                     font=ctk.CTkFont("Segoe UI", 10, "bold"),
+                     text_color=COLORS["text_dim"]).pack(anchor="w")
+        self.entry_email = ctk.CTkEntry(
+            form, height=44, corner_radius=8,
+            fg_color=COLORS["bg_card"], border_color=COLORS["border"],
+            text_color=COLORS["text"], placeholder_text="you@company.com",
+            placeholder_text_color=COLORS["text_dim"],
+            font=ctk.CTkFont("Segoe UI", 12))
+        self.entry_email.pack(fill="x", pady=(4, 16))
+
+        # Password
+        ctk.CTkLabel(form, text="PASSWORD",
+                     font=ctk.CTkFont("Segoe UI", 10, "bold"),
+                     text_color=COLORS["text_dim"]).pack(anchor="w")
+        self.entry_pass = ctk.CTkEntry(
+            form, height=44, corner_radius=8, show="\u2022",
+            fg_color=COLORS["bg_card"], border_color=COLORS["border"],
+            text_color=COLORS["text"], placeholder_text="Enter password",
+            placeholder_text_color=COLORS["text_dim"],
+            font=ctk.CTkFont("Segoe UI", 12))
+        self.entry_pass.pack(fill="x", pady=(4, 6))
+
+        # Options row
+        opts = ctk.CTkFrame(form, fg_color="transparent")
+        opts.pack(fill="x", pady=(0, 20))
+
+        self._show_pw_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(opts, text="Show password", variable=self._show_pw_var,
+                        command=self._toggle_pw, font=ctk.CTkFont("Segoe UI", 11),
+                        text_color=COLORS["text_muted"], fg_color=COLORS["accent"],
+                        hover_color=COLORS["accent_h"], border_color=COLORS["border"],
+                        checkbox_height=18, checkbox_width=18, corner_radius=4
+                        ).pack(side="left")
+
+        self._remember_var = ctk.BooleanVar(
+            value=True if get_reg("remember_me") == "1" else False)
+        ctk.CTkCheckBox(opts, text="Remember me", variable=self._remember_var,
+                        font=ctk.CTkFont("Segoe UI", 11),
+                        text_color=COLORS["text_muted"], fg_color=COLORS["accent"],
+                        hover_color=COLORS["accent_h"], border_color=COLORS["border"],
+                        checkbox_height=18, checkbox_width=18, corner_radius=4
+                        ).pack(side="right")
+
+        # Sign In button
+        ctk.CTkButton(form, text="Sign In", height=46, corner_radius=10,
+                      font=ctk.CTkFont("Segoe UI", 14, "bold"),
+                      fg_color=COLORS["accent"], hover_color=COLORS["accent_h"],
+                      command=self._do_login).pack(fill="x")
+
+        # Status
+        txt = "Verifying session..." if verifying else ""
+        clr = COLORS["yellow"] if verifying else COLORS["red"]
+        self.lbl_status_login = ctk.CTkLabel(form, text=txt,
+                                              font=ctk.CTkFont("Segoe UI", 11),
+                                              text_color=clr)
+        self.lbl_status_login.pack(pady=(12, 0))
+
+    def _toggle_pw(self):
+        self.entry_pass.configure(show="" if self._show_pw_var.get() else "\u2022")
+
+    def _do_login(self):
         email = self.entry_email.get().strip()
         pwd = self.entry_pass.get().strip()
-        
         if not email or not pwd:
-            self.lbl_login_status.config(text="Please enter email and password")
+            self.lbl_status_login.configure(text="Enter email and password",
+                                             text_color=COLORS["red"])
             return
-            
-        self.lbl_login_status.config(text="Authenticating...", fg=Theme.WARNING)
-        self.btn_login.config(state="disabled")
-        
-        def login_thread():
+        self.lbl_status_login.configure(text="Authenticating...",
+                                         text_color=COLORS["yellow"])
+
+        def work():
             try:
-                resp = requests.post(f"{SERVER_URL}/api/app-login", json={"email": email, "password": pwd}, timeout=10)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    self.activation_key = data['activation_key']
-                    self.employee_name = data['name']
-                    set_registry_value("activation_key", self.activation_key)
-                    set_registry_value("employee_name", self.employee_name)
-                    self.container.after(0, self.show_main_ui)
+                r = requests.post(f"{SERVER_URL}/api/app-login",
+                                  json={"email": email, "password": pwd}, timeout=10)
+                if r.status_code == 200:
+                    d = r.json()
+                    self.activation_key = d["activation_key"]
+                    self.employee_name = d["name"]
+                    if self._remember_var.get():
+                        set_reg("activation_key", self.activation_key)
+                        set_reg("employee_name", self.employee_name)
+                        set_reg("remember_me", "1")
+                    else:
+                        set_reg("activation_key", "")
+                        set_reg("remember_me", "0")
+                    self.after(0, self._show_dashboard)
                 else:
-                    msg = resp.json().get("detail", "Login failed")
-                    self.container.after(0, lambda: self.login_failed(msg))
+                    msg = r.json().get("detail", "Login failed")
+                    self.after(0, lambda: self.lbl_status_login.configure(
+                        text=msg, text_color=COLORS["red"]))
             except:
-                self.container.after(0, lambda: self.login_failed("Connection failed"))
-        Thread(target=login_thread, daemon=True).start()
+                self.after(0, lambda: self.lbl_status_login.configure(
+                    text="Connection failed", text_color=COLORS["red"]))
+        Thread(target=work, daemon=True).start()
 
-    def login_failed(self, msg):
-        self.lbl_login_status.config(text=msg, fg=Theme.DANGER)
-        self.btn_login.config(state="normal")
+    # ─────────────────────────────────────────────────────────────────────
+    #  DASHBOARD
+    # ─────────────────────────────────────────────────────────────────────
 
-    # -------------------------------------------------------------------------
-    # UI: MAIN DASHBOARD
-    # -------------------------------------------------------------------------
-    def show_main_ui(self):
-        for widget in self.container.winfo_children():
-            widget.destroy()
-            
-        # Top Info Bar (Black Header)
-        top_bar = tk.Frame(self.container, bg="black", height=110)
-        top_bar.pack(fill="x")
-        top_bar.pack_propagate(False)
-        
-        # Logo in Header
+    def _show_dashboard(self):
+        self._clear()
+
+        # ── Header ──
+        header = ctk.CTkFrame(self.container, fg_color=COLORS["bg_main"],
+                              height=60, corner_radius=0)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+
+        # Logo left
         try:
-            from PIL import Image, ImageTk
             if os.path.exists(LOGO_PATH):
                 img = Image.open(LOGO_PATH)
-                img.thumbnail((120, 50))
-                self.dash_logo = ImageTk.PhotoImage(img) # Keep ref
-                tk.Label(top_bar, image=self.dash_logo, bg="black", bd=0).pack(side="left", padx=25)
+                img.thumbnail((140, 50))
+                self._dash_logo = ctk.CTkImage(light_image=img, dark_image=img,
+                                                size=img.size)
+                ctk.CTkLabel(header, image=self._dash_logo, text="").pack(
+                    side="left", padx=18)
             else:
-                tk.Label(top_bar, text="INFRAME", font=("Segoe UI", 18, "bold"), bg="black", fg="white").pack(side="left", padx=25)
+                raise FileNotFoundError
         except:
-             tk.Label(top_bar, text="INFRAME", font=("Segoe UI", 18, "bold"), bg="black", fg="white").pack(side="left", padx=25)
-        
-        # User Info (Right aligned)
-        info_col = tk.Frame(top_bar, bg="black")
-        info_col.pack(side="right", fill="y", pady=25, padx=20)
-        
-        tk.Label(info_col, text=self.employee_name, font=("Segoe UI", 11, "bold"), bg="black", fg="white").pack(anchor="e")
-        self.lbl_status = tk.Label(info_col, text="● Initializing...", font=Theme.FONT_SMALL, bg="black", fg="#9ca3af")
-        self.lbl_status.pack(anchor="e")
-        
-        # Main Content (Gray background for contrast)
-        content = tk.Frame(self.container, bg=Theme.BG_SIDEBAR, padx=25, pady=25)
-        content.pack(fill="both", expand=True)
-        
-        # Stats Card (White card on gray bg)
-        stats_frame = tk.Frame(content, bg=Theme.BG_MAIN, padx=15, pady=15)
-        stats_frame.pack(fill="x", pady=(0, 25))
-        
-        tk.Label(stats_frame, text="TODAY'S ACTIVITY", font=("Segoe UI", 9, "bold"), bg=Theme.BG_MAIN, fg=Theme.TEXT_MUTED).pack(anchor="w", pady=(0, 15))
-        
-        # Stats Layout
-        stats_row = tk.Frame(stats_frame, bg=Theme.BG_MAIN)
-        stats_row.pack(fill="x")
-        
-        self.create_stat_item(stats_row, "Active", "00:00:00", Theme.SUCCESS, "lbl_present")
-        self.create_stat_item(stats_row, "Away", "00:00:00", Theme.DANGER, "lbl_away")
-        self.create_stat_item(stats_row, "Break", "00:00:00", Theme.WARNING, "lbl_break")
-        
-        # Actions
-        tk.Label(content, text="CONTROLS", font=("Segoe UI", 9, "bold"), bg=Theme.BG_SIDEBAR, fg=Theme.TEXT_MUTED).pack(anchor="w", pady=(0, 10))
-        
-        self.btn_break = ModernButton(content, text="☕ Take a Break", bg=Theme.WARNING, hover_bg="#ca8a04", command=self.toggle_break, height=2, font=Theme.FONT_BODY_BOLD)
-        self.btn_break.pack(fill="x", pady=(0, 15))
-        
-        ModernButton(content, text="🛑 End Shift", bg=Theme.DANGER, hover_bg=Theme.DANGER_HOVER, command=self.on_close, height=2).pack(fill="x")
-        
-        tk.Label(self.container, text=f"Device ID: {self.hardware_id}", bg=Theme.BG_SIDEBAR, fg=Theme.BG_INPUT, font=("Segoe UI", 8)).pack(side="bottom", pady=10)
-        
-        # Separator Line for Header
-        tk.Frame(self.container, bg=Theme.BG_INPUT, height=1).place(x=0, y=99, relwidth=1.0)
-        
-        self.start_monitoring()
+            ctk.CTkLabel(header, text="INFRAME",
+                         font=ctk.CTkFont("Segoe UI", 16, "bold"),
+                         text_color=COLORS["text_white"]).pack(side="left", padx=18)
 
-    def create_stat_item(self, parent, title, value, color, attr_name):
-        f = tk.Frame(parent, bg=Theme.BG_MAIN)
-        f.pack(side="left", expand=True, fill="both", padx=2)
-        
-        tk.Label(f, text=title, bg=Theme.BG_MAIN, fg="#94a3b8", font=("Segoe UI", 10)).pack(anchor="center")
-        l = tk.Label(f, text=value, bg=Theme.BG_MAIN, fg=color, font=("Consolas", 14, "bold"))
-        l.pack(anchor="center", pady=(5, 0))
-        setattr(self, attr_name, l)
+        # Right side: gear | name column
+        ctk.CTkButton(header, text="\u2699", width=34, height=34,
+                      corner_radius=8, fg_color=COLORS["bg_card"],
+                      hover_color=COLORS["bg_input"],
+                      text_color=COLORS["text_muted"],
+                      font=ctk.CTkFont(size=15),
+                      command=self._profile_menu).pack(side="right", padx=(0, 14))
 
-    # -------------------------------------------------------------------------
-    # FUNCTIONALITY
-    # -------------------------------------------------------------------------
-    def format_time(self, seconds):
-        h = int(seconds // 3600)
-        m = int((seconds % 3600) // 60)
-        # s = int(seconds % 60) # Seconds removed for cleaner look
-        return f"{h}h {m}m"
+        info = ctk.CTkFrame(header, fg_color="transparent")
+        info.pack(side="right", padx=(0, 10))
+        ctk.CTkLabel(info, text=self.employee_name,
+                     font=ctk.CTkFont("Segoe UI", 12, "bold"),
+                     text_color=COLORS["text_white"]).pack(anchor="e")
+        self.lbl_dash_status = ctk.CTkLabel(info, text="\u25cf Monitoring...",
+                                             font=ctk.CTkFont("Segoe UI", 10),
+                                             text_color=COLORS["text_muted"])
+        self.lbl_dash_status.pack(anchor="e")
 
-    def update_status(self, text, color):
-        if hasattr(self, 'lbl_status') and self.lbl_status.winfo_exists():
-            self.lbl_status.config(text=f"● {text}", fg=color)
+        # ── Content ──
+        content = ctk.CTkFrame(self.container, fg_color=COLORS["bg_deep"],
+                               corner_radius=0)
+        content.pack(fill="both", expand=True, padx=18, pady=(14, 10))
 
-    def start_monitoring(self):
-        if self.monitoring_active: return
-        self.monitoring_active = True
-        
-        Thread(target=self.loop_camera, daemon=True).start()
-        Thread(target=self.loop_ticks, daemon=True).start()
-        Thread(target=self.loop_heartbeat, daemon=True).start()
-        Thread(target=self.loop_apps, daemon=True).start()
-        Thread(target=self.loop_screenshots, daemon=True).start()
-        
-        self.after(1000, self.fetch_server_time)
+        # ── Stats Card ──
+        card = ctk.CTkFrame(content, fg_color=COLORS["bg_card"], corner_radius=14,
+                            border_width=1, border_color=COLORS["border"])
+        card.pack(fill="x", pady=(0, 14))
 
-    def fetch_server_time(self):
+        ctk.CTkLabel(card, text="TODAY'S ACTIVITY",
+                     font=ctk.CTkFont("Segoe UI", 10, "bold"),
+                     text_color=COLORS["text_dim"]).pack(anchor="w", padx=20, pady=(16, 14))
+
+        stats = ctk.CTkFrame(card, fg_color="transparent")
+        stats.pack(fill="x", padx=20, pady=(0, 18))
+        stats.columnconfigure((0, 1, 2), weight=1)
+
+        self._stat_labels = {}
+        for i, (label, color, key) in enumerate([
+            ("Active", COLORS["green"], "present"),
+            ("Away",   COLORS["red"],   "away"),
+            ("Break",  COLORS["yellow"],"break_"),
+        ]):
+            f = ctk.CTkFrame(stats, fg_color="transparent")
+            f.grid(row=0, column=i, sticky="nsew")
+            ctk.CTkLabel(f, text=label, font=ctk.CTkFont("Segoe UI", 11),
+                         text_color=COLORS["text_muted"]).pack()
+            lbl = ctk.CTkLabel(f, text="0h 0m",
+                               font=ctk.CTkFont("Consolas", 20, "bold"),
+                               text_color=color)
+            lbl.pack(pady=(4, 0))
+            self._stat_labels[key] = lbl
+
+        # ── Controls Card ──
+        ctrl = ctk.CTkFrame(content, fg_color=COLORS["bg_card"], corner_radius=14,
+                            border_width=1, border_color=COLORS["border"])
+        ctrl.pack(fill="x", pady=(0, 14))
+
+        ctk.CTkLabel(ctrl, text="CONTROLS",
+                     font=ctk.CTkFont("Segoe UI", 10, "bold"),
+                     text_color=COLORS["text_dim"]).pack(anchor="w", padx=20, pady=(16, 14))
+
+        btns = ctk.CTkFrame(ctrl, fg_color="transparent")
+        btns.pack(fill="x", padx=20, pady=(0, 18))
+
+        self.btn_break = ctk.CTkButton(
+            btns, text="\u2615  Take a Break", height=44, corner_radius=10,
+            font=ctk.CTkFont("Segoe UI", 13, "bold"),
+            fg_color=COLORS["yellow"], hover_color="#ca8a04",
+            text_color=COLORS["bg_deep"],
+            command=self._toggle_break)
+        self.btn_break.pack(fill="x", pady=(0, 8))
+
+        ctk.CTkButton(
+            btns, text="\u26d4  End Shift", height=44, corner_radius=10,
+            font=ctk.CTkFont("Segoe UI", 13, "bold"),
+            fg_color=COLORS["red"], hover_color="#dc2626",
+            text_color="white",
+            command=self.on_close).pack(fill="x")
+
+        # ── Footer ──
+        ctk.CTkLabel(content, text=f"Device: {self.hardware_id}",
+                     font=ctk.CTkFont("Segoe UI", 9),
+                     text_color=COLORS["text_dim"]).pack(side="bottom", pady=(6, 0))
+
+        self._start_monitoring()
+
+    # ─────────────────────────────────────────────────────────────────────
+    #  PROFILE MENU / LOGOUT / CHANGE PASSWORD
+    # ─────────────────────────────────────────────────────────────────────
+
+    def _profile_menu(self):
+        menu = tk.Menu(self, tearoff=0, bg=COLORS["bg_card"], fg=COLORS["text"],
+                       font=("Segoe UI", 10), activebackground=COLORS["accent"],
+                       activeforeground="white", bd=0, relief="flat")
+        menu.add_command(label="  \U0001F513  Change Password", command=self._change_pw_dialog)
+        menu.add_separator()
+        menu.add_command(label="  \U0001F6AA  Logout", command=self._logout)
         try:
-            resp = requests.get(f"{SERVER_URL}/api/employee-time/{self.activation_key}", timeout=5)
-            if resp.status_code == 200:
-                d = resp.json()
-                self.present_seconds = d.get('present_seconds', 0)
-                self.away_seconds = d.get('away_seconds', 0)
-                self.break_seconds = d.get('break_seconds', 0)
-        except: pass
+            menu.tk_popup(self.winfo_x() + 360, self.winfo_y() + 80)
+        finally:
+            menu.grab_release()
 
-    # --- Loops ---
+    def _logout(self):
+        self.is_running = False
+        self.monitoring_active = False
+        self.activation_key = None
+        set_reg("activation_key", "")
+        set_reg("remember_me", "0")
+        self._close_popup("_warn_win")
+        self._close_popup("_cam_err_win")
+        self.is_running = True
+        self._show_login()
 
-    def loop_ticks(self):
+    def _change_pw_dialog(self):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Change Password")
+        dialog.geometry("380x340")
+        dialog.resizable(False, False)
+        dialog.configure(fg_color=COLORS["bg_card"])
+        dialog.attributes("-topmost", True)
+        dialog.grab_set()
+
+        # Center
+        dialog.update_idletasks()
+        x = (self.winfo_screenwidth() - 380) // 2
+        y = (self.winfo_screenheight() - 340) // 2
+        dialog.geometry(f"380x340+{x}+{y}")
+
+        pad = ctk.CTkFrame(dialog, fg_color="transparent")
+        pad.pack(fill="both", expand=True, padx=28, pady=24)
+
+        ctk.CTkLabel(pad, text="Change Password",
+                     font=ctk.CTkFont("Segoe UI", 18, "bold"),
+                     text_color=COLORS["text_white"]).pack(anchor="w")
+        ctk.CTkLabel(pad, text="Verify your identity to change password",
+                     font=ctk.CTkFont("Segoe UI", 11),
+                     text_color=COLORS["text_muted"]).pack(anchor="w", pady=(2, 16))
+
+        # Old password
+        ctk.CTkLabel(pad, text="CURRENT PASSWORD",
+                     font=ctk.CTkFont("Segoe UI", 9, "bold"),
+                     text_color=COLORS["text_dim"]).pack(anchor="w")
+        entry_old = ctk.CTkEntry(pad, height=40, corner_radius=8, show="\u2022",
+                             fg_color=COLORS["bg_input"],
+                             border_color=COLORS["border"],
+                             text_color=COLORS["text"],
+                             font=ctk.CTkFont("Segoe UI", 12))
+        entry_old.pack(fill="x", pady=(4, 12))
+
+        # New password
+        ctk.CTkLabel(pad, text="NEW PASSWORD",
+                     font=ctk.CTkFont("Segoe UI", 9, "bold"),
+                     text_color=COLORS["text_dim"]).pack(anchor="w")
+        entry_new = ctk.CTkEntry(pad, height=40, corner_radius=8, show="\u2022",
+                             fg_color=COLORS["bg_input"],
+                             border_color=COLORS["border"],
+                             text_color=COLORS["text"],
+                             placeholder_text="Min 8 characters",
+                             font=ctk.CTkFont("Segoe UI", 12))
+        entry_new.pack(fill="x", pady=(4, 10))
+
+        result = ctk.CTkLabel(pad, text="", font=ctk.CTkFont("Segoe UI", 11))
+        result.pack(pady=(0, 8))
+
+        def do_it():
+            old = entry_old.get().strip()
+            new = entry_new.get().strip()
+            if not old:
+                result.configure(text="Enter current password", text_color=COLORS["red"])
+                return
+            if len(new) < 8:
+                result.configure(text="New password: min 8 characters", text_color=COLORS["red"])
+                return
+            try:
+                r = requests.post(f"{SERVER_URL}/api/app-change-password",
+                                  json={"activation_key": self.activation_key,
+                                        "old_password": old,
+                                        "new_password": new}, timeout=10)
+                if r.status_code == 200:
+                    result.configure(text="\u2705 Password changed!", text_color=COLORS["green"])
+                    dialog.after(1500, dialog.destroy)
+                else:
+                    result.configure(text=r.json().get("detail", "Error"),
+                                     text_color=COLORS["red"])
+            except:
+                result.configure(text="Connection error", text_color=COLORS["red"])
+
+        row = ctk.CTkFrame(pad, fg_color="transparent")
+        row.pack(fill="x")
+        ctk.CTkButton(row, text="Update", height=40, corner_radius=8,
+                      fg_color=COLORS["accent"], hover_color=COLORS["accent_h"],
+                      font=ctk.CTkFont("Segoe UI", 12, "bold"),
+                      command=do_it).pack(side="left", expand=True, fill="x", padx=(0, 6))
+        ctk.CTkButton(row, text="Cancel", height=40, corner_radius=8,
+                      fg_color=COLORS["bg_input"], hover_color=COLORS["border"],
+                      font=ctk.CTkFont("Segoe UI", 12, "bold"),
+                      command=dialog.destroy).pack(side="right", expand=True,
+                                                    fill="x", padx=(6, 0))
+
+    # ─────────────────────────────────────────────────────────────────────
+    #  FUNCTIONALITY
+    # ─────────────────────────────────────────────────────────────────────
+
+    def _fmt(self, s):
+        return f"{int(s//3600)}h {int((s%3600)//60)}m"
+
+    def _set_status(self, text, color):
+        if hasattr(self, "lbl_dash_status") and self.lbl_dash_status.winfo_exists():
+            self.lbl_dash_status.configure(text=f"\u25cf {text}", text_color=color)
+
+    def _start_monitoring(self):
+        if self.monitoring_active:
+            return
+        self.monitoring_active = True
+        for fn in [self._loop_cam, self._loop_tick, self._loop_hb,
+                   self._loop_apps, self._loop_ss]:
+            Thread(target=fn, daemon=True).start()
+        self.after(500, lambda: self._set_status("Monitoring...", COLORS["text_muted"]))
+        self.after(1000, self._fetch_time)
+
+    def _fetch_time(self):
+        try:
+            r = requests.get(f"{SERVER_URL}/api/employee-time/{self.activation_key}",
+                             timeout=5)
+            if r.status_code == 200:
+                d = r.json()
+                self.present_seconds = d.get("present_seconds", 0)
+                self.away_seconds = d.get("away_seconds", 0)
+                self.break_seconds = d.get("break_seconds", 0)
+        except:
+            pass
+
+    def _toggle_break(self):
+        self.in_break_mode = not self.in_break_mode
+        if self.in_break_mode:
+            if hasattr(self, "btn_break") and self.btn_break.winfo_exists():
+                self.btn_break.configure(text="\u25b6  Resume Work",
+                                          fg_color=COLORS["accent"],
+                                          hover_color=COLORS["accent_h"],
+                                          text_color="white")
+            self._set_status("On Break", COLORS["yellow"])
+            self._log("BREAK_START")
+        else:
+            if hasattr(self, "btn_break") and self.btn_break.winfo_exists():
+                self.btn_break.configure(text="\u2615  Take a Break",
+                                          fg_color=COLORS["yellow"],
+                                          hover_color="#ca8a04",
+                                          text_color=COLORS["bg_deep"])
+            self._set_status("Active", COLORS["green"])
+            self._log("BREAK_END")
+
+    # ── Loops ──
+
+    def _loop_tick(self):
         while self.is_running:
             if self.monitoring_active:
                 if self.in_break_mode:
@@ -517,103 +599,94 @@ class App(DraggableWindow):
                     self.present_seconds += 1
                 elif self.current_status == "Away":
                     self.away_seconds += 1
-                
-                self.after(0, self.update_timers)
+                self.after(0, self._update_timers)
             time.sleep(1)
 
-    def update_timers(self):
-        if hasattr(self, 'lbl_present') and self.lbl_present.winfo_exists():
-            self.lbl_present.config(text=self.format_time(self.present_seconds))
-            self.lbl_away.config(text=self.format_time(self.away_seconds))
-            self.lbl_break.config(text=self.format_time(self.break_seconds))
+    def _update_timers(self):
+        if not hasattr(self, "_stat_labels"):
+            return
+        try:
+            self._stat_labels["present"].configure(text=self._fmt(self.present_seconds))
+            self._stat_labels["away"].configure(text=self._fmt(self.away_seconds))
+            self._stat_labels["break_"].configure(text=self._fmt(self.break_seconds))
+        except:
+            pass
 
-    def toggle_break(self):
-        self.in_break_mode = not self.in_break_mode
-        if self.in_break_mode:
-            self.btn_break.config(text="▶ Resume Work", bg=Theme.PRIMARY, hover_bg=Theme.PRIMARY_HOVER)
-            self.update_status("On Break", Theme.WARNING)
-            self.send_log("BREAK_START")
-        else:
-            self.btn_break.config(text="☕ Take a Break", bg=Theme.WARNING, hover_bg="#ca8a04")
-            self.update_status("Active", Theme.SUCCESS)
-            self.send_log("BREAK_END")
-
-    def loop_camera(self):
+    def _loop_cam(self):
         model = YOLO("yolo11n.pt")
         cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        
+        cam_err = 0
         self.consecutive_away = 0
         self.consecutive_present = 0
-        consecutive_cam_errors = 0
-        
+
         while self.is_running:
             try:
                 if self.in_break_mode:
                     time.sleep(1)
                     continue
-                    
                 ret, frame = cap.read()
                 person = False
-                
                 if ret:
-                    consecutive_cam_errors = 0
-                    results = model(frame, verbose=False)
-                    for r in results:
+                    cam_err = 0
+                    self._latest_frame = frame.copy()
+                    for r in model(frame, verbose=False):
                         for box in r.boxes:
                             if int(box.cls) == 0 and float(box.conf) > CONFIDENCE_THRESHOLD:
-                                person = True; break
-                        if person: break
+                                person = True
+                                break
+                        if person:
+                            break
                 else:
-                    consecutive_cam_errors += 1
-                    # Try to restart the camera if it fails
+                    cam_err += 1
                     if cap:
                         cap.release()
                     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-                    
-                    if consecutive_cam_errors >= 5:
-                        self.after(0, self.show_cam_error)
-                        time.sleep(5)  # Pause longer before retrying to prevent spamming
+                    if cam_err >= 5:
+                        self.after(0, self._show_cam_err)
+                        time.sleep(5)
                         continue
-                
+
                 if person:
                     self.consecutive_present += 1
                     self.consecutive_away = 0
                     if self.consecutive_present >= PRESENT_LIMIT and self.current_status != "Present":
                         self.current_status = "Present"
-                        self.send_log("Present")
-                        self.after(0, lambda: self.update_status("Active", Theme.SUCCESS))
-                        self.after(0, self.hide_warning)
+                        self._log("Present")
+                        self.after(0, lambda: self._set_status("Active", COLORS["green"]))
+                        self.after(0, self._hide_warn)
                 else:
                     self.consecutive_present = 0
                     self.consecutive_away += 1
-                    
                     if self.consecutive_away >= AWAY_LIMIT:
                         if self.current_status != "Away":
                             self.current_status = "Away"
-                            self.send_log("Away")
-                            self.after(0, lambda: self.update_status("Away Detected", Theme.DANGER))
-                        
+                            self._log("Away")
+                            self.after(0, lambda: self._set_status("Away", COLORS["red"]))
                         if time.time() > self.warning_snoozed_until:
-                            self.after(0, self.show_warning)
-            except: pass
+                            self.after(0, self._show_warn)
+            except:
+                pass
             time.sleep(1)
-        if cap: cap.release()
+        if cap:
+            cap.release()
 
-    def loop_heartbeat(self):
+    def _loop_hb(self):
         while self.is_running:
             try:
-                resp = requests.post(f"{SERVER_URL}/heartbeat", json={"activation_key": self.activation_key}, timeout=5)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if data.get("command") == "screenshot":
-                        self.capture_and_send_screenshot(True)
-                    if "settings" in data:
-                        self.screenshot_frequency = data["settings"].get("screenshot_frequency", 600)
-                        self.dlp_enabled = bool(data["settings"].get("dlp_enabled", 0))
-            except: pass
+                r = requests.post(f"{SERVER_URL}/heartbeat",
+                                  json={"activation_key": self.activation_key}, timeout=5)
+                if r.status_code == 200:
+                    d = r.json()
+                    if d.get("command") == "screenshot":
+                        self._take_ss(True)
+                    if "settings" in d:
+                        self.screenshot_frequency = d["settings"].get("screenshot_frequency", 600)
+                        self.dlp_enabled = bool(d["settings"].get("dlp_enabled", 0))
+            except:
+                pass
             time.sleep(10)
 
-    def loop_apps(self):
+    def _loop_apps(self):
         last_app = None
         start_t = time.time()
         while self.is_running:
@@ -621,227 +694,256 @@ class App(DraggableWindow):
                 hwnd = win32gui.GetForegroundWindow()
                 title = win32gui.GetWindowText(hwnd)
                 _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                try: app = psutil.Process(pid).name()
-                except: app = "unknown"
-                
+                try:
+                    app = psutil.Process(pid).name()
+                except:
+                    app = "unknown"
                 if app != last_app and last_app:
                     dur = int(time.time() - start_t)
                     if dur > 2:
                         requests.post(f"{SERVER_URL}/api/app-log", json={
                             "activation_key": self.activation_key,
-                            "app_name": last_app, "window_title": title[:200], "duration_seconds": dur
-                        })
+                            "app_name": last_app, "window_title": title[:200],
+                            "duration_seconds": dur})
                     start_t = time.time()
                 last_app = app
-            except: pass
+            except:
+                pass
             time.sleep(5)
 
-    def loop_screenshots(self):
+    def _loop_ss(self):
         while self.is_running:
             if not self.in_break_mode:
-                self.capture_and_send_screenshot()
-            
-            target = time.time() + self.screenshot_frequency
-            while time.time() < target:
-                if not self.is_running: break
+                self._take_ss()
+            t = time.time() + self.screenshot_frequency
+            while time.time() < t:
+                if not self.is_running:
+                    break
                 time.sleep(5)
 
-    def capture_and_send_screenshot(self, manual=False):
+    def _take_ss(self, manual=False):
         try:
             screen = ImageGrab.grab()
             if self.dlp_enabled:
-                self.apply_dlp(screen)
-            
+                self._dlp(screen)
             buf = io.BytesIO()
-            screen.save(buf, format='JPEG', quality=60)
+            screen.save(buf, format="JPEG", quality=60)
             b64 = base64.b64encode(buf.getvalue()).decode()
-            
             requests.post(f"{SERVER_URL}/api/screenshot", json={
-                "activation_key": self.activation_key, "screenshot_data": b64, "manual_request": manual
-            })
+                "activation_key": self.activation_key,
+                "screenshot_data": b64, "manual_request": manual})
             print("Screenshot sent")
-        except Exception as e: print(e)
+        except Exception as e:
+            print(e)
 
-    def apply_dlp(self, img):
-        # Professional DLP Keyword List
-        keywords = ["password", "bank", "credit", "inbox", "login", "sign in", "facebook", 
-                    "twitter", "instagram", "gmail", "stripe", "paypal", "confidential", 
-                    "finance", "accounting", "hr", "payroll", "messages", "whatsapp"]
-        
-        # Get actual screen DPI vs logical DPI to fix scaling issues
+    def _dlp(self, img):
+        kw = ["password","bank","credit","inbox","login","sign in","facebook",
+              "twitter","instagram","gmail","stripe","paypal","confidential",
+              "finance","accounting","hr","payroll","messages","whatsapp"]
         try:
             hdc = ctypes.windll.user32.GetDC(0)
-            dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88) # LOGPIXELSX
+            dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88)
             ctypes.windll.user32.ReleaseDC(0, hdc)
-            scale_factor = dpi / 96.0
+            sf = dpi / 96.0
         except:
-            scale_factor = 1.0
+            sf = 1.0
 
         def handler(hwnd, _):
             if win32gui.IsWindowVisible(hwnd):
-                title = win32gui.GetWindowText(hwnd).lower()
-                if any(k in title for k in keywords):
+                t = win32gui.GetWindowText(hwnd).lower()
+                if any(k in t for k in kw):
                     try:
-                        # Get exact Window Coordinates
-                        msg = win32gui.GetWindowRect(hwnd)
-                        
-                        # Scale coordinates if user has 125% or 150% display scaling
-                        x1 = int(msg[0] * scale_factor)
-                        y1 = int(msg[1] * scale_factor)
-                        x2 = int(msg[2] * scale_factor)
-                        y2 = int(msg[3] * scale_factor)
-                        
-                        box = (x1, y1, x2, y2)
-                        
-                        # Validate box bounds against image size
-                        img_w, img_h = img.size
-                        x1 = max(0, x1)
-                        y1 = max(0, y1)
-                        x2 = min(img_w, x2)
-                        y2 = min(img_h, y2)
-                        
-                        if x1 >= 0 and y1 >= 0 and x2 > x1 and y2 > y1:
+                        rect = win32gui.GetWindowRect(hwnd)
+                        x1, y1 = max(0, int(rect[0]*sf)), max(0, int(rect[1]*sf))
+                        x2, y2 = min(img.size[0], int(rect[2]*sf)), min(img.size[1], int(rect[3]*sf))
+                        if x2 > x1 and y2 > y1:
                             box = (x1, y1, x2, y2)
-                            
-                            # 1. Pixelate/Blur Effect - Aggressive 30px radius for security
-                            region = img.crop(box)
-                            blurred = region.filter(ImageFilter.GaussianBlur(radius=30))
-                            
-                            # 2. Add Dark Overlay for better text contrast
-                            overlay = Image.new('RGBA', blurred.size, (0, 0, 0, 128))
-                            blurred = blurred.convert('RGBA')
-                            blurred = Image.alpha_composite(blurred, overlay)
-                            blurred = blurred.convert('RGB')
-                            
+                            region = img.crop(box).filter(ImageFilter.GaussianBlur(30))
+                            overlay = Image.new("RGBA", region.size, (0,0,0,128))
+                            blurred = Image.alpha_composite(region.convert("RGBA"), overlay).convert("RGB")
                             img.paste(blurred, box)
-                            
-                            # 3. Add "Sensitive Data" Watermark
                             draw = ImageDraw.Draw(img)
-                            
-                            # Calculate center
-                            cx, cy = x1 + (x2-x1)//2, y1 + (y2-y1)//2
-                            text = "🔒 SENSITIVE DATA BLURRED BY DLP"
-                            
-                            # Default font is small, try to use a larger built-in font if possible, else scale via math
-                            try:
-                                font = ImageFont.truetype("arial.ttf", 24)
-                            except:
-                                font = ImageFont.load_default()
-                            
-                            # Get text bounding box to center it perfectly
-                            try:
-                                bbox = draw.textbbox((0, 0), text, font=font)
-                                tw = bbox[2] - bbox[0]
-                                th = bbox[3] - bbox[1]
-                            except:
-                                tw, th = 200, 20 # Fallback sizes
-                                
-                            tx = cx - (tw//2)
-                            ty = cy - (th//2)
-                            
-                            # Draw Red pill background for the text
-                            padding = 10
-                            draw.rectangle(
-                                [tx - padding, ty - padding, tx + tw + padding, ty + th + padding],
-                                fill=(220, 38, 38) # Red-600
-                            )
-                            
-                            # Draw Text
-                            draw.text((tx, ty), text, fill="white", font=font)
-                            
-                    except Exception as e:
-                        print(f"DLP Error on window: {e}")
-        
+                            txt = "\U0001F512 SENSITIVE DATA BLURRED"
+                            try: fnt = ImageFont.truetype("arial.ttf", 24)
+                            except: fnt = ImageFont.load_default()
+                            bb = draw.textbbox((0,0), txt, font=fnt)
+                            tw, th = bb[2]-bb[0], bb[3]-bb[1]
+                            cx, cy = x1+(x2-x1)//2, y1+(y2-y1)//2
+                            draw.rectangle([cx-tw//2-10, cy-th//2-10, cx+tw//2+10, cy+th//2+10],
+                                           fill=(220,38,38))
+                            draw.text((cx-tw//2, cy-th//2), txt, fill="white", font=fnt)
+                    except:
+                        pass
         win32gui.EnumWindows(handler, None)
 
-    def send_log(self, status):
-        try: requests.post(f"{SERVER_URL}/log-activity", json={"activation_key": self.activation_key, "status": status})
-        except: pass
+    def _log(self, status):
+        try:
+            requests.post(f"{SERVER_URL}/log-activity",
+                          json={"activation_key": self.activation_key, "status": status})
+        except:
+            pass
 
-    # --- Windows ---
-    def show_warning(self):
-        if hasattr(self, 'win_warn') and self.win_warn.winfo_exists(): return
-        self.win_warn = tk.Toplevel(self)
-        self.win_warn.overrideredirect(True)
-        self.win_warn.attributes('-topmost', True)
-        self.win_warn.attributes('-alpha', 0.95)
-        self.win_warn.configure(bg=Theme.DANGER)
-        w, h = 500, 260
-        x = (self.winfo_screenwidth()-w)//2
-        y = (self.winfo_screenheight()-h)//2
-        self.win_warn.geometry(f"{w}x{h}+{x}+{y}")
-        
-        # Inner Frame with Border
-        frame = tk.Frame(self.win_warn, bg=Theme.DANGER, highlightbackground="white", highlightthickness=2)
-        frame.pack(fill="both", expand=True, padx=4, pady=4)
-        
-        tk.Label(frame, text="⚠️", font=("Segoe UI", 48), bg=Theme.DANGER, fg="white").pack(pady=(15, 0))
-        tk.Label(frame, text="YOU ARE AWAY", font=("Segoe UI", 24, "bold"), bg=Theme.DANGER, fg="white").pack()
-        tk.Label(frame, text="Presence not detected. Activity logging paused.", font=("Segoe UI", 11), bg=Theme.DANGER, fg="white").pack(pady=(5, 15))
-        
-        # Manual Bypass & Break Buttons
-        btn_frame = tk.Frame(frame, bg=Theme.DANGER)
-        btn_frame.pack(pady=(0, 20))
-        
-        ModernButton(btn_frame, text="I'm Here (Dismiss)", font=("Segoe UI", 11, "bold"), bg="#ffffff", fg=Theme.DANGER, hover_bg="#f8fafc", command=self.manual_presence, height=2, width=15).pack(side="left", padx=5)
-        ModernButton(btn_frame, text="Go on Break", font=("Segoe UI", 11, "bold"), bg=Theme.WARNING, fg="#ffffff", hover_bg="#ca8a04", command=self.warning_go_on_break, height=2, width=15).pack(side="left", padx=5)
-        
-    def show_cam_error(self):
-        if hasattr(self, 'win_cam_error') and self.win_cam_error.winfo_exists(): return
-        if hasattr(self, 'win_warn') and self.win_warn.winfo_exists(): self.hide_warning()
-        
-        self.win_cam_error = tk.Toplevel(self)
-        self.win_cam_error.overrideredirect(True)
-        self.win_cam_error.attributes('-topmost', True)
-        self.win_cam_error.attributes('-alpha', 0.95)
-        self.win_cam_error.configure(bg=Theme.WARNING)
-        w, h = 500, 280
-        x = (self.winfo_screenwidth()-w)//2
-        y = (self.winfo_screenheight()-h)//2
-        self.win_cam_error.geometry(f"{w}x{h}+{x}+{y}")
-        
-        frame = tk.Frame(self.win_cam_error, bg=Theme.WARNING, highlightbackground="black", highlightthickness=2)
-        frame.pack(fill="both", expand=True, padx=4, pady=4)
-        
-        tk.Label(frame, text="📷", font=("Segoe UI", 40), bg=Theme.WARNING, fg="black").pack(pady=(10, 0))
-        tk.Label(frame, text="CAMERA ERROR", font=("Segoe UI", 20, "bold"), bg=Theme.WARNING, fg="black").pack()
-        
-        msg = "Unable to access the camera.\n\n1. Ensure another app is NOT using the camera.\n" \
-              "2. Check Privacy Settings:\n   Settings > Privacy & security > Camera\n" \
-              "   Turn on 'Let desktop apps access your camera'."
-        
-        tk.Label(frame, text=msg, font=("Segoe UI", 10), bg=Theme.WARNING, fg="black", justify="left").pack(pady=10)
-        
-        ModernButton(frame, text="I Fixed It (Retry)", font=("Segoe UI", 11, "bold"), bg="black", fg="white", hover_bg="#333", command=self.hide_cam_error, height=2, width=20).pack(pady=(0, 15))
-        
-    def manual_presence(self):
-        self.warning_snoozed_until = time.time() + 300 # Snooze for 5 minutes
-        self.consecutive_away = 0
-        if self.current_status != "Present":
+    # ─────────────────────────────────────────────────────────────────────
+    #  POPUPS (Professional CTkToplevel dialogs)
+    # ─────────────────────────────────────────────────────────────────────
+
+    def _show_warn(self):
+        if not self.monitoring_active:
+            return
+        if hasattr(self, "_warn_win"):
+            try:
+                if self._warn_win.winfo_exists():
+                    return
+            except:
+                pass
+
+        win = ctk.CTkToplevel(self)
+        win.overrideredirect(True)
+        win.attributes("-topmost", True)
+        w, h = 400, 220
+        x = (self.winfo_screenwidth() - w) // 2
+        y = (self.winfo_screenheight() - h) // 2
+        win.geometry(f"{w}x{h}+{x}+{y}")
+        win.configure(fg_color=COLORS["bg_card"])
+        self._warn_win = win
+
+        # Red accent bar
+        ctk.CTkFrame(win, fg_color=COLORS["red"], height=4,
+                     corner_radius=0).pack(fill="x")
+
+        pad = ctk.CTkFrame(win, fg_color=COLORS["bg_card"])
+        pad.pack(fill="both", expand=True, padx=24, pady=(16, 20))
+
+        ctk.CTkLabel(pad, text="Away Detected",
+                     font=ctk.CTkFont("Segoe UI", 18, "bold"),
+                     text_color=COLORS["text_white"]).pack(anchor="w")
+        ctk.CTkLabel(pad, text="Your presence was not detected by the camera.",
+                     font=ctk.CTkFont("Segoe UI", 11),
+                     text_color=COLORS["text_muted"]).pack(anchor="w", pady=(2, 16))
+
+        row = ctk.CTkFrame(pad, fg_color="transparent")
+        row.pack(fill="x")
+        ctk.CTkButton(row, text="\U0001F504  Retry", height=40, corner_radius=8,
+                      fg_color=COLORS["accent"], hover_color=COLORS["accent_h"],
+                      font=ctk.CTkFont("Segoe UI", 12, "bold"),
+                      command=self._retry_cam).pack(side="left", expand=True,
+                                                      fill="x", padx=(0, 6))
+        ctk.CTkButton(row, text="\u2615  Go on Break", height=40, corner_radius=8,
+                      fg_color=COLORS["yellow"], hover_color="#ca8a04",
+                      text_color=COLORS["bg_deep"],
+                      font=ctk.CTkFont("Segoe UI", 12, "bold"),
+                      command=self._warn_break).pack(side="right", expand=True,
+                                                       fill="x", padx=(6, 0))
+
+        self._warn_result = ctk.CTkLabel(pad, text="",
+                                          font=ctk.CTkFont("Segoe UI", 11))
+        self._warn_result.pack(pady=(10, 0))
+
+    def _show_cam_err(self):
+        if not self.activation_key:
+            return
+        if hasattr(self, "_cam_err_win"):
+            try:
+                if self._cam_err_win.winfo_exists():
+                    return
+            except:
+                pass
+
+        win = ctk.CTkToplevel(self)
+        win.overrideredirect(True)
+        win.attributes("-topmost", True)
+        w, h = 400, 220
+        x = (self.winfo_screenwidth() - w) // 2
+        y = (self.winfo_screenheight() - h) // 2
+        win.geometry(f"{w}x{h}+{x}+{y}")
+        win.configure(fg_color=COLORS["bg_card"])
+        self._cam_err_win = win
+
+        ctk.CTkFrame(win, fg_color=COLORS["yellow"], height=4,
+                     corner_radius=0).pack(fill="x")
+
+        pad = ctk.CTkFrame(win, fg_color=COLORS["bg_card"])
+        pad.pack(fill="both", expand=True, padx=24, pady=(16, 20))
+
+        ctk.CTkLabel(pad, text="Camera Error",
+                     font=ctk.CTkFont("Segoe UI", 18, "bold"),
+                     text_color=COLORS["text_white"]).pack(anchor="w")
+        ctk.CTkLabel(pad, text="Unable to access camera. Check that no other\n"
+                     "app is using it and permissions are enabled.",
+                     font=ctk.CTkFont("Segoe UI", 11),
+                     text_color=COLORS["text_muted"], justify="left").pack(
+            anchor="w", pady=(2, 16))
+
+        row = ctk.CTkFrame(pad, fg_color="transparent")
+        row.pack(fill="x")
+        ctk.CTkButton(row, text="Retry", height=40, corner_radius=8,
+                      fg_color=COLORS["accent"], hover_color=COLORS["accent_h"],
+                      font=ctk.CTkFont("Segoe UI", 12, "bold"),
+                      command=self._hide_cam_err).pack(side="left", expand=True,
+                                                         fill="x", padx=(0, 6))
+        ctk.CTkButton(row, text="\u2615  Go on Break", height=40, corner_radius=8,
+                      fg_color=COLORS["bg_input"], hover_color=COLORS["border"],
+                      font=ctk.CTkFont("Segoe UI", 12, "bold"),
+                      command=self._cam_break).pack(side="right", expand=True,
+                                                      fill="x", padx=(6, 0))
+
+    def _retry_cam(self):
+        if hasattr(self, "_warn_result") and self._warn_result.winfo_exists():
+            self._warn_result.configure(text="Testing...", text_color=COLORS["yellow"])
+        if self._latest_frame is not None:
+            if hasattr(self, "_warn_result") and self._warn_result.winfo_exists():
+                self._warn_result.configure(text="\u2705  Camera OK! Resuming...",
+                                             text_color=COLORS["green"])
+            self.consecutive_away = 0
             self.current_status = "Present"
-            self.send_log("Present")
-            self.update_status("Active (Manual)", Theme.SUCCESS)
-        self.hide_warning()
-        
-    def warning_go_on_break(self):
-        self.hide_warning()
-        if not self.in_break_mode:
-            self.toggle_break()
-    
-    def hide_warning(self):
-        if hasattr(self, 'win_warn') and self.win_warn: self.win_warn.destroy()
+            self._log("Present")
+            self._set_status("Active", COLORS["green"])
+            self.after(1200, self._hide_warn)
+        else:
+            if hasattr(self, "_warn_result") and self._warn_result.winfo_exists():
+                self._warn_result.configure(text="\u274c  Camera not working",
+                                             text_color=COLORS["red"])
 
-    def hide_cam_error(self):
-        if hasattr(self, 'win_cam_error') and self.win_cam_error: self.win_cam_error.destroy()
+    def _warn_break(self):
+        self._hide_warn()
+        if not self.in_break_mode:
+            self._toggle_break()
+
+    def _cam_break(self):
+        self._hide_cam_err()
+        if not self.in_break_mode:
+            self._toggle_break()
+
+    def _hide_warn(self):
+        self._close_popup("_warn_win")
+
+    def _hide_cam_err(self):
+        self._close_popup("_cam_err_win")
+
+    def _close_popup(self, attr):
+        if hasattr(self, attr):
+            try:
+                getattr(self, attr).destroy()
+            except:
+                pass
+
+    # ─────────────────────────────────────────────────────────────────────
+    #  HELPERS
+    # ─────────────────────────────────────────────────────────────────────
+
+    def _clear(self):
+        for w in self.container.winfo_children():
+            w.destroy()
 
     def on_close(self):
-        if messagebox.askokcancel("Quit", "End Shift and Close?"):
-            self.send_log("WORK_END")
+        if messagebox.askokcancel("Quit", "End shift and close?"):
+            self._log("WORK_END")
             self.is_running = False
             self.destroy()
-            import os
             os._exit(0)
 
+
+# =============================================================================
 if __name__ == "__main__":
     app = App()
     app.mainloop()

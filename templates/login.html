@@ -214,6 +214,13 @@
                     class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-semibold transition-all transform hover:scale-[1.02] shine">
                     <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i>Sign In
                 </button>
+
+                <div class="text-center mt-3">
+                    <a href="/forgot-password"
+                        class="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors">
+                        <i class="fa-solid fa-key mr-1"></i>Forgot Password?
+                    </a>
+                </div>
             </form>
 
             <!-- Sign Up Form (Hidden by default) -->
@@ -272,17 +279,17 @@
                     </div>
                 </div>
 
-                <!-- Hidden default plan (pricing handled separately) -->
-                <input type="hidden" name="plan" value="basic">
+                <!-- Hidden default plan -->
+                <input type="hidden" name="plan" id="signup-plan" value="trial">
 
                 <button type="submit"
                     class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-semibold transition-all transform hover:scale-[1.02] shine">
-                    <i class="fa-solid fa-rocket mr-2"></i>Create Account
+                    <i class="fa-solid fa-rocket mr-2"></i>Start Free Trial
                 </button>
 
-                <p class="text-xs text-slate-500 text-center mt-4">
-                    You can choose your plan after signing up on our <a href="/pricing"
-                        class="text-blue-400 hover:underline">pricing page</a>.
+                <p class="text-xs text-slate-400 text-center mt-2">
+                    <i class="fa-solid fa-check text-green-400 mr-1"></i>14 days free · No credit card required · 5
+                    employees included
                 </p>
 
                 <script>
@@ -300,7 +307,7 @@
                 </script>
 
                 <p class="text-xs text-slate-500 text-center">
-                    By signing up, you agree to our <a href="/privacy#terms" class="text-blue-400 hover:underline">Terms
+                    By signing up, you agree to our <a href="/terms" class="text-blue-400 hover:underline">Terms
                         of Service</a> and <a href="/privacy" class="text-blue-400 hover:underline">Privacy Policy</a>.
                 </p>
             </form>

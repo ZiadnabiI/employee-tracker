@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to inframe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .step-card {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .step-card.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .step-dot {
+            transition: all 0.3s ease;
+        }
+
+        .step-dot.completed {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+
+        .step-dot.current {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        }
+
+        .step-connector {
+            transition: background 0.5s ease;
+        }
+
+        .step-connector.completed {
+            background: #22c55e;
+        }
+
+        @keyframes confetti {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .confetti-piece {
+            position: fixed;
+            top: -10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            animation: confetti 3s ease-out forwards;
+        }
+
+        .shine {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shine::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0) 100%);
+            transform: rotate(30deg);
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%) rotate(30deg);
+            }
+
+            100% {
+                transform: translateX(100%) rotate(30deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-white min-h-screen">
+
+    <div class="max-w-2xl mx-auto px-6 py-12">
+
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <img src="/static/LOGO.png" alt="inframe" class="h-14 mx-auto mb-6" onerror="this.style.display='none'">
+            <h1 class="text-3xl font-bold mb-2">Welcome to inframe! 🎉</h1>
+            <p class="text-slate-400">Let's get your team set up in 3 quick steps.</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="flex items-center justify-center mb-12">
+            <div class="flex items-center gap-0">
+                <div class="step-dot current w-10 h-10 rounded-full border-2 border-slate-600 flex items-center justify-center text-sm font-bold"
+                    data-step="1">1</div>
+                <div class="step-connector w-20 h-1 bg-slate-700 rounded"></div>
+                <div class="step-dot w-10 h-10 rounded-full border-2 border-slate-600 flex items-center justify-center text-sm font-bold"
+                    data-step="2">2</div>
+                <div class="step-connector w-20 h-1 bg-slate-700 rounded"></div>
+                <div class="step-dot w-10 h-10 rounded-full border-2 border-slate-600 flex items-center justify-center text-sm font-bold"
+                    data-step="3">3</div>
+            </div>
+        </div>
+
+        <!-- STEP 1: Create Department -->
+        <div class="step-card active" id="step-1">
+            <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-8">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-building text-blue-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Create a Department</h2>
+                        <p class="text-slate-400 text-sm">Organize your team by department.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Department Name</label>
+                        <input type="text" id="dept-name" placeholder="e.g. Engineering, Sales, Support"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 px-4 focus:outline-none focus:border-blue-500 transition-all">
+                    </div>
+                    <button onclick="createDepartment()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition-all shine">
+                        <i class="fa-solid fa-plus mr-2"></i>Create Department
+                    </button>
+                    <button onclick="skipStep(2)"
+                        class="w-full text-slate-400 hover:text-white py-2 text-sm transition-all">
+                        Skip for now →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Add First Employee -->
+        <div class="step-card" id="step-2">
+            <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-8">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-user-plus text-purple-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Add Your First Employee</h2>
+                        <p class="text-slate-400 text-sm">Create an employee to start monitoring.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Employee Name</label>
+                        <input type="text" id="emp-name" placeholder="e.g. John Doe"
+                            class="w-full bg-slate-800 border border-slate-600 text-white rounded-xl py-3 px-4 focus:outline-none focus:border-purple-500 transition-all">
+                    </div>
+                    <button onclick="addEmployee()"
+                        class="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold transition-all shine">
+                        <i class="fa-solid fa-user-plus mr-2"></i>Add Employee
+                    </button>
+                    <div id="emp-result"
+                        class="hidden bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-xl text-sm">
+                    </div>
+                    <button onclick="skipStep(3)"
+                        class="w-full text-slate-400 hover:text-white py-2 text-sm transition-all">
+                        Skip for now →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: Download Detector -->
+        <div class="step-card" id="step-3">
+            <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-8">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-download text-green-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Install the Detector</h2>
+                        <p class="text-slate-400 text-sm">Download and install on employee machines.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 rounded-xl p-6 mb-6">
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                            <i class="fa-brands fa-windows text-blue-400 text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-1">Windows Desktop App</h3>
+                            <p class="text-slate-400 text-sm mb-3">Works on Windows 10/11. Uses webcam for local AI
+                                presence detection.</p>
+                            <div class="flex items-center gap-3">
+                                <a href="/static/InFrameInstaller.exe"
+                                    class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-all">
+                                    <i class="fa-solid fa-download mr-2"></i>Download Installer
+                                </a>
+                                <span class="text-slate-500 text-xs">v1.0 · 50MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/50 rounded-xl p-4 mb-6">
+                    <h4 class="text-sm font-semibold text-slate-300 mb-2"><i
+                            class="fa-solid fa-circle-info text-blue-400 mr-2"></i>Quick Setup</h4>
+                    <ol class="text-sm text-slate-400 space-y-1 list-decimal pl-5">
+                        <li>Install the app on the employee's Windows PC</li>
+                        <li>Enter the <strong class="text-white">activation key</strong> from the employee's profile
+                        </li>
+                        <li>The app will start monitoring automatically</li>
+                    </ol>
+                </div>
+
+                <button onclick="finishOnboarding()"
+                    class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl font-semibold transition-all shine">
+                    <i class="fa-solid fa-check mr-2"></i>Go to Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+
+        function goToStep(step) {
+            // Hide current
+            document.getElementById(`step-${currentStep}`).classList.remove('active');
+
+            // Update progress dots
+            for (let i = 1; i <= 3; i++) {
+                const dot = document.querySelector(`.step-dot[data-step="${i}"]`);
+                dot.classList.remove('current', 'completed');
+                if (i < step) {
+                    dot.classList.add('completed');
+                    dot.innerHTML = '<i class="fa-solid fa-check text-white text-xs"></i>';
+                } else if (i === step) {
+                    dot.classList.add('current');
+                }
+            }
+
+            // Update connectors
+            const connectors = document.querySelectorAll('.step-connector');
+            connectors.forEach((c, i) => {
+                if (i < step - 1) c.classList.add('completed');
+                else c.classList.remove('completed');
+            });
+
+            currentStep = step;
+
+            // Show new step with delay for animation
+            setTimeout(() => {
+                document.getElementById(`step-${step}`).classList.add('active');
+            }, 200);
+        }
+
+        function skipStep(nextStep) {
+            goToStep(nextStep);
+        }
+
+        async function createDepartment() {
+            const name = document.getElementById('dept-name').value.trim();
+            if (!name) return alert('Please enter a department name');
+
+            try {
+                const res = await fetch('/api/departments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                if (res.ok) {
+                    goToStep(2);
+                } else {
+                    const data = await res.json();
+                    alert(data.detail || 'Error creating department');
+                }
+            } catch (e) {
+                alert('Network error. Please try again.');
+            }
+        }
+
+        async function addEmployee() {
+            const name = document.getElementById('emp-name').value.trim();
+            if (!name) return alert('Please enter an employee name');
+
+            try {
+                const res = await fetch('/api/employees', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const resultDiv = document.getElementById('emp-result');
+                    resultDiv.classList.remove('hidden');
+                    resultDiv.innerHTML = `
+                        <i class="fa-solid fa-circle-check mr-2"></i>
+                        <strong>${name}</strong> added! Activation key: <code class="bg-slate-800 px-2 py-1 rounded text-green-300">${data.activation_key}</code>
+                    `;
+                    setTimeout(() => goToStep(3), 2000);
+                } else {
+                    const data = await res.json();
+                    alert(data.detail || 'Error adding employee');
+                }
+            } catch (e) {
+                alert('Network error. Please try again.');
+            }
+        }
+
+        function fireConfetti() {
+            const colors = ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444'];
+            for (let i = 0; i < 50; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = Math.random() * 100 + 'vw';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDelay = Math.random() * 2 + 's';
+                piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+                document.body.appendChild(piece);
+                setTimeout(() => piece.remove(), 5000);
+            }
+        }
+
+        function finishOnboarding() {
+            // Mark onboarding complete
+            fetch('/api/onboarding-complete', { method: 'POST' }).catch(() => { });
+            fireConfetti();
+            setTimeout(() => window.location.href = '/', 1500);
+        }
+    </script>
+
+</body>
+
+</html>

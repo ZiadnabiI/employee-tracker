@@ -36,6 +36,8 @@ class Company(Base):
     screenshot_frequency = Column(Integer, default=600)  # Seconds between automated screenshots
     dlp_enabled = Column(Integer, default=0) # Data loss prevention (0 or 1)
     slack_webhook_url = Column(String, nullable=True) # Slack Integration Webhook
+    trial_ends_at = Column(DateTime, nullable=True) # Free trial expiry date
+    onboarding_completed = Column(Integer, default=0) # 0=pending, 1=done
     
     # Relationships
     employees = relationship("Employee", back_populates="company")
@@ -62,6 +64,10 @@ class Supervisor(Base):
     is_super_admin = Column(Integer, default=0)  # 1 = can see all companies
     role = Column(String, default="owner") # owner, admin, viewer
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    # Password Reset
+    password_reset_token = Column(String, nullable=True)
+    password_reset_expires = Column(DateTime, nullable=True)
     
     # Relationship
     company = relationship("Company", back_populates="supervisors")

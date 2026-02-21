@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    env:
+      SECRET_KEY: "ci-test-secret-key-not-real"
+      DATABASE_URL: "sqlite:///./test.db"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Syntax check
+        run: |
+          python -m py_compile main.py
+          python -m py_compile database.py
+          python -m py_compile auth.py
+          python -m py_compile blob_storage.py
+          echo "✅ All files compile successfully"
+
+      - name: Import check
+        run: |
+          python -c "
+          import os
+          os.environ['SECRET_KEY'] = 'ci-test-key'
+          from database import Base, Company, Supervisor, Employee
+          from auth import hash_password, verify_password
+          print('✅ All modules import successfully')
+          "
+
+      - name: Template check
+        run: |
+          python -c "
+          import os
+          for f in os.listdir('templates'):
+              if f.endswith('.html'):
+                  with open(f'templates/{f}', 'r') as fh:
+                      content = fh.read()
+                      assert len(content) > 0, f'{f} is empty'
+          print('✅ All templates are valid')
+          "

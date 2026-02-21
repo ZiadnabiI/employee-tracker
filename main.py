@@ -2,15 +2,58 @@ import datetime
 import secrets
 import string
 import os
+import logging
 from typing import List, Dict, Optional
 from fastapi import FastAPI, Request, Depends, HTTPException, status, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import stripe
-import os
+
+# =============================================================================
+# STRUCTURED LOGGING
+# =============================================================================
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+# JSON-style format for production, readable format for dev
+if os.getenv("ENVIRONMENT", "").lower() == "production":
+    log_format = '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}'
+else:
+    log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+
+logging.basicConfig(level=LOG_LEVEL, format=log_format, datefmt="%Y-%m-%dT%H:%M:%S")
+logger = logging.getLogger("inframe")
+
+# =============================================================================
+# SENTRY ERROR TRACKING (optional — set SENTRY_DSN env var to enable)
+# =============================================================================
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[FastApiIntegration(), SqlalchemyIntegration()],
+            traces_sample_rate=0.2,  # 20% of requests for performance monitoring
+            environment=os.getenv("ENVIRONMENT", "development"),
+        )
+        logger.info("Sentry error tracking initialized")
+    except ImportError:
+        logger.warning("sentry-sdk not installed — error tracking disabled. Run: pip install sentry-sdk[fastapi]")
+
+# Rate Limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
+
+# Environment
+IS_PRODUCTION = os.getenv("ENVIRONMENT", "").lower() == "production"
 
 # Stripe Configuration
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
@@ -31,7 +74,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 FROM_EMAIL = os.getenv("FROM_EMAIL", "reports@inframe.ai")
-CRON_SECRET = os.getenv("CRON_SECRET", "secret-cron-key-12345")
+CRON_SECRET = os.getenv("CRON_SECRET", "")
 
 from pydantic import BaseModel
 import base64
@@ -47,9 +90,20 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# Attach rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# HTTPS redirect in production
+if IS_PRODUCTION:
+    from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+    app.add_middleware(HTTPSRedirectMiddleware)
+
+# CORS — restricted to configured origins
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -153,6 +207,10 @@ async def privacy_page(request: Request):
     """Public privacy policy page"""
     return templates.TemplateResponse("privacy.html", {"request": request})
 
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    """Public terms of service page"""
+    return templates.TemplateResponse("terms.html", {"request": request})
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -164,6 +222,7 @@ async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
 @app.post("/login")
+@limiter.limit("5/minute")
 async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     """Handle login form submission"""
     supervisor = db.query(Supervisor).filter(Supervisor.email == email).first()
@@ -183,7 +242,8 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     
     # Set cookie and redirect
     response = RedirectResponse(url="/", status_code=302)
-    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400,
+        samesite="lax", secure=IS_PRODUCTION)
     return response
 
 @app.get("/logout")
@@ -198,9 +258,128 @@ async def logout(request: Request):
     return response
 
 # ===============================
+# PASSWORD RESET
+# ===============================
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    """Render forgot password page"""
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request, "mode": "forgot", "error": None, "success": None
+    })
+
+@app.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, email: str = Form(...), db: Session = Depends(get_db)):
+    """Send password reset email"""
+    # Always show success to prevent email enumeration attacks
+    success_msg = "If an account exists with that email, a reset link has been sent."
+    
+    supervisor = db.query(Supervisor).filter(Supervisor.email == email).first()
+    if not supervisor:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "mode": "forgot", "error": None, "success": success_msg
+        })
+    
+    # Generate secure reset token (1 hour expiry)
+    reset_token = secrets.token_urlsafe(48)
+    supervisor.password_reset_token = reset_token
+    supervisor.password_reset_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    db.commit()
+    
+    # Build reset URL
+    base_url = str(request.base_url).rstrip("/")
+    reset_url = f"{base_url}/reset-password?token={reset_token}"
+    
+    # Send email
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: #2563eb;">InFrame Password Reset</h2>
+        </div>
+        <p>Hi {supervisor.name},</p>
+        <p>We received a request to reset your password. Click the button below to set a new password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{reset_url}" 
+               style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                Reset Password
+            </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+        <p style="color: #9ca3af; font-size: 12px; text-align: center;">InFrame Employee Tracker</p>
+    </body>
+    </html>
+    """
+    
+    send_email_report(
+        to_email=email,
+        subject="🔑 Reset Your InFrame Password",
+        html_content=html_content
+    )
+    
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request, "mode": "forgot", "error": None, "success": success_msg
+    })
+
+@app.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request, token: str = None, db: Session = Depends(get_db)):
+    """Render reset password form or show expired message"""
+    if not token:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "mode": "expired"
+        })
+    
+    # Validate token
+    supervisor = db.query(Supervisor).filter(Supervisor.password_reset_token == token).first()
+    if not supervisor or not supervisor.password_reset_expires or supervisor.password_reset_expires < datetime.datetime.utcnow():
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "mode": "expired"
+        })
+    
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request, "mode": "reset", "token": token, "error": None
+    })
+
+@app.post("/reset-password")
+@limiter.limit("3/minute")
+async def reset_password(request: Request, token: str = Form(...), password: str = Form(...), confirm_password: str = Form(...), db: Session = Depends(get_db)):
+    """Process password reset"""
+    # Validate passwords match
+    if password != confirm_password:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "mode": "reset", "token": token,
+            "error": "Passwords do not match."
+        })
+    
+    if len(password) < 8:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "mode": "reset", "token": token,
+            "error": "Password must be at least 8 characters."
+        })
+    
+    # Validate token
+    supervisor = db.query(Supervisor).filter(Supervisor.password_reset_token == token).first()
+    if not supervisor or not supervisor.password_reset_expires or supervisor.password_reset_expires < datetime.datetime.utcnow():
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "mode": "expired"
+        })
+    
+    # Update password and clear token
+    supervisor.password_hash = hash_password(password)
+    supervisor.password_reset_token = None
+    supervisor.password_reset_expires = None
+    db.commit()
+    
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request, "mode": "success"
+    })
+
+# ===============================
 # COMPANY SELF-REGISTRATION
 # ===============================
 @app.post("/register")
+@limiter.limit("3/minute")
 async def register_company(
     request: Request,
     company_name: str = Form(...),
@@ -227,13 +406,26 @@ async def register_company(
             "error": "Company name already taken. Please choose another."
         })
     
-    # Create new company with PENDING status (no access until payment)
-    new_company = Company(
-        name=company_name,
-        subscription_plan="pending",  # Will be updated after payment
-        subscription_status="pending",
-        max_employees=0  # No employees allowed until payment
-    )
+    # FREE TRIAL: Start with 14-day trial, no payment required
+    TRIAL_DAYS = 14
+    is_trial = (plan == "trial")
+    
+    if is_trial:
+        new_company = Company(
+            name=company_name,
+            subscription_plan="trial",
+            subscription_status="active",
+            max_employees=5,  # Limited to 5 during trial
+            trial_ends_at=datetime.datetime.utcnow() + datetime.timedelta(days=TRIAL_DAYS)
+        )
+    else:
+        new_company = Company(
+            name=company_name,
+            subscription_plan="pending",
+            subscription_status="pending",
+            max_employees=0
+        )
+    
     db.add(new_company)
     db.commit()
     db.refresh(new_company)
@@ -250,8 +442,21 @@ async def register_company(
     db.add(new_supervisor)
     db.commit()
     db.refresh(new_supervisor)
+    
+    # For trial users, skip payment and go straight to dashboard
+    if is_trial:
+        logger.info(f"New trial started: {company_name} ({email}), expires in {TRIAL_DAYS} days")
+        token = create_token(
+            supervisor_id=new_supervisor.id,
+            company_id=new_company.id,
+            is_super_admin=False
+        )
+        response = RedirectResponse(url="/onboarding", status_code=302)
+        response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400,
+            samesite="lax", secure=IS_PRODUCTION)
+        return response
 
-    # Create Stripe customer immediately
+    # PAID PLANS: Create Stripe customer and redirect to checkout
     if stripe.api_key:
         try:
             customer = stripe.Customer.create(
@@ -288,10 +493,11 @@ async def register_company(
                     company_id=new_company.id,
                     is_super_admin=False
                 )
-                response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+                response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400,
+                    samesite="lax", secure=IS_PRODUCTION)
                 return response
         except Exception as e:
-            print(f"Stripe error during registration: {e}")
+            logger.error(f"Stripe error during registration: {e}")
     
     # Fallback: redirect to choose plan page if Stripe not configured
     token = create_token(
@@ -300,7 +506,8 @@ async def register_company(
         is_super_admin=False
     )
     response = RedirectResponse(url="/choose-plan", status_code=302)
-    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400)
+    response.set_cookie(key="auth_token", value=token, httponly=True, max_age=86400,
+        samesite="lax", secure=IS_PRODUCTION)
     return response
 
 # ===============================
@@ -462,12 +669,57 @@ async def read_root(request: Request, db: Session = Depends(get_db)):
     if company and company.subscription_status == "pending":
         return RedirectResponse(url="/choose-plan", status_code=302)
     
+    # Check if trial has expired
+    if company and company.subscription_plan == "trial" and company.trial_ends_at:
+        if company.trial_ends_at < datetime.datetime.utcnow():
+            company.subscription_status = "expired"
+            db.commit()
+            return RedirectResponse(url="/choose-plan?trial_expired=true", status_code=302)
+    
+    # Redirect to onboarding if not completed
+    if company and not company.onboarding_completed:
+        return RedirectResponse(url="/onboarding", status_code=302)
+    
     return templates.TemplateResponse("dashboard_new.html", {
         "request": request,
         "supervisor_name": supervisor.name if supervisor else "Admin",
         "company_name": company.name if company else "Company",
         "role": supervisor.role if supervisor else "viewer"
     })
+
+# ===============================
+# ONBOARDING WIZARD
+# ===============================
+@app.get("/onboarding", response_class=HTMLResponse)
+async def onboarding_page(request: Request, db: Session = Depends(get_db)):
+    """Onboarding wizard for new users"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        return RedirectResponse(url="/login", status_code=302)
+    
+    token_data = verify_token(token)
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    
+    # If onboarding already done, go to dashboard
+    if company and company.onboarding_completed:
+        return RedirectResponse(url="/", status_code=302)
+    
+    return templates.TemplateResponse("onboarding.html", {"request": request})
+
+@app.post("/api/onboarding-complete")
+async def onboarding_complete(request: Request, db: Session = Depends(get_db)):
+    """Mark onboarding as completed"""
+    token = get_token_from_cookies(request)
+    if not token or not verify_token(token):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
+    if company:
+        company.onboarding_completed = 1
+        db.commit()
+    
+    return {"status": "ok"}
 
 @app.get("/dashboard-new", response_class=HTMLResponse)
 async def dashboard_new(request: Request, db: Session = Depends(get_db)):
@@ -1760,6 +2012,32 @@ async def app_login(data: AppLogin, db: Session = Depends(get_db)):
         "company_id": employee.company_id
     }
 
+@app.post("/api/app-change-password")
+async def app_change_password(request: Request, db: Session = Depends(get_db)):
+    """Change password from the desktop app — requires old password for auth"""
+    data = await request.json()
+    activation_key = data.get("activation_key")
+    old_password = data.get("old_password")
+    new_password = data.get("new_password")
+    
+    if not activation_key or not old_password or not new_password:
+        raise HTTPException(status_code=400, detail="Missing fields")
+    
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    
+    employee = db.query(Employee).filter(Employee.activation_key == activation_key).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if not employee.password_hash or not verify_password(old_password, employee.password_hash):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    
+    employee.password_hash = hash_password(new_password)
+    db.commit()
+    
+    return {"status": "ok", "message": "Password updated"}
+
 @app.get("/api/app-usage-stats")
 async def get_app_usage_stats(request: Request, employee_name: Optional[str] = None, db: Session = Depends(get_db)):
     """Get top apps usage stats - can be filtered by employee"""
@@ -1915,6 +2193,70 @@ def sync_stripe_quantity(db: Session, company_id: int):
     """
     update_stripe_usage(company_id, db)
 
+# ===============================
+# ADMIN METRICS (Super Admin Only)
+# ===============================
+@app.get("/api/admin/metrics")
+async def admin_metrics(request: Request, db: Session = Depends(get_db)):
+    """
+    SaaS-level metrics for super admins.
+    Returns MRR, company counts, plan breakdown, trial stats, and recent signups.
+    """
+    token = get_token_from_cookies(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token_data = verify_token(token)
+    if not token_data or not token_data.get("is_super_admin"):
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Company stats
+    total_companies = db.query(Company).count()
+    total_employees = db.query(Employee).count()
+    
+    # Plan distribution
+    plans = db.query(Company.subscription_plan, func.count(Company.id)).group_by(Company.subscription_plan).all()
+    plan_breakdown = {plan: count for plan, count in plans}
+    
+    # Trial stats
+    active_trials = db.query(Company).filter(
+        Company.subscription_plan == "trial",
+        Company.subscription_status == "active"
+    ).count()
+    
+    expired_trials = db.query(Company).filter(
+        Company.subscription_plan == "trial",
+        Company.subscription_status == "expired"
+    ).count()
+    
+    # MRR estimate (count paying customers)
+    basic_count = plan_breakdown.get("basic", 0)
+    pro_count = plan_breakdown.get("pro", 0)
+    # Placeholder prices — adjust to your actual pricing
+    estimated_mrr = (basic_count * 29) + (pro_count * 79)
+    
+    # Recent signups (last 30 days)
+    thirty_days_ago = datetime.datetime.utcnow() - datetime.timedelta(days=30)
+    recent_signups = db.query(Company).filter(
+        Company.created_at >= thirty_days_ago
+    ).count()
+    
+    # Conversion rate (trials that became paid)
+    total_ever_trialed = active_trials + expired_trials + plan_breakdown.get("basic", 0) + plan_breakdown.get("pro", 0)
+    paid_from_trial = plan_breakdown.get("basic", 0) + plan_breakdown.get("pro", 0)
+    conversion_rate = round((paid_from_trial / max(total_ever_trialed, 1)) * 100, 1)
+    
+    return {
+        "total_companies": total_companies,
+        "total_employees": total_employees,
+        "estimated_mrr": estimated_mrr,
+        "plan_breakdown": plan_breakdown,
+        "active_trials": active_trials,
+        "expired_trials": expired_trials,
+        "recent_signups_30d": recent_signups,
+        "trial_to_paid_conversion": conversion_rate,
+    }
+
 @app.get("/api/subscription-status")
 async def get_subscription_status(request: Request, db: Session = Depends(get_db)):
     """Get current company subscription status"""
@@ -1929,12 +2271,23 @@ async def get_subscription_status(request: Request, db: Session = Depends(get_db
     company = db.query(Company).filter(Company.id == token_data["company_id"]).first()
     employee_count = db.query(Employee).filter(Employee.company_id == company.id).count()
     
+    # Calculate trial info
+    trial_days_remaining = None
+    trial_expired = False
+    if company.subscription_plan == "trial" and company.trial_ends_at:
+        remaining = (company.trial_ends_at - datetime.datetime.utcnow()).days
+        trial_days_remaining = max(0, remaining)
+        trial_expired = remaining < 0
+    
     return {
         "plan": company.subscription_plan or "free",
         "status": company.subscription_status or "active",
         "max_employees": company.max_employees or 5,
         "current_employees": employee_count,
-        "can_add_employees": employee_count < (company.max_employees or 5)
+        "can_add_employees": employee_count < (company.max_employees or 5),
+        "trial_ends_at": company.trial_ends_at.isoformat() if company.trial_ends_at else None,
+        "trial_days_remaining": trial_days_remaining,
+        "trial_expired": trial_expired
     }
 
 @app.post("/api/stripe/create-checkout")
